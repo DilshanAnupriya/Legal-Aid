@@ -2,6 +2,7 @@
 import { StyleSheet, View,Text } from 'react-native';
 import {useEffect, useState} from "react";
 import SplashScreen from "@/components/ui/screen/SplashScreen";
+import Home from "@/components/ui/screen/Home";
 
 
 
@@ -9,17 +10,14 @@ export default function HomeScreen() {
 
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 2000);
-        return () => clearTimeout(timer);
-    }, []);
+
 
     return (
         <View style={styles.container}>
             {isLoading ? (
-                <SplashScreen/>
+                <SplashScreen onFinish={()=>{setIsLoading(false)}}/>
             ) : (
-                <Text style={styles.text}>Welcome to Legal Aid 🚀</Text>
+               <Home/>
             )}
         </View>
     );
