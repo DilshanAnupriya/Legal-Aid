@@ -9,9 +9,9 @@
 
 #Client Side Setup
 
+- npm install
 - npm install react-navigation @react-navigation/native @react-navigation/native-stack
 - npm install react-native-paper react-native-vector-icons
 - npm install axios
-
 - npm start
 
