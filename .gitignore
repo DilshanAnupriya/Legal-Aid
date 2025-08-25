@@ -1,0 +1,37 @@
+# === Node.js (server) ===
+server/node_modules/
+server/npm-debug.log
+server/yarn-error.log
+server/pnpm-debug.log
+
+# === React Native (client) ===
+client/node_modules/
+client/npm-debug.log
+client/yarn-error.log
+client/pnpm-debug.log
+client/.expo/
+client/.expo-shared/
+
+# Logs
+logs
+*.log
+*.log.*
+
+# Environment variables
+.env
+server/.env
+client/.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Build/Output
+dist/
+build/
+android/
+ios/
