@@ -11,6 +11,8 @@ client/yarn-error.log
 client/pnpm-debug.log
 client/.expo/
 client/.expo-shared/
+client/.idea/
+client/.vscode/
 
 # Logs
 logs
