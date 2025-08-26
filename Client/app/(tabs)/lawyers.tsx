@@ -6,11 +6,11 @@ import {
   View,
 } from 'react-native';
 
-const HomeScreen = () => {
+const LawyersScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Home</Text>
+        <Text style={styles.title}>Lawyers</Text>
         <Text style={styles.subtitle}>This page is under construction</Text>
       </View>
     </SafeAreaView>
@@ -41,4 +41,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+export default LawyersScreen;
