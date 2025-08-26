@@ -1,44 +1,38 @@
-import React from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, View,Text } from 'react-native';
+import {useEffect, useState} from "react";
+import SplashScreen from "@/components/ui/screen/SplashScreen";
+import StackNavigator from "@/app/navigation/stack-navigation/StackNavigator";
+import HomePageScreen from "@/components/ui/screen/HomePageScreen";
 
-const HomeScreen = () => {
+
+
+
+export default function HomeScreen() {
+
+  const [isLoading, setIsLoading] = useState(true);
+
+
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Home</Text>
-        <Text style={styles.subtitle}>This page is under construction</Text>
+      <View style={styles.container}>
+        {isLoading ? (
+            <SplashScreen onFinish={()=>{setIsLoading(false)}}/>
+        ) : (
+            <StackNavigator/>
+        )}
       </View>
-    </SafeAreaView>
   );
-};
+}
+
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6c757d',
-    textAlign: 'center',
-  },
-});
-
-export default HomeScreen;
+  text: {
+    fontSize: 18,
+    color: "blue",
+    fontWeight: "600",
+  }
+})
