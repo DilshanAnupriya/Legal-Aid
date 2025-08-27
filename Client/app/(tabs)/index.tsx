@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import SplashScreen from "@/components/ui/screen/SplashScreen";
 import StackNavigator from "@/app/navigation/stack-navigation/StackNavigator";
 import HomePageScreen from "@/components/ui/screen/HomePageScreen";
+import { ThemeProvider } from '../../context/ThemeContext';
 
 
 
@@ -14,6 +15,9 @@ export default function HomeScreen() {
 
 
   return (
+    <ThemeProvider>
+
+    
       <View style={styles.container}>
         {isLoading ? (
             <SplashScreen onFinish={()=>{setIsLoading(false)}}/>
@@ -21,6 +25,7 @@ export default function HomeScreen() {
             <StackNavigator/>
         )}
       </View>
+    </ThemeProvider>
   );
 }
 
@@ -34,5 +39,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "blue",
     fontWeight: "600",
+    
   }
 })

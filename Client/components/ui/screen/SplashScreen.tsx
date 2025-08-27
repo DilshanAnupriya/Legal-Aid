@@ -1,7 +1,8 @@
 import React, {useEffect, useRef} from 'react'
 import {Text, StyleSheet, Animated, View, Image, Dimensions} from 'react-native'
 import {COLOR} from "@/constants/ColorPallet";
-import appJson from "../../../app.json"
+import appJson from "../../../app.json";
+import { Colors } from 'react-native/Libraries/NewAppScreen';
 
 const {width, height} = Dimensions.get('window');
 
@@ -94,10 +95,10 @@ export default function SplashScreen({onFinish}: any) {
                     ]}
                 >
                     <Text style={styles.tagline}>
-                        Your rights don't disappear
+                        Your Rights 
                     </Text>
                     <Text style={styles.taglineSecond}>
-                        just because you don't know them
+                        Our <Text style={{color:COLOR.accent}}>Mission</Text>
                     </Text>
                     <View style={styles.underline} />
                 </Animated.View>
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: '#1a1a2e',
+        backgroundColor: COLOR.primary,
         position: 'relative',
     },
     gradientOverlay: {
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     underline: {
         width: 60,
         height: 3,
-        backgroundColor: COLOR.orange,
+        backgroundColor: COLOR.accent,
         borderRadius: 2,
         marginTop: 12,
     },
