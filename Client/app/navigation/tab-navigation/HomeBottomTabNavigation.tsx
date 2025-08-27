@@ -9,7 +9,7 @@ import {COLOR} from "@/constants/ColorPallet";
 const logo = require('../../../assets/images/logo/Law Firm Logo Black and White (1).png')
 
 const Tab = createBottomTabNavigator();
-export default function HomeBottomTabNavigation({navigation}:any) {
+export default function HomeBottomTabNavigation() {
     return (
         <Tab.Navigator
             initialRouteName={'Home'}

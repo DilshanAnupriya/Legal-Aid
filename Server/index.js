@@ -19,10 +19,12 @@ mongoose.connect(DB_URL)
 
 // Import Routes
 const postRoutes = require("./Routes/postRoutes");
+const userRoutes = require("./Routes/userRoutes");
 
 
 // API Routes
 app.use("/api/posts", postRoutes);
+app.use("/api/auth", userRoutes);
 
 
 // Root route
@@ -31,8 +33,8 @@ app.get("/", (req, res) => {
     message: "Legal Aid Backend API",
     version: "1.0.0",
     endpoints: {
+      auth: "/api/auth",
       posts: "/api/posts",
-      users: "/api/users",
       health: "/health"
     }
   });

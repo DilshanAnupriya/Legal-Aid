@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-
+const User = require('../models/User');
 
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
@@ -20,7 +20,7 @@ const authenticateToken = async (req, res, next) => {
     // Get user from token
     const user = await User.findById(decoded.userId).select('-password');
     
-    if (!user || !user.isActive) {
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid token or user not found'
@@ -65,7 +65,7 @@ const authorizeRoles = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.userDetails.role)) {
+    if (req.userDetails.role && !roles.includes(req.userDetails.role)) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Required roles: ${roles.join(', ')}`
@@ -94,7 +94,7 @@ const optionalAuth = async (req, res, next) => {
     // Get user from token
     const user = await User.findById(decoded.userId).select('-password');
     
-    if (user && user.isActive) {
+    if (user) {
       req.user = decoded;
       req.userDetails = user;
     } else {
