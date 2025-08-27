@@ -1,9 +1,10 @@
 import {StyleSheet, Text, View} from "react-native";
+import LawyerNetworkScreen from "@/components/modals/LawyerNetworkScreen";
 
 export default function LawyerScreen(){
     return (
         <View style={styles.container}>
-            <Text>Lawyers Screen</Text>
+            <LawyerNetworkScreen/>
         </View>
     )
 }
