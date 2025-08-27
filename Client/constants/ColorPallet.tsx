@@ -11,15 +11,15 @@ export const LightColors = {
 } as const;
 
 export const DarkColors = {
-  darkgray: '#2c2c2c',
+  darkgray: '#6a6a6aff',
   orange: '#d35400',
-  primary: '#121212',
-  secondary: '#1c1c1c',
+  primary: '#ffffff', // Light text for dark theme
+  secondary: '#3c3b54ff',
   accent: '#e67e22',
-  light: '#1f1f1f',
-  white: '#ffffff',
+  light: '#16172dff', // Dark background
+  white: '#17152fff', // Dark surface color
   shadow: 'rgba(255,255,255,0.1)',
-  black: '#ffffff',
+  black: '#000000ff',
 } as const;
 
 export type ColorTypes = keyof typeof LightColors;
