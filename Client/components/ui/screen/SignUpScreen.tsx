@@ -14,9 +14,10 @@ import {
 } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
 import { COLOR } from '../../../constants/ColorPallet';
+import { router } from 'expo-router';
 
 interface SignUpScreenProps {
-  navigation: any;
+  navigation?: any;
 }
 
 const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
@@ -84,7 +85,13 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       Alert.alert(
         'Success',
         'Account created successfully!',
-        [{ text: 'OK', onPress: () => navigation.replace('Main') }]
+        [{ 
+          text: 'OK', 
+          onPress: () => {
+            // After successful registration, user is authenticated, so navigate to main app
+            router.replace('/(tabs)');
+          }
+        }]
       );
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Registration failed');
@@ -222,7 +229,14 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
           {/* Login Link */}
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity onPress={() => {
+              // Handle navigation - try both methods for compatibility
+              if (navigation && navigation.navigate) {
+                navigation.navigate('Login');
+              } else {
+                router.push('/auth/login');
+              }
+            }}>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>

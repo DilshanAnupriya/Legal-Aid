@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 
 export default function ProfileScreen({ navigation }: { navigation?: any }) {
-    const { user, logout, getCurrentUser, isLoading } = useAuth();
+    const { user, logout, getCurrentUser, isLoading, isAuthenticated } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
 
     const handleLogout = async () => {
@@ -28,9 +28,12 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
     const onRefresh = async () => {
         setRefreshing(true);
         try {
+            console.log('[ProfileScreen] Attempting to refresh user data...');
             await getCurrentUser();
+            console.log('[ProfileScreen] User data refreshed successfully');
         } catch (error) {
-            // Error refreshing profile
+            console.error('[ProfileScreen] Error refreshing profile:', error);
+            Alert.alert('Error', 'Failed to refresh profile data');
         } finally {
             setRefreshing(false);
         }
@@ -76,9 +79,20 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
         return (
             <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>Unable to load profile</Text>
+                <Text style={styles.errorSubText}>
+                    {isAuthenticated ? 'Profile data is missing' : 'Please log in to view your profile'}
+                </Text>
                 <Pressable style={styles.retryButton} onPress={onRefresh}>
                     <Text style={styles.retryButtonText}>Retry</Text>
                 </Pressable>
+                {!isAuthenticated && (
+                    <Pressable 
+                        style={[styles.retryButton, { backgroundColor: '#007AFF', marginTop: 10 }]} 
+                        onPress={() => router.replace('/auth/login')}
+                    >
+                        <Text style={styles.retryButtonText}>Go to Login</Text>
+                    </Pressable>
+                )}
             </View>
         );
     }
@@ -165,6 +179,12 @@ const styles = StyleSheet.create({
     errorText: {
         fontSize: 16,
         color: '#666',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    errorSubText: {
+        fontSize: 14,
+        color: '#999',
         marginBottom: 20,
         textAlign: 'center',
     },

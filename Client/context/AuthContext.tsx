@@ -55,7 +55,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:3000/api/auth';
+  // For Android emulator, use 10.0.2.2 instead of localhost
+  // For iOS simulator, localhost should work
+  // For physical device, use your computer's IP address
+  const API_BASE_URL = 'http://10.0.2.2:3000/api/auth';
 
 
   // Configure axios interceptor
@@ -112,17 +115,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const checkAuthState = React.useCallback(async () => {
     try {
       const storedToken = await AsyncStorage.getItem('userToken');
-  // console.log('[AuthContext] checkAuthState: token from storage:', storedToken);
+      console.log('[AuthContext] checkAuthState: token from storage:', storedToken ? 'Token exists' : 'No token found');
       if (storedToken) {
         setToken(storedToken);
         try {
           await getCurrentUser(storedToken);
-        } catch {
+        } catch (error) {
+          console.log('[AuthContext] checkAuthState: Token validation failed, logging out');
           // If token is invalid, logout will be called from getCurrentUser
         }
+      } else {
+        console.log('[AuthContext] checkAuthState: No stored token, user not authenticated');
       }
     } catch (error) {
-      console.error('Error checking auth state:', error);
+      console.error('[AuthContext] Error checking auth state:', error);
     } finally {
       setIsLoading(false);
     }

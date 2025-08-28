@@ -17,31 +17,8 @@ mongoose.connect(process.env.DB_URL)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
-// User Schema
-const userSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6,
-  },
-  birthday: {
-    type: String,
-    required: true,
-  },
-  genderSpectrum: {
-    type: String,
-    required: true,
-  }
-}, { timestamps: true });
-
-const User = mongoose.model('User', userSchema);
+// Import User model
+const User = require('./models/User');
 
 // Auth middleware
 const authenticateToken = async (req, res, next) => {
@@ -72,6 +49,13 @@ const authenticateToken = async (req, res, next) => {
 // Register
 app.post('/api/auth/register', async (req, res) => {
   try {
+    console.log('[Registration] Received request:', { 
+      email: req.body.email, 
+      birthday: req.body.birthday, 
+      genderSpectrum: req.body.genderSpectrum,
+      hasPassword: !!req.body.password 
+    });
+    
     const { email, password, birthday, genderSpectrum } = req.body;
 
     // Validation
@@ -98,18 +82,22 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create user
+    // Create user (password will be hashed automatically by the User model)
+    console.log('[Registration] Creating user with data:', {
+      email: email.toLowerCase(),
+      birthday,
+      genderSpectrum
+    });
+    
     const user = new User({
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password,
       birthday,
       genderSpectrum
     });
 
     await user.save();
+    console.log('[Registration] User created successfully:', user._id);
 
     // Create token
     const token = jwt.sign(
@@ -161,8 +149,8 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // Check password
-    const isValid = await bcrypt.compare(password, user.password);
+    // Check password using the User model method
+    const isValid = await user.comparePassword(password);
     if (!isValid) {
       return res.status(401).json({
         success: false,
