@@ -8,6 +8,7 @@ export const LightColors = {
   white: '#ffffff',
   shadow: 'rgba(0,0,0,0.1)',
   black: '#000000',
+  textcol : '#ffffff'
 } as const;
 
 export const DarkColors = {
@@ -20,6 +21,7 @@ export const DarkColors = {
   white: '#17152fff', // Dark surface color
   shadow: 'rgba(255,255,255,0.1)',
   black: '#000000ff',
+  textcol: '#ffffff'
 } as const;
 
 export type ColorTypes = keyof typeof LightColors;
