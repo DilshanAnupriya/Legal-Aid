@@ -1,3 +1,8 @@
+
+import HomeBottomTabNavigation from "../navigation/tab-navigation/HomeBottomTabNavigation";
+
+export default HomeBottomTabNavigation;
+
 import { StyleSheet, View } from 'react-native';
 import { useState } from "react";
 import SplashScreen from "@/components/ui/screen/SplashScreen";
@@ -22,3 +27,4 @@ const styles = StyleSheet.create({
     flex: 1,
   }
 });
+
