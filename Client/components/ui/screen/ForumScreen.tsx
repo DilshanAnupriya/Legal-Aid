@@ -15,15 +15,19 @@ import {
 } from 'react-native';
 import CreatePostModal from '../../modals/CreatePostModal';
 import PostDetailModal from '../../modals/PostDetailModal';
+import { useAuth } from '../../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const ForumsScreen = () => {
+    const { user } = useAuth();
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
+    const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false);
     const [isPostDetailModalVisible, setIsPostDetailModalVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState<any>(null);
+    const [editingPost, setEditingPost] = useState<any>(null);
     const [forumPosts, setForumPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -31,6 +35,14 @@ const ForumsScreen = () => {
         totalViews: 0,
         answerRate: 0,
     });
+    const [categories, setCategories] = useState([
+        { id: 1, name: 'All', count: 0, icon: '📋' },
+        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
+        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
+        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
+        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
+        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
+    ]);
 
     // Multiple URL options for different environments
     const API_URLS = Platform.OS === 'android'
@@ -152,6 +164,28 @@ const ForumsScreen = () => {
                     totalViews: data.data.totalViews || 0,
                     answerRate: data.data.answerRate || 0,
                 });
+
+                // Update categories with real counts from backend
+                if (data.data.categoryBreakdown) {
+                    const updatedCategories = [
+                        { id: 1, name: 'All', count: data.data.totalPosts || 0, icon: '📋' },
+                        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
+                        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
+                        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
+                        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
+                        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
+                    ];
+
+                    // Map backend category counts to frontend categories
+                    data.data.categoryBreakdown.forEach((cat: any) => {
+                        const categoryIndex = updatedCategories.findIndex(c => c.name === cat._id);
+                        if (categoryIndex !== -1) {
+                            updatedCategories[categoryIndex].count = cat.count;
+                        }
+                    });
+
+                    setCategories(updatedCategories);
+                }
             }
         } catch (error) {
             console.error('Error fetching stats:', error);
@@ -191,7 +225,7 @@ const ForumsScreen = () => {
             if (data.success) {
                 Alert.alert('Success', 'Your post has been created successfully!');
                 fetchPosts(); // Refresh the posts list
-                fetchStats(); // Refresh stats
+                fetchStats(); // Refresh stats and categories
             } else {
                 Alert.alert('Error', data.message || 'Failed to create post');
             }
@@ -206,6 +240,158 @@ const ForumsScreen = () => {
                 ]
             );
         }
+    };
+
+    const updatePost = async (postData: any) => {
+        try {
+            console.log('Updating post:', postData);
+            console.log('PUT URL:', `${BASE_URL}/posts/${editingPost._id}`);
+
+            const response = await fetch(`${BASE_URL}/posts/${editingPost._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(postData),
+            });
+
+            console.log('Update post response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Update post error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Update post response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your post has been updated successfully!');
+                fetchPosts(); // Refresh the posts list
+                fetchStats(); // Refresh stats and categories
+                setIsEditPostModalVisible(false);
+                setEditingPost(null);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to update post');
+            }
+        } catch (error) {
+            console.error('Error updating post:', error);
+            Alert.alert(
+                'Post Update Failed',
+                `Failed to update post. Please check your connection and try again.\n\nError: ${error.message}`,
+                [
+                    { text: 'Retry', onPress: () => updatePost(postData) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const deletePost = async (postId: string, postTitle: string) => {
+        try {
+            console.log('Deleting post:', postId);
+
+            const response = await fetch(`${BASE_URL}/posts/${postId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('Delete post response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Delete post error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Delete post response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your post has been deleted successfully!');
+                fetchPosts(); // Refresh the posts list
+                fetchStats(); // Refresh stats
+            } else {
+                Alert.alert('Error', data.message || 'Failed to delete post');
+            }
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            Alert.alert(
+                'Delete Failed',
+                `Failed to delete post. Please check your connection and try again.\n\nError: ${error.message}`,
+                [
+                    { text: 'Retry', onPress: () => deletePost(postId, postTitle) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const handleEditPost = async (post: any) => {
+        try {
+            setLoading(true);
+            console.log('Fetching full post details for editing:', post.id);
+
+            const response = await fetch(`${BASE_URL}/posts/${post.id}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // @ts-ignore - timeout is supported in React Native
+                timeout: 10000,
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Set the full post data for editing
+                setEditingPost(data.data);
+                setIsEditPostModalVisible(true);
+            } else {
+                throw new Error(data.message || 'Failed to fetch post details');
+            }
+        } catch (error) {
+            console.error('Error fetching post details for editing:', error);
+            Alert.alert('Error', `Failed to load post details for editing: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeletePost = (postId: string, postTitle: string) => {
+        Alert.alert(
+            'Delete Post',
+            `Are you sure you want to delete "${postTitle}"?\n\nThis action cannot be undone.`,
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => deletePost(postId, postTitle),
+                },
+            ]
+        );
+    };
+
+    // Helper function to check if current user can delete the post
+    const canDeletePost = (postAuthor: string) => {
+        if (!user?.email) return false;
+        
+        // Get current user's display name (same logic as in CreatePostModal)
+        const currentUserDisplayName = user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1);
+        
+        // Check if the post author matches current user or if post is by "Anonymous User"
+        return postAuthor === currentUserDisplayName && postAuthor !== 'Anonymous User';
     };
 
     const formatLastActivity = (dateString: string) => {
@@ -229,14 +415,7 @@ const ForumsScreen = () => {
         fetchStats();
     }, [activeCategory, searchQuery]);
 
-    const categories = [
-        { id: 1, name: 'All', count: 93, icon: '📋' },
-        { id: 2, name: 'Family Law', count: 28, icon: '👨‍👩‍👧‍👦' },
-        { id: 3, name: 'Property Law', count: 19, icon: '🏠' },
-        { id: 4, name: 'Employment Law', count: 24, icon: '💼' },
-        { id: 5, name: 'Civil Law', count: 15, icon: '⚖️' },
-        { id: 6, name: 'Criminal Law', count: 7, icon: '🚔' },
-    ];
+
 
     const trendingTopics = [
         { name: 'Tenant Rights', count: 45 },
@@ -256,12 +435,21 @@ const ForumsScreen = () => {
         createPost(postData);
     };
 
+    const handleUpdatePost = (postData: any) => {
+        updatePost(postData);
+    };
+
     const openCreatePostModal = () => {
         setIsCreatePostModalVisible(true);
     };
 
     const closeCreatePostModal = () => {
         setIsCreatePostModalVisible(false);
+    };
+
+    const closeEditPostModal = () => {
+        setIsEditPostModalVisible(false);
+        setEditingPost(null);
     };
 
     const handlePostPress = async (postId: string) => {
@@ -450,14 +638,42 @@ const ForumsScreen = () => {
                                 onPress={() => handlePostPress(post.id)}
                                 activeOpacity={0.8}
                             >
-                                {/* Priority Indicator */}
-                                <View style={styles.postPriorityIndicator}>
-                                    <View style={[
-                                        styles.priorityDot,
-                                        post.priority === 'high' && styles.highPriority,
-                                        post.priority === 'medium' && styles.mediumPriority,
-                                        post.priority === 'low' && styles.lowPriority,
-                                    ]} />
+                                {/* Priority Indicator and Delete Button */}
+                                <View style={styles.topRightContainer}>
+                                    <View style={styles.postPriorityIndicator}>
+                                        <View style={[
+                                            styles.priorityDot,
+                                            post.priority === 'high' && styles.highPriority,
+                                            post.priority === 'medium' && styles.mediumPriority,
+                                            post.priority === 'low' && styles.lowPriority,
+                                        ]} />
+                                    </View>
+                                    
+                                    {/* Edit and Delete Buttons - Only show for posts by current user */}
+                                    {canDeletePost(post.author) && (
+                                        <>
+                                            <TouchableOpacity
+                                                style={styles.editButton}
+                                                onPress={(e) => {
+                                                    e.stopPropagation(); // Prevent card press
+                                                    handleEditPost(post);
+                                                }}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            >
+                                                <Text style={styles.editIcon}>✏️</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.deleteButton}
+                                                onPress={(e) => {
+                                                    e.stopPropagation(); // Prevent card press
+                                                    handleDeletePost(post.id, post.title);
+                                                }}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            >
+                                                <Text style={styles.deleteIcon}>🗑️</Text>
+                                            </TouchableOpacity>
+                                        </>
+                                    )}
                                 </View>
 
                                 {/* Post Header */}
@@ -514,11 +730,25 @@ const ForumsScreen = () => {
                 onSubmit={handleCreatePost}
             />
 
+            {/* Edit Post Modal */}
+            <CreatePostModal
+                visible={isEditPostModalVisible}
+                onClose={closeEditPostModal}
+                onSubmit={handleUpdatePost}
+                editingPost={editingPost}
+                isEditMode={true}
+            />
+
             {/* Post Detail Modal */}
             <PostDetailModal
                 visible={isPostDetailModalVisible}
                 post={selectedPost}
                 onClose={() => setIsPostDetailModalVisible(false)}
+                onPostUpdated={() => {
+                    // Refresh posts and stats when post is updated (reply count changed)
+                    fetchPosts();
+                    fetchStats();
+                }}
             />
         </SafeAreaView>
     );
@@ -851,10 +1081,39 @@ const styles = StyleSheet.create({
     postHeader: {
         marginBottom: 8,
     },
-    postPriorityIndicator: {
+    topRightContainer: {
         position: 'absolute',
         top: 12,
         right: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 1,
+    },
+    postPriorityIndicator: {
+        marginRight: 8,
+    },
+    editButton: {
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+        padding: 6,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(102, 126, 234, 0.3)',
+        marginRight: 8,
+    },
+    editIcon: {
+        fontSize: 12,
+        color: '#667eea',
+    },
+    deleteButton: {
+        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+        padding: 6,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 107, 107, 0.3)',
+    },
+    deleteIcon: {
+        fontSize: 12,
+        color: '#FF6B6B',
     },
     priorityDot: {
         width: 6,

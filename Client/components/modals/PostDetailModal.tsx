@@ -13,38 +13,24 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 
 interface PostDetailModalProps {
   visible: boolean;
   post: any;
   onClose: () => void;
+  onPostUpdated?: () => void; // Callback to refresh parent data
 }
 
-// Mock comments data - moved outside component to prevent recreation
-const mockComments = [
-  {
-    id: 1,
-    author: 'Legal Expert',
-    content: 'This is a common issue in property law. I recommend consulting with a local attorney who specializes in boundary disputes.',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-    isAnonymous: false,
-  },
-  {
-    id: 2,
-    author: 'Anonymous User',
-    content: 'I had a similar problem last year. Make sure you have a proper survey done by a licensed surveyor.',
-    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-    isAnonymous: true,
-  },
-];
-
-const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClose }) => {
+const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClose, onPostUpdated }) => {
+  const { user } = useAuth();
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [addingComment, setAddingComment] = useState(false);
-  const [commenterName, setCommenterName] = useState('');
   const [isAnonymousComment, setIsAnonymousComment] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
 
   // API URL configuration
   const API_URLS = Platform.OS === 'android' 
@@ -102,13 +88,81 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
 
 
 
+  // Helper function to get user display name
+  const getUserDisplayName = () => {
+    if (isAnonymousComment) {
+      return 'Anonymous User';
+    }
+    
+    if (user?.email) {
+      // Extract name part from email (before @ symbol) and capitalize
+      const emailName = user.email.split('@')[0];
+      return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+    }
+    
+    return 'User'; // Fallback if no user info
+  };
+
+  // Helper function to check if current user can delete the comment
+  const canDeleteComment = (commentAuthor: string) => {
+    if (!user?.email) return false;
+    
+    // Get current user's display name (same logic as getUserDisplayName)
+    const currentUserDisplayName = user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1);
+    
+    // Check if the comment author matches current user and is not anonymous
+    return commentAuthor === currentUserDisplayName && commentAuthor !== 'Anonymous User';
+  };
+
   // Load comments when modal opens
   useEffect(() => {
     if (visible && post) {
-      // For now, use mock data
-      setComments(mockComments);
+      fetchComments();
     }
   }, [visible, post]);
+
+  const fetchComments = async () => {
+    if (!post?._id) return;
+    
+    try {
+      setCommentsLoading(true);
+      console.log('Fetching comments for post:', post._id);
+      
+      const response = await fetch(`${BASE_URL}/posts/${post._id}/comments`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Comments response:', data);
+
+      if (data.success) {
+        // Transform backend comment data to match frontend format
+        const transformedComments = data.data.comments.map((comment: any) => ({
+          id: comment._id,
+          author: comment.author,
+          content: comment.content,
+          createdAt: comment.createdAt,
+          isAnonymous: comment.isAnonymous,
+        }));
+        setComments(transformedComments);
+      } else {
+        console.error('Failed to fetch comments:', data.message);
+        setComments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
 
   const handleAddComment = async () => {
     if (!newComment.trim()) {
@@ -116,39 +170,54 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
       return;
     }
 
-    if (!isAnonymousComment && !commenterName.trim()) {
-      Alert.alert('Validation Error', 'Please enter your name or choose anonymous');
+    if (!user?.email) {
+      Alert.alert('Authentication Required', 'Please log in to add a comment');
       return;
     }
 
     try {
       setAddingComment(true);
 
-      // Create new comment object
-      const comment = {
-        id: comments.length + 1,
-        author: isAnonymousComment ? 'Anonymous User' : commenterName,
+      const commentData = {
         content: newComment.trim(),
-        createdAt: new Date().toISOString(),
+        author: getUserDisplayName(),
         isAnonymous: isAnonymousComment,
       };
 
-      // Add to comments list
-      setComments([...comments, comment]);
+      console.log('Adding comment:', commentData);
 
-      // Reset form
-      setNewComment('');
-      setCommenterName('');
-      setIsAnonymousComment(false);
+      const response = await fetch(`${BASE_URL}/posts/${post._id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(commentData),
+      });
 
-      Alert.alert('Success', 'Comment added successfully!');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      // TODO: In the future, send to backend API
-      // const response = await fetch(`${BASE_URL}/posts/${post._id}/comments`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(comment),
-      // });
+      const data = await response.json();
+      console.log('Add comment response:', data);
+
+      if (data.success) {
+        // Reset form
+        setNewComment('');
+        setIsAnonymousComment(false);
+
+        // Refresh comments to show the new comment
+        await fetchComments();
+
+        // Notify parent component to refresh post data (for reply count update)
+        if (onPostUpdated) {
+          onPostUpdated();
+        }
+
+        Alert.alert('Success', 'Comment added successfully!');
+      } else {
+        throw new Error(data.message || 'Failed to add comment');
+      }
 
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -156,6 +225,122 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
     } finally {
       setAddingComment(false);
     }
+  };
+
+  const handleEditComment = (commentId: string, currentContent: string) => {
+    setEditingCommentId(commentId);
+    setEditingCommentContent(currentContent);
+  };
+
+  const handleSaveEditComment = async (commentId: string) => {
+    if (!editingCommentContent.trim()) {
+      Alert.alert('Validation Error', 'Please enter comment content');
+      return;
+    }
+
+    try {
+      console.log('Updating comment:', commentId);
+      
+      const response = await fetch(`${BASE_URL}/posts/comments/${commentId}/update`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: editingCommentContent.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Update comment response:', data);
+
+      if (data.success) {
+        // Refresh comments to show the updated comment
+        await fetchComments();
+        
+        // Notify parent component to refresh post data
+        if (onPostUpdated) {
+          onPostUpdated();
+        }
+        
+        // Reset editing state
+        setEditingCommentId(null);
+        setEditingCommentContent('');
+        
+        Alert.alert('Success', 'Comment updated successfully!');
+      } else {
+        throw new Error(data.message || 'Failed to update comment');
+      }
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      Alert.alert('Error', 'Failed to update comment. Please try again.');
+    }
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  };
+
+  const handleDeleteComment = (commentId: string, commentContent: string) => {
+    const truncatedContent = commentContent.length > 50 
+      ? commentContent.substring(0, 50) + '...' 
+      : commentContent;
+      
+    Alert.alert(
+      'Delete Comment',
+      `Are you sure you want to delete this comment?\n\n"${truncatedContent}"\n\nThis action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Deleting comment:', commentId);
+              
+              const response = await fetch(`${BASE_URL}/posts/comments/${commentId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+
+              const data = await response.json();
+              console.log('Delete comment response:', data);
+
+              if (data.success) {
+                // Refresh comments to remove the deleted comment
+                await fetchComments();
+                
+                // Notify parent component to refresh post data (for reply count update)
+                if (onPostUpdated) {
+                  onPostUpdated();
+                }
+                
+                Alert.alert('Success', 'Comment deleted successfully!');
+              } else {
+                throw new Error(data.message || 'Failed to delete comment');
+              }
+            } catch (error) {
+              console.error('Error deleting comment:', error);
+              Alert.alert('Error', 'Failed to delete comment. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Don't render anything if no post data
@@ -297,7 +482,18 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
             <Text style={styles.sectionLabel}>Comments ({comments.length})</Text>
             
             {/* Existing Comments */}
-            {comments.map((comment) => (
+            {commentsLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#667eea" />
+                <Text style={styles.loadingText}>Loading comments...</Text>
+              </View>
+            ) : comments.length === 0 ? (
+              <View style={styles.noCommentsContainer}>
+                <Text style={styles.noCommentsText}>No comments yet</Text>
+                <Text style={styles.noCommentsSubtext}>Be the first to share your thoughts!</Text>
+              </View>
+            ) : (
+              comments.map((comment) => (
               <View key={comment.id} style={styles.commentCard}>
                 <View style={styles.commentHeader}>
                   <View style={styles.commentAuthor}>
@@ -306,36 +502,88 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                         {comment.author.charAt(0)}
                       </Text>
                     </View>
-                    <View>
+                    <View style={styles.commentAuthorInfo}>
                       <Text style={styles.commentAuthorName}>{comment.author}</Text>
                       <Text style={styles.commentDate}>
                         {formatLastActivity(comment.createdAt)}
                       </Text>
                     </View>
                   </View>
-                  {comment.isAnonymous && (
-                    <View style={styles.anonymousBadge}>
-                      <Text style={styles.anonymousText}>Anonymous</Text>
-                    </View>
-                  )}
+                  
+                  <View style={styles.commentActions}>
+                    {comment.isAnonymous && (
+                      <View style={styles.anonymousBadge}>
+                        <Text style={styles.anonymousText}>Anonymous</Text>
+                      </View>
+                    )}
+                    
+                    {/* Edit and Delete Buttons - Only show for comments by current user */}
+                    {canDeleteComment(comment.author) && (
+                      <>
+                        <TouchableOpacity
+                          style={styles.editCommentButton}
+                          onPress={() => handleEditComment(comment.id, comment.content)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Text style={styles.editCommentIcon}>✏️</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.deleteCommentButton}
+                          onPress={() => handleDeleteComment(comment.id, comment.content)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Text style={styles.deleteCommentIcon}>🗑️</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
                 </View>
-                <Text style={styles.commentContent}>{comment.content}</Text>
+                
+                {/* Comment Content or Edit Input */}
+                {editingCommentId === comment.id ? (
+                  <View style={styles.editCommentContainer}>
+                    <TextInput
+                      style={styles.editCommentInput}
+                      value={editingCommentContent}
+                      onChangeText={setEditingCommentContent}
+                      multiline={true}
+                      autoFocus={true}
+                      maxLength={500}
+                    />
+                    <Text style={styles.editCharacterCount}>{editingCommentContent.length}/500</Text>
+                    <View style={styles.editCommentActions}>
+                      <TouchableOpacity
+                        style={styles.cancelEditButton}
+                        onPress={handleCancelEditComment}
+                      >
+                        <Text style={styles.cancelEditText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.saveEditButton}
+                        onPress={() => handleSaveEditComment(comment.id)}
+                      >
+                        <Text style={styles.saveEditText}>Save</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.commentContent}>{comment.content}</Text>
+                )}
               </View>
-            ))}
+              ))
+            )}
 
             {/* Add Comment Form */}
             <View style={styles.addCommentSection}>
               <Text style={styles.addCommentLabel}>Add a Comment</Text>
               
-              {/* Commenter Name Input */}
-              {!isAnonymousComment && (
-                <TextInput
-                  style={styles.nameInput}
-                  placeholder="Your name"
-                  placeholderTextColor="#999999"
-                  value={commenterName}
-                  onChangeText={setCommenterName}
-                />
+              {/* Show current user info */}
+              {user?.email && (
+                <View style={styles.currentUserInfo}>
+                  <Text style={styles.currentUserLabel}>
+                    Commenting as: <Text style={styles.currentUserName}>{getUserDisplayName()}</Text>
+                  </Text>
+                </View>
               )}
 
               {/* Comment Input */}
@@ -663,6 +911,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  commentAuthorInfo: {
+    flex: 1,
+  },
+  commentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   commentAvatar: {
     width: 32,
     height: 32,
@@ -702,6 +957,125 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#666666',
     fontWeight: '500',
+  },
+  editCommentButton: {
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    padding: 6,
+    borderRadius: 8,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(102, 126, 234, 0.3)',
+  },
+  editCommentIcon: {
+    fontSize: 12,
+    color: '#667eea',
+  },
+  deleteCommentButton: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    padding: 6,
+    borderRadius: 8,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  deleteCommentIcon: {
+    fontSize: 12,
+    color: '#FF6B6B',
+  },
+  editCommentContainer: {
+    marginTop: 10,
+  },
+  editCommentInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#2C3E50',
+    borderWidth: 1,
+    borderColor: '#667eea',
+    minHeight: 80,
+    maxHeight: 120,
+    textAlignVertical: 'top',
+  },
+  editCharacterCount: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    textAlign: 'right',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  editCommentActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  cancelEditButton: {
+    backgroundColor: '#E0E0E0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  cancelEditText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  saveEditButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  saveEditText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  currentUserInfo: {
+    backgroundColor: '#F0F8FF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#667eea',
+  },
+  currentUserLabel: {
+    fontSize: 14,
+    color: '#2C3E50',
+  },
+  currentUserName: {
+    fontWeight: '600',
+    color: '#667eea',
+  },
+  noCommentsContainer: {
+    padding: 20,
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  noCommentsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#7F8C8D',
+    marginBottom: 4,
+  },
+  noCommentsSubtext: {
+    fontSize: 14,
+    color: '#BDC3C7',
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#7F8C8D',
+    marginTop: 10,
   },
   addCommentSection: {
     marginTop: 20,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -12,23 +12,58 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 
 interface CreatePostModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (postData: any) => void;
+  editingPost?: any;
+  isEditMode?: boolean;
 }
 
 const CreatePostModal: React.FC<CreatePostModalProps> = ({
   visible,
   onClose,
   onSubmit,
+  editingPost,
+  isEditMode = false,
 }) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('Family Law');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  // Legal categories from ForumScreen (excluding 'All' as it's not a specific category)
+  const legalCategories = [
+    { id: 2, name: 'Family Law', icon: '👨‍👩‍👧‍👦' },
+    { id: 3, name: 'Property Law', icon: '🏠' },
+    { id: 4, name: 'Employment Law', icon: '💼' },
+    { id: 5, name: 'Civil Law', icon: '⚖️' },
+    { id: 6, name: 'Criminal Law', icon: '🚔' },
+  ];
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isEditMode && editingPost) {
+      setTitle(editingPost.title || '');
+      setDescription(editingPost.description || '');
+      setTags(editingPost.tags || []);
+      setSelectedCategory(editingPost.category || 'Family Law');
+      setIsAnonymous(editingPost.isAnonymous || false);
+    } else {
+      // Reset form when not editing
+      setTitle('');
+      setDescription('');
+      setTags([]);
+      setSelectedCategory('Family Law');
+      setIsAnonymous(false);
+    }
+  }, [isEditMode, editingPost, visible]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -60,24 +95,42 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       return;
     }
 
+    // Get user name for author field
+    const getUserDisplayName = () => {
+      if (isAnonymous) {
+        return 'Anonymous User';
+      }
+      
+      if (user?.email) {
+        // Extract name part from email (before @ symbol) and capitalize
+        const emailName = user.email.split('@')[0];
+        return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+      }
+      
+      return 'User'; // Fallback if no user info
+    };
+
     const postData = {
       title: title.trim(),
       description: description.trim(),
       tags,
       isAnonymous,
-      author: isAnonymous ? 'Anonymous User' : 'User',
-      category: 'All', // Default category
+      author: getUserDisplayName(),
+      category: selectedCategory, // Use selected category
       priority: 'medium', // Default priority
     };
     
     onSubmit(postData);
     
-    // Reset form
-    setTitle('');
-    setDescription('');
-    setTags([]);
-    setNewTag('');
-    setIsAnonymous(false);
+    // Reset form only if not in edit mode
+    if (!isEditMode) {
+      setTitle('');
+      setDescription('');
+      setTags([]);
+      setNewTag('');
+      setIsAnonymous(false);
+      setSelectedCategory('Family Law');
+    }
     onClose();
   };
 
@@ -95,9 +148,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create New Post</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Post' : 'Create New Post'}</Text>
           <TouchableOpacity onPress={handleSubmit} style={styles.postButton}>
-            <Text style={styles.postButtonText}>Post</Text>
+            <Text style={styles.postButtonText}>{isEditMode ? 'Update' : 'Post'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -129,9 +182,25 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
             />
           </View>
 
-          {/* Categories & Tags */}
+          {/* Legal Categories */}
           <View style={styles.section}>
-            <Text style={styles.label}>Categories & Tags</Text>
+            <Text style={styles.label}>Legal Categories</Text>
+            <TouchableOpacity
+              style={styles.categoryDropdown}
+              onPress={() => setShowCategoryModal(true)}>
+              <View style={styles.selectedCategoryContainer}>
+                <Text style={styles.selectedCategoryIcon}>
+                  {legalCategories.find(cat => cat.name === selectedCategory)?.icon}
+                </Text>
+                <Text style={styles.selectedCategoryText}>{selectedCategory}</Text>
+              </View>
+              <Text style={styles.dropdownArrow}>▼</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Tags */}
+          <View style={styles.section}>
+            <Text style={styles.label}>Tags</Text>
             
             {/* Existing Tags */}
             <View style={styles.tagsContainer}>
@@ -184,13 +253,50 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {/* Submit Button */}
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Submit Post</Text>
+            <Text style={styles.submitButtonText}>{isEditMode ? 'Update Post' : 'Submit Post'}</Text>
           </TouchableOpacity>
 
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
         </ScrollView>
       </SafeAreaView>
+
+      {/* Category Selection Modal */}
+      <Modal
+        visible={showCategoryModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCategoryModal(false)}>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowCategoryModal(false)}>
+          <View style={styles.categoryModalContent}>
+            <Text style={styles.categoryModalTitle}>Select Legal Category</Text>
+            {legalCategories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryOption,
+                  selectedCategory === category.name && styles.categoryOptionSelected
+                ]}
+                onPress={() => {
+                  setSelectedCategory(category.name);
+                  setShowCategoryModal(false);
+                }}>
+                <Text style={styles.categoryOptionIcon}>{category.icon}</Text>
+                <Text style={[
+                  styles.categoryOptionText,
+                  selectedCategory === category.name && styles.categoryOptionTextSelected
+                ]}>{category.name}</Text>
+                {selectedCategory === category.name && (
+                  <Text style={styles.categorySelectedIcon}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Modal>
   );
 };
@@ -386,6 +492,95 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  // Category Dropdown Styles
+  categoryDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginTop: 10,
+  },
+  selectedCategoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  selectedCategoryIcon: {
+    fontSize: 20,
+    marginRight: 10,
+  },
+  selectedCategoryText: {
+    fontSize: 16,
+    color: '#2C3E50',
+    fontWeight: '500',
+  },
+  dropdownArrow: {
+    fontSize: 14,
+    color: '#7F8C8D',
+  },
+  // Category Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    width: '85%',
+    maxWidth: 350,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  categoryModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2C3E50',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  categoryOptionSelected: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
+  },
+  categoryOptionIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  categoryOptionText: {
+    fontSize: 16,
+    color: '#2C3E50',
+    fontWeight: '500',
+    flex: 1,
+  },
+  categoryOptionTextSelected: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  categorySelectedIcon: {
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
 });
 
