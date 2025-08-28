@@ -13,12 +13,9 @@ const WhiteLogo = require('../../../assets/images/logo/img.png');
 const Tab = createBottomTabNavigator();
 
 
-export default function HomeBottomTabNavigation({ navigation }: any) {
+export default function HomeBottomTabNavigation() {
     const { colors, theme } = useTheme(); // Get current theme colors and theme state
     
-
-export default function HomeBottomTabNavigation() {
-  
     return (
         <Tab.Navigator
             initialRouteName={'Home'}

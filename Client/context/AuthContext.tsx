@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   // For Android emulator, use 10.0.2.2 instead of localhost
   // For iOS simulator, localhost should work
@@ -85,11 +86,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       await AsyncStorage.removeItem('userToken');
       setToken(null);
       setUser(null);
-  setIsAuthenticated(false);
+      setIsAuthenticated(false);
+      setHasCheckedAuth(false); // Reset flag to allow re-checking auth state
     } catch (error) {
       console.error('Logout error:', error);
     }
-  }, [user, token, isAuthenticated]);
+  }, []);
 
   const getCurrentUser = React.useCallback(async (authToken: string = token || ''): Promise<User> => {
     try {
@@ -113,13 +115,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [token, logout]);
 
   const checkAuthState = React.useCallback(async () => {
+    // Prevent multiple executions
+    if (hasCheckedAuth) {
+      return;
+    }
+    
     try {
+      console.log('[AuthContext] checkAuthState: Checking authentication state...');
       const storedToken = await AsyncStorage.getItem('userToken');
-      console.log('[AuthContext] checkAuthState: token from storage:', storedToken ? 'Token exists' : 'No token found');
+      
       if (storedToken) {
+        console.log('[AuthContext] checkAuthState: Token found, validating...');
         setToken(storedToken);
         try {
           await getCurrentUser(storedToken);
+          console.log('[AuthContext] checkAuthState: User authenticated successfully');
         } catch (error) {
           console.log('[AuthContext] checkAuthState: Token validation failed, logging out');
           // If token is invalid, logout will be called from getCurrentUser
@@ -131,8 +141,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error('[AuthContext] Error checking auth state:', error);
     } finally {
       setIsLoading(false);
+      setHasCheckedAuth(true);
     }
-  }, [getCurrentUser]);
+  }, [hasCheckedAuth, getCurrentUser]);
 
   // Check for existing token on app start
   useEffect(() => {
@@ -150,6 +161,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setToken(newToken);
         setUser(newUser);
         setIsAuthenticated(true);
+        setHasCheckedAuth(true); // Mark as checked since we just authenticated
   // console.log('[AuthContext] register: token set:', newToken);
         return { success: true, user: newUser };
       }
@@ -175,6 +187,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setToken(newToken);
         setUser(newUser);
         setIsAuthenticated(true);
+        setHasCheckedAuth(true); // Mark as checked since we just authenticated
   // console.log('[AuthContext] login: token set:', newToken);
         return { success: true, user: newUser };
       }
