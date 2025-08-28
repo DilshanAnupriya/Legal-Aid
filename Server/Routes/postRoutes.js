@@ -6,7 +6,8 @@ const {
   getPostById,
   updatePost,
   deletePost,
-  getPostStats
+  getPostStats,
+  getTrendingPosts
 } = require('../controllers/postController');
 
 const {
@@ -39,10 +40,16 @@ router.post('/', createRateLimit(), validateCreatePost, createPost);
 // @access  Public
 router.get('/', getPosts);
 
+// Static routes MUST come before parameterized routes
 // @route   GET /api/posts/stats
 // @desc    Get post statistics
 // @access  Public
 router.get('/stats', getPostStats);
+
+// @route   GET /api/posts/trending
+// @desc    Get trending posts (most viewed)
+// @access  Public
+router.get('/trending', getTrendingPosts);
 
 // Comment routes - PUT BEFORE general :id routes to avoid conflicts
 // @route   PUT /api/posts/comments/:commentId/update

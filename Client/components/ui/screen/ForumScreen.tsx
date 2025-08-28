@@ -43,6 +43,7 @@ const ForumsScreen = () => {
         { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
         { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
     ]);
+    const [trendingTopics, setTrendingTopics] = useState([]);
 
     // Multiple URL options for different environments
     const API_URLS = Platform.OS === 'android'
@@ -198,6 +199,42 @@ const ForumsScreen = () => {
         }
     };
 
+    const fetchTrendingTopics = async () => {
+        try {
+            console.log('Fetching trending topics from:', `${BASE_URL}/posts/trending`);
+
+            const response = await fetch(`${BASE_URL}/posts/trending?limit=4`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // @ts-ignore - timeout is supported in React Native
+                timeout: 10000,
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Trending topics response:', data);
+
+            if (data.success && data.data && Array.isArray(data.data)) {
+                // Use the post data directly since we're now rendering discussion cards
+                const validPosts = data.data.filter((post: any) => post && post._id && post.title);
+                setTrendingTopics(validPosts);
+                console.log('Loaded trending topics:', validPosts.length);
+            } else {
+                console.warn('Invalid trending topics response:', data);
+                setTrendingTopics([]);
+            }
+        } catch (error) {
+            console.error('Error fetching trending topics:', error);
+            // Use empty array if trending topics can't be fetched
+            setTrendingTopics([]);
+        }
+    };
+
     const createPost = async (postData: any) => {
         try {
             console.log('Creating post:', postData);
@@ -226,6 +263,7 @@ const ForumsScreen = () => {
                 Alert.alert('Success', 'Your post has been created successfully!');
                 fetchPosts(); // Refresh the posts list
                 fetchStats(); // Refresh stats and categories
+                fetchTrendingTopics(); // Refresh trending topics
             } else {
                 Alert.alert('Error', data.message || 'Failed to create post');
             }
@@ -270,6 +308,7 @@ const ForumsScreen = () => {
                 Alert.alert('Success', 'Your post has been updated successfully!');
                 fetchPosts(); // Refresh the posts list
                 fetchStats(); // Refresh stats and categories
+                fetchTrendingTopics(); // Refresh trending topics
                 setIsEditPostModalVisible(false);
                 setEditingPost(null);
             } else {
@@ -314,6 +353,7 @@ const ForumsScreen = () => {
                 Alert.alert('Success', 'Your post has been deleted successfully!');
                 fetchPosts(); // Refresh the posts list
                 fetchStats(); // Refresh stats
+                fetchTrendingTopics(); // Refresh trending topics
             } else {
                 Alert.alert('Error', data.message || 'Failed to delete post');
             }
@@ -409,20 +449,31 @@ const ForumsScreen = () => {
         }
     };
 
+    const formatRelativeTime = (dateString: string) => {
+        const now = new Date().getTime();
+        const postTime = new Date(dateString).getTime();
+        const diffInSeconds = Math.floor((now - postTime) / 1000);
+
+        if (diffInSeconds < 60) {
+            return 'Just now';
+        } else if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        } else if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        } else {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        }
+    };
+
     // Effects
     useEffect(() => {
         fetchPosts();
         fetchStats();
+        fetchTrendingTopics();
     }, [activeCategory, searchQuery]);
-
-
-
-    const trendingTopics = [
-        { name: 'Tenant Rights', count: 45 },
-        { name: 'Divorce Process', count: 38 },
-        { name: 'Employment Issues', count: 32 },
-        { name: 'Property Disputes', count: 29 },
-    ];
 
     const filteredPosts = forumPosts.filter((post: any) => {
         const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
@@ -579,14 +630,97 @@ const ForumsScreen = () => {
                             <Text style={styles.seeAllText}>See All</Text>
                         </TouchableOpacity>
                     </View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {trendingTopics.map((topic, index) => (
-                            <TouchableOpacity key={index} style={styles.trendingCard}>
-                                <Text style={styles.trendingName}>{topic.name}</Text>
-                                <Text style={styles.trendingCount}>{topic.count} discussions</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    
+                    {/* Trending Discussion Cards - Horizontal Scroll */}
+                    {trendingTopics.length > 0 ? (
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.trendingScrollContainer}
+                        >
+                            {trendingTopics.map((post: any, index: number) => (
+                                <TouchableOpacity
+                                    key={post._id || index}
+                                    style={styles.trendingCard}
+                                    onPress={async () => {
+                                        console.log('Trending post clicked:', post);
+                                        if (post && post._id) {
+                                            // Fetch complete post data before opening modal
+                                            try {
+                                                const response = await fetch(`${BASE_URL}/posts/${post._id}`);
+                                                if (response.ok) {
+                                                    const data = await response.json();
+                                                    if (data.success) {
+                                                        setSelectedPost(data.data);
+                                                        setIsPostDetailModalVisible(true);
+                                                    } else {
+                                                        console.error('Failed to fetch post details:', data.message);
+                                                        // Fallback to using the trending post data
+                                                        setSelectedPost(post);
+                                                        setIsPostDetailModalVisible(true);
+                                                    }
+                                                } else {
+                                                    console.error('Failed to fetch post details, using cached data');
+                                                    setSelectedPost(post);
+                                                    setIsPostDetailModalVisible(true);
+                                                }
+                                            } catch (error) {
+                                                console.error('Error fetching post details:', error);
+                                                // Fallback to using the trending post data
+                                                setSelectedPost(post);
+                                                setIsPostDetailModalVisible(true);
+                                            }
+                                        } else {
+                                            console.error('Invalid post object:', post);
+                                        }
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    {/* Trending Badge */}
+                                    <View style={styles.trendingBadgeContainer}>
+                                        <Text style={styles.trendingBadge}>🔥 #{index + 1}</Text>
+                                    </View>
+
+                                    {/* Main Content */}
+                                    <View style={styles.trendingContent}>
+                                        <Text style={styles.trendingTitle} numberOfLines={2}>
+                                            {post.title || 'Untitled'}
+                                        </Text>
+                                        
+                                        <Text style={styles.trendingDescription} numberOfLines={2}>
+                                            {post.description || 'No description available'}
+                                        </Text>
+                                        
+                                        {/* Stats Row */}
+                                        <View style={styles.trendingStatsRow}>
+                                            <View style={styles.trendingStatItem}>
+                                                <Text style={styles.trendingStatIcon}>👁️</Text>
+                                                <Text style={styles.trendingStatText}>{post.views || 0}</Text>
+                                            </View>
+                                            <View style={styles.trendingStatItem}>
+                                                <Text style={styles.trendingStatIcon}>💬</Text>
+                                                <Text style={styles.trendingStatText}>{post.replies || 0}</Text>
+                                            </View>
+                                        </View>
+                                        
+                                        {/* Footer */}
+                                        <View style={styles.trendingFooter}>
+                                            <Text style={styles.trendingAuthor}>
+                                                {post.isAnonymous ? 'Anonymous' : (post.author || 'Unknown')}
+                                            </Text>
+                                            <Text style={styles.trendingTime}>
+                                                {formatRelativeTime(post.createdAt)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <View style={styles.emptyTrendingContainer}>
+                            <Text style={styles.emptyTrendingText}>No trending discussions yet</Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* Enhanced Search Bar */}
@@ -748,6 +882,7 @@ const ForumsScreen = () => {
                     // Refresh posts and stats when post is updated (reply count changed)
                     fetchPosts();
                     fetchStats();
+                    fetchTrendingTopics();
                 }}
             />
         </SafeAreaView>
@@ -1011,30 +1146,105 @@ const styles = StyleSheet.create({
         color: '#667eea',
         fontWeight: '600',
     },
+
+    // Horizontal Trending Card Styles
+    trendingScrollContainer: {
+        paddingHorizontal: 15,
+        paddingVertical: 5,
+    },
     trendingCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        padding: 15,
-        marginLeft: 20,
-        marginRight: 5,
-        minWidth: 140,
-        borderLeftWidth: 4,
-        borderLeftColor: '#FF6B6B',
+        marginRight: 12,
+        padding: 0,
+        width: 280,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowRadius: 6,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#FFE5E5',
+        overflow: 'hidden',
     },
-    trendingName: {
-        fontSize: 16,
-        fontWeight: '600',
+    trendingBadgeContainer: {
+        backgroundColor: '#FF6B6B',
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        alignItems: 'center',
+    },
+    trendingBadge: {
+        fontSize: 10,
+        color: '#FFFFFF',
+        fontWeight: '800',
+        letterSpacing: 0.3,
+    },
+    trendingContent: {
+        padding: 12,
+    },
+    trendingTitle: {
+        fontSize: 14,
+        fontWeight: '700',
         color: '#2C3E50',
-        marginBottom: 4,
+        marginBottom: 6,
+        lineHeight: 18,
     },
-    trendingCount: {
+    trendingDescription: {
         fontSize: 12,
+        color: '#5D6D7E',
+        lineHeight: 16,
+        marginBottom: 8,
+    },
+    trendingStatsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        marginBottom: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        backgroundColor: '#F8F9FA',
+        borderRadius: 8,
+    },
+    trendingStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    trendingStatIcon: {
+        fontSize: 12,
+        marginRight: 3,
+    },
+    trendingStatText: {
+        fontSize: 10,
+        color: '#34495E',
+        fontWeight: '600',
+    },
+    trendingFooter: {
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        borderTopWidth: 1,
+        borderTopColor: '#ECF0F1',
+        paddingTop: 8,
+    },
+    trendingAuthor: {
+        fontSize: 10,
         color: '#7F8C8D',
+        fontWeight: '500',
+        marginBottom: 2,
+    },
+    trendingTime: {
+        fontSize: 9,
+        color: '#95A5A6',
+        fontStyle: 'italic',
+    },
+    emptyTrendingContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    emptyTrendingText: {
+        fontSize: 14,
+        color: '#7F8C8D',
+        fontStyle: 'italic',
     },
     // Posts Section
     postsSection: {

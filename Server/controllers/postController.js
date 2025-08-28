@@ -297,11 +297,38 @@ const getPostStats = async (req, res) => {
   }
 };
 
+// Get trending posts (most viewed)
+const getTrendingPosts = async (req, res) => {
+  try {
+    const { limit = 4 } = req.query;
+    
+    const trendingPosts = await Post.find({ status: 'active' })
+      .sort({ views: -1, createdAt: -1 }) // Sort by views desc, then by recency
+      .limit(parseInt(limit))
+      .select('title description author views replies createdAt category isAnonymous priority')
+      .lean();
+    
+    res.status(200).json({
+      success: true,
+      data: trendingPosts
+    });
+    
+  } catch (error) {
+    console.error('Error fetching trending posts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createPost,
   getPosts,
   getPostById,
   updatePost,
   deletePost,
-  getPostStats
+  getPostStats,
+  getTrendingPosts
 };
