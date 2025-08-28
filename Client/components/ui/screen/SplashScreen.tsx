@@ -1,69 +1,26 @@
+
 import React, {useEffect, useRef} from 'react'
 import {Text, StyleSheet, Animated, View, Image, Dimensions} from 'react-native'
 import {COLOR} from "@/constants/ColorPallet";
 import appJson from "../../../app.json";
 import { Colors } from 'react-native/Libraries/NewAppScreen';
 
-const {width, height} = Dimensions.get('window');
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { COLOR } from '@/constants/ColorPallet';
 
-export default function SplashScreen({onFinish}: any) {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
-    const slideAnim = useRef(new Animated.Value(50)).current;
-    const progress = useRef(new Animated.Value(0)).current;
-    const progressOpacity = useRef(new Animated.Value(0)).current;
-    const bottomFade = useRef(new Animated.Value(0)).current;
 
-    useEffect(() => {
-        // Sequential animations for a professional feel
-        const animationSequence = Animated.sequence([
-            // Logo entrance
-            Animated.parallel([
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    tension: 50,
-                    friction: 7,
-                    useNativeDriver: true,
-                }),
-            ]),
-            // Tagline slide in
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-            // Progress bar fade in
-            Animated.timing(progressOpacity, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-            }),
-            // Progress bar fill
-            Animated.timing(progress, {
-                toValue: 100,
-                duration: 2200,
-                useNativeDriver: false,
-            }),
-            // Bottom info fade in
-            Animated.timing(bottomFade, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-            }),
-        ]);
+interface SplashScreenProps {
+  onFinish: () => void;
+}
 
-        animationSequence.start(() => {
-            // Small delay before finishing
-            setTimeout(() => {
-                onFinish();
-            }, 500);
-        });
-    }, [onFinish]);
+export default function SplashScreen({ onFinish }: SplashScreenProps) {
+  useEffect(() => {
+    // Simulate loading time
+    const timer = setTimeout(() => {
+      onFinish();
+    }, 2000); // 2 seconds
+
 
     return (
         <View style={styles.container}>
@@ -103,46 +60,24 @@ export default function SplashScreen({onFinish}: any) {
                     <View style={styles.underline} />
                 </Animated.View>
 
-                <Animated.View
-                    style={[
-                        styles.progressSection,
-                        {opacity: progressOpacity}
-                    ]}
-                >
-                    <Text style={styles.loadingText}>Loading...</Text>
-                    <View style={styles.progressContainer}>
-                        <Animated.View
-                            style={[
-                                styles.progressbar,
-                                {
-                                    width: progress.interpolate({
-                                        inputRange: [0, 100],
-                                        outputRange: ['0%', '100%']
-                                    })
-                                }
-                            ]}
-                        />
-                        <View style={styles.progressGlow} />
-                    </View>
-                </Animated.View>
-                <Animated.View
-                    style={[
-                        styles.bottom,
-                        {opacity: bottomFade}
-                    ]}
-                >
-                    <View style={styles.bottomLeft}>
-                        <Text style={styles.versionText}>Version {appJson.expo.version}</Text>
-                    </View>
-                    <View style={styles.bottomRight}>
-                        <Text style={styles.fromText}>From SLIIT</Text>
-                    </View>
-                </Animated.View>
-        </View>
-    )
+    return () => clearTimeout(timer);
+  }, [onFinish]);
+
+  return (
+    <View style={styles.container}>
+      <Image 
+        source={require('@/assets/images/logo/img.png')} 
+        style={styles.logo}
+        resizeMode="contain"
+      />
+      <Text style={styles.title}>Legal Aid</Text>
+      <Text style={styles.subtitle}>Your Legal Assistant</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+
     container: {
         flex: 1,
         alignItems: "center",
@@ -265,4 +200,28 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         letterSpacing: 0.3,
     },
+
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLOR.white,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLOR.primary,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: COLOR.secondary,
+    textAlign: 'center',
+  },
+
 });

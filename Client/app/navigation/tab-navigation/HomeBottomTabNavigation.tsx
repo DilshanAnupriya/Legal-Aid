@@ -12,9 +12,13 @@ const DarkLogo = require('../../../assets/images/logo/Law Firm Logo Black and Wh
 const WhiteLogo = require('../../../assets/images/logo/img.png');
 const Tab = createBottomTabNavigator();
 
+
 export default function HomeBottomTabNavigation({ navigation }: any) {
     const { colors, theme } = useTheme(); // Get current theme colors and theme state
     
+
+export default function HomeBottomTabNavigation() {
+  
     return (
         <Tab.Navigator
             initialRouteName={'Home'}
