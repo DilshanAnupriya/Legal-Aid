@@ -18,11 +18,13 @@ mongoose.connect(DB_URL)
 .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // Import Routes
-const postRoutes = require("./Routes/postRoutes");
+const postRoutes = require("./routes/postRoutes");
+const lawyerRoutes = require("./routes/lawyerRoutes");
 
 
 // API Routes
 app.use("/api/posts", postRoutes);
+app.use("/api/lawyers", lawyerRoutes);
 
 
 // Root route

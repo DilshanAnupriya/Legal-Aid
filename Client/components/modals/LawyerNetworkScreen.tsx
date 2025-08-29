@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,37 +10,38 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
-
-// Dummy lawyer data
-const lawyers = [
-  {
-    id: "1",
-    name: "Advocate Anura Silva",
-    specialty: "Family Law & Divorce",
-    rating: 4.8,
-    experience: 12,
-    location: "Colombo",
-  },
-  {
-    id: "2",
-    name: "Nayani Kodikara",
-    specialty: "Family Law & Divorce",
-    rating: 4.0,
-    experience: 10,
-    location: "Kadawatha",
-  },
-];
+import { getAllLawyers } from "../../services/lawyerService"; 
 
 export default function LawyerNetworkScreen() {
-  const { colors, theme } = useTheme(); // from context
+  const { colors } = useTheme(); // from context
   const styles = getStyles(colors);
 
   const [search, setSearch] = useState("");
+  const [lawyers, setLawyers] = useState([]); // 👈 state from API
+  const [loading, setLoading] = useState(true);
+
+  // Chat state
   const [messages, setMessages] = useState([
     { id: 1, text: "Hello Lawyer", sender: "user" },
     { id: 2, text: "Hi, how can I help you?", sender: "lawyer" },
   ]);
   const [input, setInput] = useState("");
+
+  // Fetch lawyers from backend
+  useEffect(() => {
+    const fetchLawyers = async () => {
+      try {
+        const data = await getAllLawyers();
+        setLawyers(data);
+      } catch (error) {
+        console.error("Error loading lawyers:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLawyers();
+  }, []);
 
   const sendMessage = () => {
     if (input.trim()) {
@@ -56,14 +57,10 @@ export default function LawyerNetworkScreen() {
     <View style={styles.card}>
       <View style={styles.avatar} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.text}>{item.specialty}</Text>
-        <Text style={styles.text}>⭐ {item.rating} / 5</Text>
-        <Text style={styles.text}>
-          Experience: {item.experience} years
-        </Text>
-        <Text style={styles.text}>Location: {item.location}</Text>
-        <Text style={styles.text}>Anonymous Chat Available</Text>
+        <Text style={styles.name}>{item.fullName}</Text>
+        <Text style={styles.text}>{item.specialization}</Text>
+        <Text style={styles.text}>📧 {item.email}</Text>
+        <Text style={styles.text}>📞 {item.contactNumber}</Text>
 
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.button}>
@@ -97,11 +94,24 @@ export default function LawyerNetworkScreen() {
       </View>
 
       {/* Lawyer List */}
-      <FlatList
-        data={lawyers}
-        renderItem={renderLawyer}
-        keyExtractor={(item) => item.id}
-      />
+      {loading ? (
+        <Text style={{ textAlign: "center", marginVertical: 20 }}>
+          Loading lawyers...
+        </Text>
+      ) : (
+        <FlatList
+          data={lawyers.filter(
+            (lawyer) =>
+              lawyer.firstName.toLowerCase().includes(search.toLowerCase()) ||
+              lawyer.specialization
+                .toLowerCase()
+                .includes(search.toLowerCase()) ||
+              lawyer.contactNumber.includes(search)
+          )}
+          renderItem={renderLawyer}
+          keyExtractor={(item) => item._id}
+        />
+      )}
 
       {/* Anonymous Chat */}
       <View style={styles.chatBox}>
@@ -138,7 +148,7 @@ export default function LawyerNetworkScreen() {
   );
 }
 
-// Theme-aware styles
+// Theme-aware styles (same as before)
 const getStyles = (colors) =>
   StyleSheet.create({
     container: {
