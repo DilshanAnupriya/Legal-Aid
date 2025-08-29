@@ -44,6 +44,8 @@ const ForumsScreen = () => {
         { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
     ]);
     const [trendingTopics, setTrendingTopics] = useState([]);
+    const [sortOrder, setSortOrder] = useState('Newest');
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
 
     // Multiple URL options for different environments
     const API_URLS = Platform.OS === 'android'
@@ -101,6 +103,8 @@ const ForumsScreen = () => {
                     replies: post.replies,
                     views: post.views,
                     lastActivity: formatLastActivity(post.lastActivity),
+                    lastActivityRaw: post.lastActivity, // Keep raw date for sorting
+                    createdAt: post.createdAt, // Keep creation date for sorting
                     category: post.category,
                     isAnswered: post.isAnswered,
                     priority: post.priority,
@@ -121,9 +125,10 @@ const ForumsScreen = () => {
             }
 
             // All URLs failed, show error
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Alert.alert(
                 'Connection Error',
-                `Failed to load forum posts. Please check if the backend server is running.\n\nTried URLs: ${API_URLS.join(', ')}\n\nError: ${error.message}`,
+                `Failed to load forum posts. Please check if the backend server is running.\n\nTried URLs: ${API_URLS.join(', ')}\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => {
                             setCurrentApiIndex(0); // Reset to first URL
@@ -269,9 +274,10 @@ const ForumsScreen = () => {
             }
         } catch (error) {
             console.error('Error creating post:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Alert.alert(
                 'Post Creation Failed',
-                `Failed to create post. Please check your connection and try again.\n\nError: ${error.message}`,
+                `Failed to create post. Please check your connection and try again.\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => createPost(postData) },
                     { text: 'OK' }
@@ -316,9 +322,10 @@ const ForumsScreen = () => {
             }
         } catch (error) {
             console.error('Error updating post:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Alert.alert(
                 'Post Update Failed',
-                `Failed to update post. Please check your connection and try again.\n\nError: ${error.message}`,
+                `Failed to update post. Please check your connection and try again.\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => updatePost(postData) },
                     { text: 'OK' }
@@ -359,9 +366,10 @@ const ForumsScreen = () => {
             }
         } catch (error) {
             console.error('Error deleting post:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Alert.alert(
                 'Delete Failed',
-                `Failed to delete post. Please check your connection and try again.\n\nError: ${error.message}`,
+                `Failed to delete post. Please check your connection and try again.\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => deletePost(postId, postTitle) },
                     { text: 'OK' }
@@ -399,7 +407,8 @@ const ForumsScreen = () => {
             }
         } catch (error) {
             console.error('Error fetching post details for editing:', error);
-            Alert.alert('Error', `Failed to load post details for editing: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert('Error', `Failed to load post details for editing: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
@@ -480,6 +489,44 @@ const ForumsScreen = () => {
         const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
         return matchesCategory && matchesSearch;
+    }).sort((a: any, b: any) => {
+        // Sort by creation date - use createdAt if available, otherwise lastActivityRaw, otherwise fallback to id
+        let dateA, dateB;
+        
+        // Try to get proper dates
+        if (a.createdAt) {
+            dateA = new Date(a.createdAt);
+        } else if (a.lastActivityRaw) {
+            dateA = new Date(a.lastActivityRaw);
+        } else {
+            // Fallback: use id as string comparison (assuming MongoDB ObjectId or similar)
+            dateA = a.id;
+        }
+        
+        if (b.createdAt) {
+            dateB = new Date(b.createdAt);
+        } else if (b.lastActivityRaw) {
+            dateB = new Date(b.lastActivityRaw);
+        } else {
+            // Fallback: use id as string comparison
+            dateB = b.id;
+        }
+        
+        // Handle different data types
+        if (dateA instanceof Date && dateB instanceof Date) {
+            if (sortOrder === 'Newest') {
+                return dateB.getTime() - dateA.getTime(); // Newest first
+            } else {
+                return dateA.getTime() - dateB.getTime(); // Oldest first
+            }
+        } else {
+            // String comparison fallback
+            if (sortOrder === 'Newest') {
+                return dateB > dateA ? 1 : -1; // Newest first
+            } else {
+                return dateA > dateB ? 1 : -1; // Oldest first
+            }
+        }
     });
 
     const handleCreatePost = (postData: any) => {
@@ -531,7 +578,8 @@ const ForumsScreen = () => {
             }
         } catch (error) {
             console.error('Error fetching post details:', error);
-            Alert.alert('Error', `Failed to load post details: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert('Error', `Failed to load post details: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
@@ -581,19 +629,7 @@ const ForumsScreen = () => {
                         <Text style={styles.askQuestionArrow}>→</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.browseCard}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.browseIcon}>
-                            <Text style={styles.browseEmoji}>📚</Text>
-                        </View>
-                        <View style={styles.browseContent}>
-                            <Text style={styles.browseTitle}>Browse Topics</Text>
-                            <Text style={styles.browseSubtitle}>Explore legal categories</Text>
-                        </View>
-                        <Text style={styles.browseArrow}>→</Text>
-                    </TouchableOpacity>
+
                 </View>
 
                 {/* Categories with Icons */}
@@ -676,18 +712,17 @@ const ForumsScreen = () => {
                                     }}
                                     activeOpacity={0.8}
                                 >
-                                    {/* Trending Badge */}
-                                    <View style={styles.trendingBadgeContainer}>
-                                        <Text style={styles.trendingBadge}>🔥 #{index + 1}</Text>
-                                    </View>
-
+                                    {/* Left Badge Area */}
+                                    <View style={styles.trendingLeftBadge} />
+                                    
                                     {/* Main Content */}
                                     <View style={styles.trendingContent}>
+
                                         <Text style={styles.trendingTitle} numberOfLines={2}>
                                             {post.title || 'Untitled'}
                                         </Text>
                                         
-                                        <Text style={styles.trendingDescription} numberOfLines={2}>
+                                        <Text style={styles.trendingDescription} numberOfLines={1}>
                                             {post.description || 'No description available'}
                                         </Text>
                                         
@@ -701,16 +736,6 @@ const ForumsScreen = () => {
                                                 <Text style={styles.trendingStatIcon}>💬</Text>
                                                 <Text style={styles.trendingStatText}>{post.replies || 0}</Text>
                                             </View>
-                                        </View>
-                                        
-                                        {/* Footer */}
-                                        <View style={styles.trendingFooter}>
-                                            <Text style={styles.trendingAuthor}>
-                                                {post.isAnonymous ? 'Anonymous' : (post.author || 'Unknown')}
-                                            </Text>
-                                            <Text style={styles.trendingTime}>
-                                                {formatRelativeTime(post.createdAt)}
-                                            </Text>
                                         </View>
                                     </View>
                                 </TouchableOpacity>
@@ -747,10 +772,39 @@ const ForumsScreen = () => {
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Recent Discussions</Text>
                         <View style={styles.filterContainer}>
-                            <TouchableOpacity style={styles.filterButton}>
-                                <Text style={styles.filterText}>Latest</Text>
+                            <TouchableOpacity 
+                                style={styles.filterButton}
+                                onPress={() => setShowSortDropdown(!showSortDropdown)}
+                            >
+                                <Text style={styles.filterText}>{sortOrder}</Text>
                                 <Text style={styles.filterArrow}>▼</Text>
                             </TouchableOpacity>
+                            {showSortDropdown && (
+                                <View style={styles.sortDropdown}>
+                                    <TouchableOpacity 
+                                        style={[styles.sortOption, sortOrder === 'Newest' && styles.activeSortOption]}
+                                        onPress={() => {
+                                            setSortOrder('Newest');
+                                            setShowSortDropdown(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.sortOptionText, sortOrder === 'Newest' && styles.activeSortOptionText]}>
+                                            Newest
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        style={[styles.sortOption, sortOrder === 'Oldest' && styles.activeSortOption]}
+                                        onPress={() => {
+                                            setSortOrder('Oldest');
+                                            setShowSortDropdown(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.sortOptionText, sortOrder === 'Oldest' && styles.activeSortOptionText]}>
+                                            Oldest
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                         </View>
                     </View>
 
@@ -984,6 +1038,7 @@ const styles = StyleSheet.create({
     // Quick Actions
     quickActionsSection: {
         paddingHorizontal: 20,
+        paddingTop: 20,
         paddingBottom: 20,
         backgroundColor: '#FFFFFF',
     },
@@ -1030,48 +1085,7 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: '600',
     },
-    browseCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#764ba2',
-        borderRadius: 20,
-        padding: 20,
-        shadowColor: '#764ba2',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-    },
-    browseIcon: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    browseEmoji: {
-        fontSize: 24,
-    },
-    browseContent: {
-        flex: 1,
-    },
-    browseTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        marginBottom: 4,
-    },
-    browseSubtitle: {
-        fontSize: 14,
-        color: '#E8E8E8',
-    },
-    browseArrow: {
-        fontSize: 20,
-        color: '#FFFFFF',
-        fontWeight: '600',
-    },
+
     // Categories Section
     categoriesSection: {
         paddingTop: 20,
@@ -1131,7 +1145,7 @@ const styles = StyleSheet.create({
     },
     // Trending Section
     trendingSection: {
-        paddingVertical: 20,
+        paddingVertical: 30,
         backgroundColor: '#F8F9FA',
     },
     sectionHeader: {
@@ -1157,31 +1171,64 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginRight: 12,
         padding: 0,
-        width: 280,
+        paddingBottom: 0,
+        width: 220,
+        height: 110,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
         shadowRadius: 6,
         elevation: 4,
         borderWidth: 1,
-        borderColor: '#FFE5E5',
+        borderColor: '#E5E5E5',
         overflow: 'hidden',
+        flexDirection: 'row',
     },
     trendingBadgeContainer: {
         backgroundColor: '#FF6B6B',
-        paddingVertical: 6,
+        paddingVertical: 8,
         paddingHorizontal: 12,
-        alignItems: 'center',
+    },
+    trendingBadgeContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        width: '100%',
+    },
+    trendingAuthorSection: {
+        flex: 1,
+        alignItems: 'flex-start',
+    },
+    trendingBadgeAuthor: {
+        fontSize: 9,
+        color: '#FFFFFF',
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    trendingBadgeTime: {
+        fontSize: 8,
+        color: '#FFE5E5',
+        fontWeight: '500',
     },
     trendingBadge: {
         fontSize: 10,
         color: '#FFFFFF',
         fontWeight: '800',
         letterSpacing: 0.3,
+        textAlign: 'right',
+    },
+    trendingLeftBadge: {
+        width: 8,
+        backgroundColor: '#FF7100',
+        borderTopLeftRadius: 12,
+        borderBottomLeftRadius: 12,
     },
     trendingContent: {
         padding: 12,
+        paddingBottom: 0,
+        flex: 1,
     },
+
     trendingTitle: {
         fontSize: 14,
         fontWeight: '700',
@@ -1194,12 +1241,13 @@ const styles = StyleSheet.create({
         color: '#5D6D7E',
         lineHeight: 16,
         marginBottom: 8,
+        overflow: 'hidden',
     },
     trendingStatsRow: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 0,
         paddingVertical: 6,
         paddingHorizontal: 8,
         backgroundColor: '#F8F9FA',
@@ -1248,13 +1296,14 @@ const styles = StyleSheet.create({
     },
     // Posts Section
     postsSection: {
-        paddingTop: 20,
+        paddingTop: 30,
         paddingHorizontal: 20,
         backgroundColor: '#F8F9FA',
     },
     filterContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        position: 'relative',
     },
     filterButton: {
         flexDirection: 'row',
@@ -1275,6 +1324,40 @@ const styles = StyleSheet.create({
     filterArrow: {
         fontSize: 10,
         color: '#7F8C8D',
+    },
+    sortDropdown: {
+        position: 'absolute',
+        top: 40,
+        right: 0,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        minWidth: 100,
+        zIndex: 1000,
+    },
+    sortOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    activeSortOption: {
+        backgroundColor: '#F8F9FA',
+    },
+    sortOptionText: {
+        fontSize: 14,
+        color: '#2C3E50',
+        fontWeight: '500',
+    },
+    activeSortOptionText: {
+        color: '#667eea',
+        fontWeight: '600',
     },
     // Post Cards - Compact Design
     postCard: {

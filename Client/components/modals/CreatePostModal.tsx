@@ -32,8 +32,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
+
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Family Law');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -52,29 +51,20 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     if (isEditMode && editingPost) {
       setTitle(editingPost.title || '');
       setDescription(editingPost.description || '');
-      setTags(editingPost.tags || []);
+
       setSelectedCategory(editingPost.category || 'Family Law');
       setIsAnonymous(editingPost.isAnonymous || false);
     } else {
       // Reset form when not editing
       setTitle('');
       setDescription('');
-      setTags([]);
+
       setSelectedCategory('Family Law');
       setIsAnonymous(false);
     }
   }, [isEditMode, editingPost, visible]);
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag('');
-    }
-  };
 
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
 
   const handleSubmit = () => {
     // Basic validation
@@ -113,7 +103,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     const postData = {
       title: title.trim(),
       description: description.trim(),
-      tags,
+
       isAnonymous,
       author: getUserDisplayName(),
       category: selectedCategory, // Use selected category
@@ -126,8 +116,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     if (!isEditMode) {
       setTitle('');
       setDescription('');
-      setTags([]);
-      setNewTag('');
+
       setIsAnonymous(false);
       setSelectedCategory('Family Law');
     }
@@ -198,39 +187,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Tags */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Tags</Text>
-            
-            {/* Existing Tags */}
-            <View style={styles.tagsContainer}>
-              {tags.map((tag, index) => (
-                <View key={index} style={styles.tagChip}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                  <TouchableOpacity
-                    onPress={() => handleRemoveTag(tag)}
-                    style={styles.removeTagButton}>
-                    <Text style={styles.removeTagText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-              
-              {/* Add Tag Input */}
-              <TextInput
-                style={styles.addTagInput}
-                placeholder="Add a tag..."
-                placeholderTextColor="#999999"
-                value={newTag}
-                onChangeText={setNewTag}
-                onSubmitEditing={handleAddTag}
-              />
-            </View>
 
-            {/* Add Tag Button */}
-            <TouchableOpacity style={styles.addTagButton} onPress={handleAddTag}>
-              <Text style={styles.addTagButtonText}>+ Add Tag</Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Anonymous Option */}
           <View style={styles.section}>
@@ -376,66 +333,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
     maxHeight: 200,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    minHeight: 60,
-  },
-  tagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F0F0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  tagText: {
-    fontSize: 14,
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
-  removeTagButton: {
-    marginLeft: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#999999',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeTagText: {
-    fontSize: 10,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  addTagInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#2C3E50',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    minWidth: 100,
-  },
-  addTagButton: {
-    backgroundColor: '#667eea',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
-    marginTop: 10,
-  },
-  addTagButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
