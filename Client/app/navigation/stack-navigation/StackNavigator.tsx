@@ -2,6 +2,7 @@ import { StyleSheet } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
 import HomeBottomTabNavigation from "@/app/navigation/tab-navigation/HomeBottomTabNavigation";
 import { COLOR } from "@/constants/ColorPallet";
+import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
 
 const Stack = createStackNavigator();
 
@@ -15,12 +16,14 @@ export default function StackNavigator() {
             }}
         >
             <Stack.Screen
-                name="Process"
+                name={'Process'}
                 component={HomeBottomTabNavigation}
-                options={{
-                    headerLeft: () => null,
-                    headerShown: false,
-                }}
+                options={{headerLeft: () => null, headerShown: false,}}
+            />
+            <Stack.Screen
+                name={'Ngo'}
+                options={{title:'NGO'}}
+                component={NgoScreen}
             />
         </Stack.Navigator>
     );
@@ -28,7 +31,7 @@ export default function StackNavigator() {
 
 const styles = StyleSheet.create({
     header: {
-        backgroundColor: COLOR.light.primary, // example primary color
+        backgroundColor: COLOR.light.light, // example primary color
         shadowColor: "transparent", // removes shadow on iOS
         elevation: 0, // removes shadow on Android
     },
@@ -38,6 +41,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     card: {
-        backgroundColor: COLOR.light.primary, // Changed from COLOR.light to COLOR.light.background
+        backgroundColor: COLOR.light.light, // Changed from COLOR.light to COLOR.light.background
     },
 });
