@@ -2,8 +2,7 @@ import { StyleSheet, View,Text } from 'react-native';
 import {useEffect, useState} from "react";
 import SplashScreen from "@/components/ui/screen/SplashScreen";
 import StackNavigator from "@/app/navigation/stack-navigation/StackNavigator";
-import HomePageScreen from "@/components/ui/screen/HomePageScreen";
-import { ThemeProvider } from '../../context/ThemeContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 
 
 
