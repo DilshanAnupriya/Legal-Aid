@@ -6,7 +6,7 @@ import LawyerScreen from "@/components/ui/screen/LawyerScreen";
 import ProfileScreen from "@/components/ui/screen/ProfileScreen";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from '../../../context/ThemeContext';
-import ThemeSwitcher from '../../../components/modals/ThemeSwitcher'; // Adjust path as needed
+import ThemeSwitcher from '../../../components/modals/ThemeSwitcher';
 
 const DarkLogo = require('../../../assets/images/logo/Law Firm Logo Black and White (1).png');
 const WhiteLogo = require('../../../assets/images/logo/img.png');
@@ -113,6 +113,7 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                     headerTintColor: colors.primary,
                 }}
             />
+            
             <Tab.Screen 
                 name={'Lawyer'} 
                 component={LawyerScreen}
