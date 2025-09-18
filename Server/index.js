@@ -1,30 +1,64 @@
 const express = require("express");
-require("dotenv").config(); // Load .env file
-const mongoose = require("mongoose"); // Import Mongoose
-const cors = require("cors"); // Import CORS
+require("dotenv").config();
+const mongoose = require("mongoose");
+const cors = require("cors");
+const {MulterError} = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
 // Middleware
-app.use(cors()); // Enable CORS for all routes
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
+app.use((error, req, res, next) => {
+  if (error instanceof MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        message: 'error',
+        error: 'File size too large. Maximum 5MB allowed.'
+      });
+    }
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        message: 'error',
+        error: 'Too many files. Maximum 11 files allowed.'
+      });
+    }
+  }
+
+  if (error.message === 'Only image files are allowed!') {
+    return res.status(400).json({
+      message: 'error',
+      error: 'Only image files are allowed!'
+    });
+  }
+
+  next(error);
+});
 
 // Connect to MongoDB
 mongoose.connect(DB_URL)
 .then(() => console.log("✅ Connected to MongoDB"))
 .catch((err) => console.error("❌ MongoDB connection error:", err));
 
+
+//NGO
+const ngoRoutes = require('./Routes/ngoRoutes');
+app.use('/api/ngo', ngoRoutes);
 // Import Routes
 const postRoutes = require("./Routes/postRoutes");
 const userRoutes = require("./Routes/userRoutes");
+const lawyerRoutes = require("./Routes/lawyerRoutes");
 
 
 // API Routes
 app.use("/api/posts", postRoutes);
 app.use("/api/auth", userRoutes);
+app.use("/api/lawyers", lawyerRoutes);
 
 
 // Root route

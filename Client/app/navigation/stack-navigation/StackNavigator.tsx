@@ -6,38 +6,40 @@ import { COLOR } from "@/constants/ColorPallet";
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: styles.header, // Header background
-        headerTitleStyle: styles.headerTitle, // Header text
-        cardStyle: styles.card, // Screen background
-      }}
-    >
-      <Stack.Screen
-        name="Process"
-        component={HomeBottomTabNavigation}
-        options={{
-          headerLeft: () => null,
-          headerShown: false, // Hide header if needed
-        }}
-      />
-    </Stack.Navigator>
-  );
+    return (
+        <Stack.Navigator
+            screenOptions={{
+                headerStyle: styles.header, // Header background
+                headerTitleStyle: styles.headerTitle, // Header text
+                cardStyle: styles.card, // Screen background
+            }}
+        >
+            <Stack.Screen
+                name="Process"
+                component={HomeBottomTabNavigation}
+                options={{
+                    headerLeft: () => null,
+                    headerShown: false,
+                }}
+            />
+        </Stack.Navigator>
+    );
 }
 
+
+//styles
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: COLOR.primary, // example primary color
-    shadowColor: "transparent", // removes shadow on iOS
-    elevation: 0, // removes shadow on Android
-  },
-  headerTitle: {
-    color: COLOR.white,
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  card: {
-    backgroundColor: COLOR.light, // screen background color
-  },
+    header: {
+        backgroundColor: COLOR.light.primary, // example primary color
+        shadowColor: "transparent", // removes shadow on iOS
+        elevation: 0, // removes shadow on Android
+    },
+    headerTitle: {
+        color: COLOR.light.primary,
+        fontSize: 18,
+        fontWeight: "bold",
+    },
+    card: {
+        backgroundColor: COLOR.light.primary, // Changed from COLOR.light to COLOR.light.background
+    },
 });
