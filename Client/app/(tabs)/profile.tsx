@@ -1,4 +1,4 @@
-import ProfileScreen from "@/components/ui/screen/ProfileScreen";
+import MenuScreen from "@/components/ui/screen/MenuScreen";
 import { useRouter } from 'expo-router';
 
 export default function Profile() {
@@ -11,5 +11,5 @@ export default function Profile() {
     goBack: () => router.back(),
   };
 
-  return <ProfileScreen navigation={navigation} />;
+  return <MenuScreen navigation={navigation} />;
 }
