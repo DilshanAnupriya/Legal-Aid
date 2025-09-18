@@ -49,12 +49,14 @@ mongoose.connect(DB_URL)
 const ngoRoutes = require('./routes/ngoRoutes');
 app.use('/api/ngo', ngoRoutes);
 // Import Routes
-const postRoutes = require("./Routes/postRoutes");
+const postRoutes = require("./routes/postRoutes");
+const lawyerRoutes = require("./routes/lawyerRoutes");
 const {MulterError} = require("multer");
 
 
 // API Routes
 app.use("/api/posts", postRoutes);
+app.use("/api/lawyers", lawyerRoutes);
 
 
 // Root route

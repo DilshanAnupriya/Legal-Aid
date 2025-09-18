@@ -26,6 +26,8 @@ export default function StackNavigator() {
     );
 }
 
+
+//styles
 const styles = StyleSheet.create({
     header: {
         backgroundColor: COLOR.light.primary, // example primary color

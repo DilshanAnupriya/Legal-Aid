@@ -4,19 +4,11 @@ import SplashScreen from "@/components/ui/screen/SplashScreen";
 import StackNavigator from "@/app/navigation/stack-navigation/StackNavigator";
 import { ThemeProvider } from '@/context/ThemeContext';
 
-
-
-
 export default function HomeScreen() {
 
   const [isLoading, setIsLoading] = useState(true);
-
-
-
   return (
     <ThemeProvider>
-
-    
       <View style={styles.container}>
         {isLoading ? (
             <SplashScreen onFinish={()=>{setIsLoading(false)}}/>
