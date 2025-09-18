@@ -15,7 +15,6 @@ const Tab = createBottomTabNavigator();
 
 export default function HomeBottomTabNavigation({ navigation }: any) {
     const { colors, theme } = useTheme();
-
     return (
         <Tab.Navigator
             initialRouteName={'Home'}

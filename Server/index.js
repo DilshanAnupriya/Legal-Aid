@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const cors = require("cors");
+const {MulterError} = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,16 +47,17 @@ mongoose.connect(DB_URL)
 
 
 //NGO
-const ngoRoutes = require('./routes/ngoRoutes');
+const ngoRoutes = require('./Routes/ngoRoutes');
 app.use('/api/ngo', ngoRoutes);
 // Import Routes
-const postRoutes = require("./routes/postRoutes");
-const lawyerRoutes = require("./routes/lawyerRoutes");
-const {MulterError} = require("multer");
+const postRoutes = require("./Routes/postRoutes");
+const userRoutes = require("./Routes/userRoutes");
+const lawyerRoutes = require("./Routes/lawyerRoutes");
 
 
 // API Routes
 app.use("/api/posts", postRoutes);
+app.use("/api/auth", userRoutes);
 app.use("/api/lawyers", lawyerRoutes);
 
 
@@ -65,8 +67,8 @@ app.get("/", (req, res) => {
     message: "Legal Aid Backend API",
     version: "1.0.0",
     endpoints: {
+      auth: "/api/auth",
       posts: "/api/posts",
-      users: "/api/users",
       health: "/health"
     }
   });

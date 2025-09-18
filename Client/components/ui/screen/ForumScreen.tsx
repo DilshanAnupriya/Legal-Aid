@@ -15,15 +15,19 @@ import {
 } from 'react-native';
 import CreatePostModal from '../../modals/CreatePostModal';
 import PostDetailModal from '../../modals/PostDetailModal';
+import { useAuth } from '../../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const ForumsScreen = () => {
+    const { user } = useAuth();
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
+    const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false);
     const [isPostDetailModalVisible, setIsPostDetailModalVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState<any>(null);
+    const [editingPost, setEditingPost] = useState<any>(null);
     const [forumPosts, setForumPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -31,6 +35,17 @@ const ForumsScreen = () => {
         totalViews: 0,
         answerRate: 0,
     });
+    const [categories, setCategories] = useState([
+        { id: 1, name: 'All', count: 0, icon: '📋' },
+        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
+        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
+        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
+        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
+        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
+    ]);
+    const [trendingTopics, setTrendingTopics] = useState([]);
+    const [sortOrder, setSortOrder] = useState('Newest');
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
 
     // Multiple URL options for different environments
     const API_URLS = Platform.OS === 'android'
@@ -88,6 +103,8 @@ const ForumsScreen = () => {
                     replies: post.replies,
                     views: post.views,
                     lastActivity: formatLastActivity(post.lastActivity),
+                    lastActivityRaw: post.lastActivity, // Keep raw date for sorting
+                    createdAt: post.createdAt, // Keep creation date for sorting
                     category: post.category,
                     isAnswered: post.isAnswered,
                     priority: post.priority,
@@ -108,9 +125,10 @@ const ForumsScreen = () => {
             }
 
             // All URLs failed, show error
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Alert.alert(
                 'Connection Error',
-                `Failed to load forum posts. Please check if the backend server is running.\n\nTried URLs: ${API_URLS.join(', ')}\n\nError: ${error.message}`,
+                `Failed to load forum posts. Please check if the backend server is running.\n\nTried URLs: ${API_URLS.join(', ')}\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => {
                             setCurrentApiIndex(0); // Reset to first URL
@@ -152,6 +170,28 @@ const ForumsScreen = () => {
                     totalViews: data.data.totalViews || 0,
                     answerRate: data.data.answerRate || 0,
                 });
+
+                // Update categories with real counts from backend
+                if (data.data.categoryBreakdown) {
+                    const updatedCategories = [
+                        { id: 1, name: 'All', count: data.data.totalPosts || 0, icon: '📋' },
+                        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
+                        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
+                        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
+                        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
+                        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
+                    ];
+
+                    // Map backend category counts to frontend categories
+                    data.data.categoryBreakdown.forEach((cat: any) => {
+                        const categoryIndex = updatedCategories.findIndex(c => c.name === cat._id);
+                        if (categoryIndex !== -1) {
+                            updatedCategories[categoryIndex].count = cat.count;
+                        }
+                    });
+
+                    setCategories(updatedCategories);
+                }
             }
         } catch (error) {
             console.error('Error fetching stats:', error);
@@ -161,6 +201,42 @@ const ForumsScreen = () => {
                 totalViews: 0,
                 answerRate: 0,
             });
+        }
+    };
+
+    const fetchTrendingTopics = async () => {
+        try {
+            console.log('Fetching trending topics from:', `${BASE_URL}/posts/trending`);
+
+            const response = await fetch(`${BASE_URL}/posts/trending?limit=4`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // @ts-ignore - timeout is supported in React Native
+                timeout: 10000,
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Trending topics response:', data);
+
+            if (data.success && data.data && Array.isArray(data.data)) {
+                // Use the post data directly since we're now rendering discussion cards
+                const validPosts = data.data.filter((post: any) => post && post._id && post.title);
+                setTrendingTopics(validPosts);
+                console.log('Loaded trending topics:', validPosts.length);
+            } else {
+                console.warn('Invalid trending topics response:', data);
+                setTrendingTopics([]);
+            }
+        } catch (error) {
+            console.error('Error fetching trending topics:', error);
+            // Use empty array if trending topics can't be fetched
+            setTrendingTopics([]);
         }
     };
 
@@ -191,21 +267,180 @@ const ForumsScreen = () => {
             if (data.success) {
                 Alert.alert('Success', 'Your post has been created successfully!');
                 fetchPosts(); // Refresh the posts list
-                fetchStats(); // Refresh stats
+                fetchStats(); // Refresh stats and categories
+                fetchTrendingTopics(); // Refresh trending topics
             } else {
                 Alert.alert('Error', data.message || 'Failed to create post');
             }
         } catch (error) {
             console.error('Error creating post:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Alert.alert(
                 'Post Creation Failed',
-                `Failed to create post. Please check your connection and try again.\n\nError: ${error.message}`,
+                `Failed to create post. Please check your connection and try again.\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => createPost(postData) },
                     { text: 'OK' }
                 ]
             );
         }
+    };
+
+    const updatePost = async (postData: any) => {
+        try {
+            console.log('Updating post:', postData);
+            console.log('PUT URL:', `${BASE_URL}/posts/${editingPost._id}`);
+
+            const response = await fetch(`${BASE_URL}/posts/${editingPost._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(postData),
+            });
+
+            console.log('Update post response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Update post error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Update post response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your post has been updated successfully!');
+                fetchPosts(); // Refresh the posts list
+                fetchStats(); // Refresh stats and categories
+                fetchTrendingTopics(); // Refresh trending topics
+                setIsEditPostModalVisible(false);
+                setEditingPost(null);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to update post');
+            }
+        } catch (error) {
+            console.error('Error updating post:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Post Update Failed',
+                `Failed to update post. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => updatePost(postData) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const deletePost = async (postId: string, postTitle: string) => {
+        try {
+            console.log('Deleting post:', postId);
+
+            const response = await fetch(`${BASE_URL}/posts/${postId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('Delete post response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Delete post error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Delete post response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your post has been deleted successfully!');
+                fetchPosts(); // Refresh the posts list
+                fetchStats(); // Refresh stats
+                fetchTrendingTopics(); // Refresh trending topics
+            } else {
+                Alert.alert('Error', data.message || 'Failed to delete post');
+            }
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Delete Failed',
+                `Failed to delete post. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => deletePost(postId, postTitle) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const handleEditPost = async (post: any) => {
+        try {
+            setLoading(true);
+            console.log('Fetching full post details for editing:', post.id);
+
+            const response = await fetch(`${BASE_URL}/posts/${post.id}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // @ts-ignore - timeout is supported in React Native
+                timeout: 10000,
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Set the full post data for editing
+                setEditingPost(data.data);
+                setIsEditPostModalVisible(true);
+            } else {
+                throw new Error(data.message || 'Failed to fetch post details');
+            }
+        } catch (error) {
+            console.error('Error fetching post details for editing:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert('Error', `Failed to load post details for editing: ${errorMessage}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeletePost = (postId: string, postTitle: string) => {
+        Alert.alert(
+            'Delete Post',
+            `Are you sure you want to delete "${postTitle}"?\n\nThis action cannot be undone.`,
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => deletePost(postId, postTitle),
+                },
+            ]
+        );
+    };
+
+    // Helper function to check if current user can delete the post
+    const canDeletePost = (postAuthor: string) => {
+        if (!user?.email) return false;
+        
+        // Get current user's display name (same logic as in CreatePostModal)
+        const currentUserDisplayName = user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1);
+        
+        // Check if the post author matches current user or if post is by "Anonymous User"
+        return postAuthor === currentUserDisplayName && postAuthor !== 'Anonymous User';
     };
 
     const formatLastActivity = (dateString: string) => {
@@ -223,37 +458,83 @@ const ForumsScreen = () => {
         }
     };
 
+    const formatRelativeTime = (dateString: string) => {
+        const now = new Date().getTime();
+        const postTime = new Date(dateString).getTime();
+        const diffInSeconds = Math.floor((now - postTime) / 1000);
+
+        if (diffInSeconds < 60) {
+            return 'Just now';
+        } else if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        } else if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        } else {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        }
+    };
+
     // Effects
     useEffect(() => {
         fetchPosts();
         fetchStats();
+        fetchTrendingTopics();
     }, [activeCategory, searchQuery]);
-
-    const categories = [
-        { id: 1, name: 'All', count: 93, icon: '📋' },
-        { id: 2, name: 'Family Law', count: 28, icon: '👨‍👩‍👧‍👦' },
-        { id: 3, name: 'Property Law', count: 19, icon: '🏠' },
-        { id: 4, name: 'Employment Law', count: 24, icon: '💼' },
-        { id: 5, name: 'Civil Law', count: 15, icon: '⚖️' },
-        { id: 6, name: 'Criminal Law', count: 7, icon: '🚔' },
-    ];
-
-    const trendingTopics = [
-        { name: 'Tenant Rights', count: 45 },
-        { name: 'Divorce Process', count: 38 },
-        { name: 'Employment Issues', count: 32 },
-        { name: 'Property Disputes', count: 29 },
-    ];
 
     const filteredPosts = forumPosts.filter((post: any) => {
         const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
         const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
         return matchesCategory && matchesSearch;
+    }).sort((a: any, b: any) => {
+        // Sort by creation date - use createdAt if available, otherwise lastActivityRaw, otherwise fallback to id
+        let dateA, dateB;
+        
+        // Try to get proper dates
+        if (a.createdAt) {
+            dateA = new Date(a.createdAt);
+        } else if (a.lastActivityRaw) {
+            dateA = new Date(a.lastActivityRaw);
+        } else {
+            // Fallback: use id as string comparison (assuming MongoDB ObjectId or similar)
+            dateA = a.id;
+        }
+        
+        if (b.createdAt) {
+            dateB = new Date(b.createdAt);
+        } else if (b.lastActivityRaw) {
+            dateB = new Date(b.lastActivityRaw);
+        } else {
+            // Fallback: use id as string comparison
+            dateB = b.id;
+        }
+        
+        // Handle different data types
+        if (dateA instanceof Date && dateB instanceof Date) {
+            if (sortOrder === 'Newest') {
+                return dateB.getTime() - dateA.getTime(); // Newest first
+            } else {
+                return dateA.getTime() - dateB.getTime(); // Oldest first
+            }
+        } else {
+            // String comparison fallback
+            if (sortOrder === 'Newest') {
+                return dateB > dateA ? 1 : -1; // Newest first
+            } else {
+                return dateA > dateB ? 1 : -1; // Oldest first
+            }
+        }
     });
 
     const handleCreatePost = (postData: any) => {
         createPost(postData);
+    };
+
+    const handleUpdatePost = (postData: any) => {
+        updatePost(postData);
     };
 
     const openCreatePostModal = () => {
@@ -262,6 +543,11 @@ const ForumsScreen = () => {
 
     const closeCreatePostModal = () => {
         setIsCreatePostModalVisible(false);
+    };
+
+    const closeEditPostModal = () => {
+        setIsEditPostModalVisible(false);
+        setEditingPost(null);
     };
 
     const handlePostPress = async (postId: string) => {
@@ -292,7 +578,8 @@ const ForumsScreen = () => {
             }
         } catch (error) {
             console.error('Error fetching post details:', error);
-            Alert.alert('Error', `Failed to load post details: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert('Error', `Failed to load post details: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
@@ -342,19 +629,7 @@ const ForumsScreen = () => {
                         <Text style={styles.askQuestionArrow}>→</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.browseCard}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.browseIcon}>
-                            <Text style={styles.browseEmoji}>📚</Text>
-                        </View>
-                        <View style={styles.browseContent}>
-                            <Text style={styles.browseTitle}>Browse Topics</Text>
-                            <Text style={styles.browseSubtitle}>Explore legal categories</Text>
-                        </View>
-                        <Text style={styles.browseArrow}>→</Text>
-                    </TouchableOpacity>
+
                 </View>
 
                 {/* Categories with Icons */}
@@ -391,14 +666,86 @@ const ForumsScreen = () => {
                             <Text style={styles.seeAllText}>See All</Text>
                         </TouchableOpacity>
                     </View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {trendingTopics.map((topic, index) => (
-                            <TouchableOpacity key={index} style={styles.trendingCard}>
-                                <Text style={styles.trendingName}>{topic.name}</Text>
-                                <Text style={styles.trendingCount}>{topic.count} discussions</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    
+                    {/* Trending Discussion Cards - Horizontal Scroll */}
+                    {trendingTopics.length > 0 ? (
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.trendingScrollContainer}
+                        >
+                            {trendingTopics.map((post: any, index: number) => (
+                                <TouchableOpacity
+                                    key={post._id || index}
+                                    style={styles.trendingCard}
+                                    onPress={async () => {
+                                        console.log('Trending post clicked:', post);
+                                        if (post && post._id) {
+                                            // Fetch complete post data before opening modal
+                                            try {
+                                                const response = await fetch(`${BASE_URL}/posts/${post._id}`);
+                                                if (response.ok) {
+                                                    const data = await response.json();
+                                                    if (data.success) {
+                                                        setSelectedPost(data.data);
+                                                        setIsPostDetailModalVisible(true);
+                                                    } else {
+                                                        console.error('Failed to fetch post details:', data.message);
+                                                        // Fallback to using the trending post data
+                                                        setSelectedPost(post);
+                                                        setIsPostDetailModalVisible(true);
+                                                    }
+                                                } else {
+                                                    console.error('Failed to fetch post details, using cached data');
+                                                    setSelectedPost(post);
+                                                    setIsPostDetailModalVisible(true);
+                                                }
+                                            } catch (error) {
+                                                console.error('Error fetching post details:', error);
+                                                // Fallback to using the trending post data
+                                                setSelectedPost(post);
+                                                setIsPostDetailModalVisible(true);
+                                            }
+                                        } else {
+                                            console.error('Invalid post object:', post);
+                                        }
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    {/* Left Badge Area */}
+                                    <View style={styles.trendingLeftBadge} />
+                                    
+                                    {/* Main Content */}
+                                    <View style={styles.trendingContent}>
+
+                                        <Text style={styles.trendingTitle} numberOfLines={2}>
+                                            {post.title || 'Untitled'}
+                                        </Text>
+                                        
+                                        <Text style={styles.trendingDescription} numberOfLines={1}>
+                                            {post.description || 'No description available'}
+                                        </Text>
+                                        
+                                        {/* Stats Row */}
+                                        <View style={styles.trendingStatsRow}>
+                                            <View style={styles.trendingStatItem}>
+                                                <Text style={styles.trendingStatIcon}>👁️</Text>
+                                                <Text style={styles.trendingStatText}>{post.views || 0}</Text>
+                                            </View>
+                                            <View style={styles.trendingStatItem}>
+                                                <Text style={styles.trendingStatIcon}>💬</Text>
+                                                <Text style={styles.trendingStatText}>{post.replies || 0}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <View style={styles.emptyTrendingContainer}>
+                            <Text style={styles.emptyTrendingText}>No trending discussions yet</Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* Enhanced Search Bar */}
@@ -425,10 +772,39 @@ const ForumsScreen = () => {
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Recent Discussions</Text>
                         <View style={styles.filterContainer}>
-                            <TouchableOpacity style={styles.filterButton}>
-                                <Text style={styles.filterText}>Latest</Text>
+                            <TouchableOpacity 
+                                style={styles.filterButton}
+                                onPress={() => setShowSortDropdown(!showSortDropdown)}
+                            >
+                                <Text style={styles.filterText}>{sortOrder}</Text>
                                 <Text style={styles.filterArrow}>▼</Text>
                             </TouchableOpacity>
+                            {showSortDropdown && (
+                                <View style={styles.sortDropdown}>
+                                    <TouchableOpacity 
+                                        style={[styles.sortOption, sortOrder === 'Newest' && styles.activeSortOption]}
+                                        onPress={() => {
+                                            setSortOrder('Newest');
+                                            setShowSortDropdown(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.sortOptionText, sortOrder === 'Newest' && styles.activeSortOptionText]}>
+                                            Newest
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        style={[styles.sortOption, sortOrder === 'Oldest' && styles.activeSortOption]}
+                                        onPress={() => {
+                                            setSortOrder('Oldest');
+                                            setShowSortDropdown(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.sortOptionText, sortOrder === 'Oldest' && styles.activeSortOptionText]}>
+                                            Oldest
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                         </View>
                     </View>
 
@@ -450,14 +826,42 @@ const ForumsScreen = () => {
                                 onPress={() => handlePostPress(post.id)}
                                 activeOpacity={0.8}
                             >
-                                {/* Priority Indicator */}
-                                <View style={styles.postPriorityIndicator}>
-                                    <View style={[
-                                        styles.priorityDot,
-                                        post.priority === 'high' && styles.highPriority,
-                                        post.priority === 'medium' && styles.mediumPriority,
-                                        post.priority === 'low' && styles.lowPriority,
-                                    ]} />
+                                {/* Priority Indicator and Delete Button */}
+                                <View style={styles.topRightContainer}>
+                                    <View style={styles.postPriorityIndicator}>
+                                        <View style={[
+                                            styles.priorityDot,
+                                            post.priority === 'high' && styles.highPriority,
+                                            post.priority === 'medium' && styles.mediumPriority,
+                                            post.priority === 'low' && styles.lowPriority,
+                                        ]} />
+                                    </View>
+                                    
+                                    {/* Edit and Delete Buttons - Only show for posts by current user */}
+                                    {canDeletePost(post.author) && (
+                                        <>
+                                            <TouchableOpacity
+                                                style={styles.editButton}
+                                                onPress={(e) => {
+                                                    e.stopPropagation(); // Prevent card press
+                                                    handleEditPost(post);
+                                                }}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            >
+                                                <Text style={styles.editIcon}>✏️</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.deleteButton}
+                                                onPress={(e) => {
+                                                    e.stopPropagation(); // Prevent card press
+                                                    handleDeletePost(post.id, post.title);
+                                                }}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            >
+                                                <Text style={styles.deleteIcon}>🗑️</Text>
+                                            </TouchableOpacity>
+                                        </>
+                                    )}
                                 </View>
 
                                 {/* Post Header */}
@@ -514,11 +918,26 @@ const ForumsScreen = () => {
                 onSubmit={handleCreatePost}
             />
 
+            {/* Edit Post Modal */}
+            <CreatePostModal
+                visible={isEditPostModalVisible}
+                onClose={closeEditPostModal}
+                onSubmit={handleUpdatePost}
+                editingPost={editingPost}
+                isEditMode={true}
+            />
+
             {/* Post Detail Modal */}
             <PostDetailModal
                 visible={isPostDetailModalVisible}
                 post={selectedPost}
                 onClose={() => setIsPostDetailModalVisible(false)}
+                onPostUpdated={() => {
+                    // Refresh posts and stats when post is updated (reply count changed)
+                    fetchPosts();
+                    fetchStats();
+                    fetchTrendingTopics();
+                }}
             />
         </SafeAreaView>
     );
@@ -619,6 +1038,7 @@ const styles = StyleSheet.create({
     // Quick Actions
     quickActionsSection: {
         paddingHorizontal: 20,
+        paddingTop: 20,
         paddingBottom: 20,
         backgroundColor: '#FFFFFF',
     },
@@ -665,48 +1085,7 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: '600',
     },
-    browseCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#764ba2',
-        borderRadius: 20,
-        padding: 20,
-        shadowColor: '#764ba2',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-    },
-    browseIcon: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    browseEmoji: {
-        fontSize: 24,
-    },
-    browseContent: {
-        flex: 1,
-    },
-    browseTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        marginBottom: 4,
-    },
-    browseSubtitle: {
-        fontSize: 14,
-        color: '#E8E8E8',
-    },
-    browseArrow: {
-        fontSize: 20,
-        color: '#FFFFFF',
-        fontWeight: '600',
-    },
+
     // Categories Section
     categoriesSection: {
         paddingTop: 20,
@@ -766,7 +1145,7 @@ const styles = StyleSheet.create({
     },
     // Trending Section
     trendingSection: {
-        paddingVertical: 20,
+        paddingVertical: 30,
         backgroundColor: '#F8F9FA',
     },
     sectionHeader: {
@@ -781,40 +1160,150 @@ const styles = StyleSheet.create({
         color: '#667eea',
         fontWeight: '600',
     },
+
+    // Horizontal Trending Card Styles
+    trendingScrollContainer: {
+        paddingHorizontal: 15,
+        paddingVertical: 5,
+    },
     trendingCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        padding: 15,
-        marginLeft: 20,
-        marginRight: 5,
-        minWidth: 140,
-        borderLeftWidth: 4,
-        borderLeftColor: '#FF6B6B',
+        marginRight: 12,
+        padding: 0,
+        paddingBottom: 0,
+        width: 220,
+        height: 110,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowRadius: 6,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        overflow: 'hidden',
+        flexDirection: 'row',
     },
-    trendingName: {
-        fontSize: 16,
+    trendingBadgeContainer: {
+        backgroundColor: '#FF6B6B',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+    },
+    trendingBadgeContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        width: '100%',
+    },
+    trendingAuthorSection: {
+        flex: 1,
+        alignItems: 'flex-start',
+    },
+    trendingBadgeAuthor: {
+        fontSize: 9,
+        color: '#FFFFFF',
         fontWeight: '600',
-        color: '#2C3E50',
-        marginBottom: 4,
+        marginBottom: 2,
     },
-    trendingCount: {
+    trendingBadgeTime: {
+        fontSize: 8,
+        color: '#FFE5E5',
+        fontWeight: '500',
+    },
+    trendingBadge: {
+        fontSize: 10,
+        color: '#FFFFFF',
+        fontWeight: '800',
+        letterSpacing: 0.3,
+        textAlign: 'right',
+    },
+    trendingLeftBadge: {
+        width: 8,
+        backgroundColor: '#FF7100',
+        borderTopLeftRadius: 12,
+        borderBottomLeftRadius: 12,
+    },
+    trendingContent: {
+        padding: 12,
+        paddingBottom: 0,
+        flex: 1,
+    },
+
+    trendingTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#2C3E50',
+        marginBottom: 6,
+        lineHeight: 18,
+    },
+    trendingDescription: {
         fontSize: 12,
+        color: '#5D6D7E',
+        lineHeight: 16,
+        marginBottom: 8,
+        overflow: 'hidden',
+    },
+    trendingStatsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        marginBottom: 0,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        backgroundColor: '#F8F9FA',
+        borderRadius: 8,
+    },
+    trendingStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    trendingStatIcon: {
+        fontSize: 12,
+        marginRight: 3,
+    },
+    trendingStatText: {
+        fontSize: 10,
+        color: '#34495E',
+        fontWeight: '600',
+    },
+    trendingFooter: {
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        borderTopWidth: 1,
+        borderTopColor: '#ECF0F1',
+        paddingTop: 8,
+    },
+    trendingAuthor: {
+        fontSize: 10,
         color: '#7F8C8D',
+        fontWeight: '500',
+        marginBottom: 2,
+    },
+    trendingTime: {
+        fontSize: 9,
+        color: '#95A5A6',
+        fontStyle: 'italic',
+    },
+    emptyTrendingContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    emptyTrendingText: {
+        fontSize: 14,
+        color: '#7F8C8D',
+        fontStyle: 'italic',
     },
     // Posts Section
     postsSection: {
-        paddingTop: 20,
+        paddingTop: 30,
         paddingHorizontal: 20,
         backgroundColor: '#F8F9FA',
     },
     filterContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        position: 'relative',
     },
     filterButton: {
         flexDirection: 'row',
@@ -836,6 +1325,40 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: '#7F8C8D',
     },
+    sortDropdown: {
+        position: 'absolute',
+        top: 40,
+        right: 0,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        minWidth: 100,
+        zIndex: 1000,
+    },
+    sortOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    activeSortOption: {
+        backgroundColor: '#F8F9FA',
+    },
+    sortOptionText: {
+        fontSize: 14,
+        color: '#2C3E50',
+        fontWeight: '500',
+    },
+    activeSortOptionText: {
+        color: '#667eea',
+        fontWeight: '600',
+    },
     // Post Cards - Compact Design
     postCard: {
         backgroundColor: '#FFFFFF',
@@ -851,10 +1374,39 @@ const styles = StyleSheet.create({
     postHeader: {
         marginBottom: 8,
     },
-    postPriorityIndicator: {
+    topRightContainer: {
         position: 'absolute',
         top: 12,
         right: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 1,
+    },
+    postPriorityIndicator: {
+        marginRight: 8,
+    },
+    editButton: {
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+        padding: 6,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(102, 126, 234, 0.3)',
+        marginRight: 8,
+    },
+    editIcon: {
+        fontSize: 12,
+        color: '#667eea',
+    },
+    deleteButton: {
+        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+        padding: 6,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 107, 107, 0.3)',
+    },
+    deleteIcon: {
+        fontSize: 12,
+        color: '#FF6B6B',
     },
     priorityDot: {
         width: 6,

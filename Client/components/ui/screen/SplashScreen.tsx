@@ -3,61 +3,57 @@ import {Text, StyleSheet, Animated, View, Image, Dimensions} from 'react-native'
 import {COLOR} from "@/constants/ColorPallet";
 import appJson from "../../../app.json";
 
-const {width, height} = Dimensions.get('window');
+interface SplashScreenProps {
+  onFinish: () => void;
+}
 
-export default function SplashScreen({onFinish}: any) {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
-    const slideAnim = useRef(new Animated.Value(50)).current;
-    const progress = useRef(new Animated.Value(0)).current;
-    const progressOpacity = useRef(new Animated.Value(0)).current;
-    const bottomFade = useRef(new Animated.Value(0)).current;
+export default function SplashScreen({ onFinish }: SplashScreenProps) {
+    const fadeAnim = useRef(new Animated.Value(0)).current
+    const scaleAnim = useRef(new Animated.Value(0.8)).current
+    const slideAnim = useRef(new Animated.Value(20)).current
+    const progress = useRef(new Animated.Value(0)).current
+    const progressOpacity = useRef(new Animated.Value(0)).current
+    const bottomFade = useRef(new Animated.Value(0)).current
 
     useEffect(() => {
-        // Sequential animations for a professional feel
         const animationSequence = Animated.sequence([
-            // Logo entrance
             Animated.parallel([
                 Animated.timing(fadeAnim, {
                     toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
+                    duration: 500,
+                    useNativeDriver: true
                 }),
-                Animated.spring(scaleAnim, {
+                Animated.timing(scaleAnim, {
                     toValue: 1,
-                    tension: 50,
-                    friction: 7,
-                    useNativeDriver: true,
-                }),
+                    duration: 500,
+                    useNativeDriver: true
+                })
             ]),
-            // Tagline slide in
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-            // Progress bar fade in
-            Animated.timing(progressOpacity, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-            }),
-            // Progress bar fill
-            Animated.timing(progress, {
-                toValue: 100,
-                duration: 2200,
-                useNativeDriver: false,
-            }),
-            // Bottom info fade in
+            Animated.parallel([
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 400,
+                    useNativeDriver: true
+                }),
+                Animated.timing(progress, {
+                    toValue: 100,
+                    duration: 1200,
+                    useNativeDriver: false
+                }),
+                Animated.timing(progressOpacity, {
+                    toValue: 1,
+                    duration: 400,
+                    useNativeDriver: true
+                })
+            ]),
             Animated.timing(bottomFade, {
                 toValue: 1,
                 duration: 400,
-                useNativeDriver: true,
-            }),
-        ]);
+                useNativeDriver: true
+            })
+        ])
 
         animationSequence.start(() => {
-            // Small delay before finishing
             setTimeout(() => {
                 onFinish();
             }, 500);
@@ -168,7 +164,7 @@ const styles = StyleSheet.create({
     },
     logo: {
         height: 280,
-        width: width * 0.7,
+        width: Dimensions.get('window').width * 0.7,
     },
     taglineWrapper: {
         alignItems: 'center',
