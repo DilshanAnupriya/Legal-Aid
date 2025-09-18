@@ -2,7 +2,6 @@ import React, {useEffect, useRef} from 'react'
 import {Text, StyleSheet, Animated, View, Image, Dimensions} from 'react-native'
 import {COLOR} from "@/constants/ColorPallet";
 import appJson from "../../../app.json";
-import { Colors } from 'react-native/Libraries/NewAppScreen';
 
 const {width, height} = Dimensions.get('window');
 
@@ -98,7 +97,7 @@ export default function SplashScreen({onFinish}: any) {
                         Your Rights 
                     </Text>
                     <Text style={styles.taglineSecond}>
-                        Our <Text style={{color:COLOR.accent}}>Mission</Text>
+                        Our <Text style={{color:COLOR.light.accent}}>Mission</Text>
                     </Text>
                     <View style={styles.underline} />
                 </Animated.View>
@@ -147,7 +146,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: COLOR.primary,
+        backgroundColor: COLOR.light.primary,
         position: 'relative',
     },
     gradientOverlay: {
@@ -196,7 +195,7 @@ const styles = StyleSheet.create({
     underline: {
         width: 60,
         height: 3,
-        backgroundColor: COLOR.accent,
+        backgroundColor: COLOR.light.accent,
         borderRadius: 2,
         marginTop: 12,
     },
@@ -220,7 +219,7 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     progressbar: {
-        backgroundColor: COLOR.orange,
+        backgroundColor: COLOR.light.orange,
         height: '100%',
         borderRadius: 10,
         position: 'relative',

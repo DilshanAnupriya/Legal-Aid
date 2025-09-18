@@ -14,12 +14,15 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.18.0",
-    "mongoose": "^8.18.0"
+    "mongoose": "^8.18.0",
+    "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
