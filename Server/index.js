@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const cors = require("cors");
+const {MulterError} = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,12 +10,36 @@ const DB_URL = process.env.DB_URL;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
+  origin: [
+    'http://localhost:3000', 'http://127.0.0.1:3000', 
+    'http://10.0.2.2:3000', 'http://10.4.2.1:3000',
+    'http://localhost:8081', 'http://127.0.0.1:8081', // Expo web dev server
+    'http://localhost:19006', 'http://127.0.0.1:19006', // Alternative Expo web port
+    'http://localhost:8080', 'http://127.0.0.1:8080',
+    'http://10.0.2.2:8081', 'http://10.4.2.1:8081',
+    'http://10.164.198.42:8081','http://10.164.198.42:3000'// Common dev server port
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200 // For legacy browser support
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`, {
+    headers: {
+      origin: req.headers.origin,
+      'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
+      'content-type': req.headers['content-type']
+    },
+    body: req.method !== 'GET' ? req.body : undefined
+  });
+  next();
+});
+app.use('/uploads', express.static('uploads'));
 
 app.use((error, req, res, next) => {
   if (error instanceof MulterError) {
@@ -49,15 +74,17 @@ mongoose.connect(DB_URL)
 
 
 //NGO
-const ngoRoutes = require('./routes/ngoRoutes');
+const ngoRoutes = require('./Routes/ngoRoutes');
 app.use('/api/ngo', ngoRoutes);
 // Import Routes
 const postRoutes = require("./Routes/postRoutes");
-const {MulterError} = require("multer");
-
-
-// API Routes
+const userRoutes = require("./Routes/userRoutes");
+const lawyerRoutes = require("./Routes/lawyerRoutes");
+const documentRoutes = require('./Routes/documentRoutes');
+app.use('/api/documents', documentRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/lawyers", lawyerRoutes);
 
 
 // Root route
@@ -66,8 +93,8 @@ app.get("/", (req, res) => {
     message: "Legal Aid Backend API",
     version: "1.0.0",
     endpoints: {
+      auth: "/api/auth",
       posts: "/api/posts",
-      users: "/api/users",
       health: "/health"
     }
   });
