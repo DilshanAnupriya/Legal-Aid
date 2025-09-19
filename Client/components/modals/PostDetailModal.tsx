@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   ScrollView,
   StyleSheet,
   SafeAreaView,
@@ -33,19 +34,39 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
   const [editingCommentContent, setEditingCommentContent] = useState('');
 
   // API URL configuration
-  const API_URLS = Platform.OS === 'android' 
-    ? [
+  const getApiUrls = () => {
+    if (Platform.OS === 'web') {
+      return [
+        'http://localhost:3000/api',
+        'http://127.0.0.1:3000/api',
+      ];
+    } else if (Platform.OS === 'android') {
+      return [
         'http://10.0.2.2:3000/api',     // Android emulator
         'http://10.4.2.1:3000/api',    // Your computer's IP
         'http://localhost:3000/api',    // Fallback
-      ]
-    : [
+      ];
+    } else {
+      // iOS simulator
+      return [
         'http://10.4.2.1:3000/api',    // Your computer's IP
         'http://localhost:3000/api',    // iOS simulator
       ];
+    }
+  };
+
+  const API_URLS = getApiUrls();
 
   const [currentApiIndex, setCurrentApiIndex] = useState(0);
   const BASE_URL = API_URLS[currentApiIndex];
+
+  // Try next API URL if current one fails
+  const tryNextApiUrl = () => {
+    const nextIndex = (currentApiIndex + 1) % API_URLS.length;
+    console.log(`[PostDetailModal] Trying next API URL: ${API_URLS[nextIndex]}`);
+    setCurrentApiIndex(nextIndex);
+    return nextIndex !== currentApiIndex; // Return false if we've tried all URLs
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -527,13 +548,16 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                         >
                           <Text style={styles.editCommentIcon}>✏️</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.deleteCommentButton}
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.deleteCommentButton,
+                            { opacity: pressed ? 0.7 : 1 }
+                          ]}
                           onPress={() => handleDeleteComment(comment.id, comment.content)}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
                           <Text style={styles.deleteCommentIcon}>🗑️</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </>
                     )}
                   </View>
@@ -972,11 +996,18 @@ const styles = StyleSheet.create({
   },
   deleteCommentButton: {
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    padding: 6,
+    padding: 8,
     borderRadius: 8,
     marginLeft: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 107, 107, 0.3)',
+    zIndex: 10,
+    elevation: 3,
+    // Ensure it's clickable on web
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      userSelect: 'none',
+    }),
   },
   deleteCommentIcon: {
     fontSize: 12,

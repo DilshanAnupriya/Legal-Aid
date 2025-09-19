@@ -212,7 +212,28 @@ const updatePost = async (req, res) => {
 // Delete a post (soft delete)
 const deletePost = async (req, res) => {
   try {
+    console.log('[DELETE POST] Request received:', {
+      id: req.params.id,
+      method: req.method,
+      headers: {
+        'user-agent': req.headers['user-agent'],
+        'content-type': req.headers['content-type'],
+        'origin': req.headers.origin
+      },
+      ip: req.ip
+    });
+
     const { id } = req.params;
+
+    if (!id) {
+      console.log('[DELETE POST] No ID provided');
+      return res.status(400).json({
+        success: false,
+        message: 'Post ID is required'
+      });
+    }
+
+    console.log('[DELETE POST] Attempting to delete post with ID:', id);
 
     const deletedPost = await Post.findByIdAndUpdate(
       id,
@@ -221,11 +242,14 @@ const deletePost = async (req, res) => {
     );
 
     if (!deletedPost) {
+      console.log('[DELETE POST] Post not found with ID:', id);
       return res.status(404).json({
         success: false,
         message: 'Post not found'
       });
     }
+
+    console.log('[DELETE POST] Post deleted successfully:', id);
 
     res.status(200).json({
       success: true,
@@ -233,7 +257,7 @@ const deletePost = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error deleting post:', error);
+    console.error('[DELETE POST] Error deleting post:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

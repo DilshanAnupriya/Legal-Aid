@@ -109,15 +109,39 @@ const getComments = async (req, res) => {
 // Delete a comment
 const deleteComment = async (req, res) => {
   try {
+    console.log('[DELETE COMMENT] Request received:', {
+      commentId: req.params.commentId,
+      method: req.method,
+      headers: {
+        'user-agent': req.headers['user-agent'],
+        'content-type': req.headers['content-type'],
+        'origin': req.headers.origin
+      },
+      ip: req.ip
+    });
+
     const { commentId } = req.params;
+
+    if (!commentId) {
+      console.log('[DELETE COMMENT] No comment ID provided');
+      return res.status(400).json({
+        success: false,
+        message: 'Comment ID is required'
+      });
+    }
+
+    console.log('[DELETE COMMENT] Attempting to delete comment with ID:', commentId);
 
     const comment = await Comment.findById(commentId);
     if (!comment) {
+      console.log('[DELETE COMMENT] Comment not found with ID:', commentId);
       return res.status(404).json({
         success: false,
         message: 'Comment not found'
       });
     }
+
+    console.log('[DELETE COMMENT] Found comment, removing from post and deleting');
 
     // Remove comment reference from post and decrement replies count
     await Post.findByIdAndUpdate(
@@ -132,13 +156,15 @@ const deleteComment = async (req, res) => {
     // Delete the comment
     await Comment.findByIdAndDelete(commentId);
 
+    console.log('[DELETE COMMENT] Comment deleted successfully:', commentId);
+
     res.status(200).json({
       success: true,
       message: 'Comment deleted successfully'
     });
 
   } catch (error) {
-    console.error('Error deleting comment:', error);
+    console.error('[DELETE COMMENT] Error deleting comment:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

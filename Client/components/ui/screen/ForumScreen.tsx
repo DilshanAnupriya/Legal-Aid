@@ -6,12 +6,14 @@ import {
     Text,
     View,
     TouchableOpacity,
+    Pressable,
     TextInput,
     Dimensions,
     StatusBar,
     Platform,
     ActivityIndicator,
     Alert,
+    Modal,
 } from 'react-native';
 import CreatePostModal from '../../modals/CreatePostModal';
 import PostDetailModal from '../../modals/PostDetailModal';
@@ -46,18 +48,32 @@ const ForumsScreen = () => {
     const [trendingTopics, setTrendingTopics] = useState([]);
     const [sortOrder, setSortOrder] = useState('Newest');
     const [showSortDropdown, setShowSortDropdown] = useState(false);
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [postToDelete, setPostToDelete] = useState<{id: string, title: string} | null>(null);
 
     // Multiple URL options for different environments
-    const API_URLS = Platform.OS === 'android'
-        ? [
-            'http://10.0.2.2:3000/api',     // Android emulator
-            'http://10.4.2.1:3000/api',    // Your computer's IP
-            'http://localhost:3000/api',    // Fallback
-        ]
-        : [
-            'http://10.4.2.1:3000/api',    // Your computer's IP
-            'http://localhost:3000/api',    // iOS simulator
-        ];
+    const getApiUrls = () => {
+        if (Platform.OS === 'web') {
+            return [
+                'http://localhost:3000/api',
+                'http://127.0.0.1:3000/api',
+            ];
+        } else if (Platform.OS === 'android') {
+            return [
+                'http://10.0.2.2:3000/api',     // Android emulator
+                'http://10.4.2.1:3000/api',    // Your computer's IP
+                'http://localhost:3000/api',    // Fallback
+            ];
+        } else {
+            // iOS simulator
+            return [
+                'http://10.4.2.1:3000/api',    // Your computer's IP
+                'http://localhost:3000/api',    // iOS simulator
+            ];
+        }
+    };
+
+    const API_URLS = getApiUrls();
 
     const [currentApiIndex, setCurrentApiIndex] = useState(0);
     const BASE_URL = API_URLS[currentApiIndex];
@@ -266,9 +282,12 @@ const ForumsScreen = () => {
 
             if (data.success) {
                 Alert.alert('Success', 'Your post has been created successfully!');
-                fetchPosts(); // Refresh the posts list
-                fetchStats(); // Refresh stats and categories
-                fetchTrendingTopics(); // Refresh trending topics
+                // Add a small delay to ensure server has processed the post
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the posts list
+                    fetchStats(); // Refresh stats and categories
+                    fetchTrendingTopics(); // Refresh trending topics
+                }, 500);
             } else {
                 Alert.alert('Error', data.message || 'Failed to create post');
             }
@@ -357,25 +376,55 @@ const ForumsScreen = () => {
             console.log('Delete post response data:', data);
 
             if (data.success) {
-                Alert.alert('Success', 'Your post has been deleted successfully!');
+                console.log('Post deleted successfully');
                 fetchPosts(); // Refresh the posts list
                 fetchStats(); // Refresh stats
                 fetchTrendingTopics(); // Refresh trending topics
             } else {
-                Alert.alert('Error', data.message || 'Failed to delete post');
+                console.error('Failed to delete post:', data.message);
+                // For web compatibility, we could add a toast notification here
+                if (Platform.OS === 'web') {
+                    console.error('Delete failed:', data.message || 'Failed to delete post');
+                } else {
+                    Alert.alert('Error', data.message || 'Failed to delete post');
+                }
             }
         } catch (error) {
             console.error('Error deleting post:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            Alert.alert(
-                'Delete Failed',
-                `Failed to delete post. Please check your connection and try again.\n\nError: ${errorMessage}`,
-                [
-                    { text: 'Retry', onPress: () => deletePost(postId, postTitle) },
-                    { text: 'OK' }
-                ]
-            );
+            
+            // For web compatibility, use console.error instead of Alert
+            if (Platform.OS === 'web') {
+                console.error('Delete failed:', errorMessage);
+            } else {
+                Alert.alert(
+                    'Delete Failed',
+                    `Failed to delete post. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                    [
+                        { text: 'Retry', onPress: () => deletePost(postId, postTitle) },
+                        { text: 'OK' }
+                    ]
+                );
+            }
         }
+    };
+
+    const handleDeletePost = (postId: string, postTitle: string) => {
+        setPostToDelete({ id: postId, title: postTitle });
+        setShowDeleteConfirmModal(true);
+    };
+
+    const confirmDelete = () => {
+        if (postToDelete) {
+            deletePost(postToDelete.id, postToDelete.title);
+            setShowDeleteConfirmModal(false);
+            setPostToDelete(null);
+        }
+    };
+
+    const cancelDelete = () => {
+        setShowDeleteConfirmModal(false);
+        setPostToDelete(null);
     };
 
     const handleEditPost = async (post: any) => {
@@ -414,32 +463,16 @@ const ForumsScreen = () => {
         }
     };
 
-    const handleDeletePost = (postId: string, postTitle: string) => {
-        Alert.alert(
-            'Delete Post',
-            `Are you sure you want to delete "${postTitle}"?\n\nThis action cannot be undone.`,
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => deletePost(postId, postTitle),
-                },
-            ]
-        );
-    };
 
-    // Helper function to check if current user can delete the post
-    const canDeletePost = (postAuthor: string) => {
+    // Helper function to check if current user can edit the post
+    const canEditPost = (postAuthor: string) => {
         if (!user?.email) return false;
         
         // Get current user's display name (same logic as in CreatePostModal)
         const currentUserDisplayName = user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1);
         
-        // Check if the post author matches current user or if post is by "Anonymous User"
+        // Check if the post author matches current user AND post is not by "Anonymous User"
+        // Users cannot edit anonymous posts (even their own) for privacy reasons
         return postAuthor === currentUserDisplayName && postAuthor !== 'Anonymous User';
     };
 
@@ -483,6 +516,23 @@ const ForumsScreen = () => {
         fetchStats();
         fetchTrendingTopics();
     }, [activeCategory, searchQuery]);
+
+    // Close dropdown when clicking outside or when component unmounts
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (showSortDropdown) {
+                setShowSortDropdown(false);
+            }
+        };
+
+        // For web, add click listener to document
+        if (Platform.OS === 'web') {
+            document.addEventListener('click', handleClickOutside);
+            return () => {
+                document.removeEventListener('click', handleClickOutside);
+            };
+        }
+    }, [showSortDropdown]);
 
     const filteredPosts = forumPosts.filter((post: any) => {
         const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
@@ -587,7 +637,10 @@ const ForumsScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView 
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+            >
                 {/* Modern Header with Gradient Background */}
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
@@ -774,7 +827,11 @@ const ForumsScreen = () => {
                         <View style={styles.filterContainer}>
                             <TouchableOpacity 
                                 style={styles.filterButton}
-                                onPress={() => setShowSortDropdown(!showSortDropdown)}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    setShowSortDropdown(!showSortDropdown);
+                                }}
+                                activeOpacity={0.7}
                             >
                                 <Text style={styles.filterText}>{sortOrder}</Text>
                                 <Text style={styles.filterArrow}>▼</Text>
@@ -783,10 +840,12 @@ const ForumsScreen = () => {
                                 <View style={styles.sortDropdown}>
                                     <TouchableOpacity 
                                         style={[styles.sortOption, sortOrder === 'Newest' && styles.activeSortOption]}
-                                        onPress={() => {
+                                        onPress={(e) => {
+                                            e.stopPropagation();
                                             setSortOrder('Newest');
                                             setShowSortDropdown(false);
                                         }}
+                                        activeOpacity={0.7}
                                     >
                                         <Text style={[styles.sortOptionText, sortOrder === 'Newest' && styles.activeSortOptionText]}>
                                             Newest
@@ -794,10 +853,12 @@ const ForumsScreen = () => {
                                     </TouchableOpacity>
                                     <TouchableOpacity 
                                         style={[styles.sortOption, sortOrder === 'Oldest' && styles.activeSortOption]}
-                                        onPress={() => {
+                                        onPress={(e) => {
+                                            e.stopPropagation();
                                             setSortOrder('Oldest');
                                             setShowSortDropdown(false);
                                         }}
+                                        activeOpacity={0.7}
                                     >
                                         <Text style={[styles.sortOptionText, sortOrder === 'Oldest' && styles.activeSortOptionText]}>
                                             Oldest
@@ -838,7 +899,7 @@ const ForumsScreen = () => {
                                     </View>
                                     
                                     {/* Edit and Delete Buttons - Only show for posts by current user */}
-                                    {canDeletePost(post.author) && (
+                                    {canEditPost(post.author) && (
                                         <>
                                             <TouchableOpacity
                                                 style={styles.editButton}
@@ -850,8 +911,11 @@ const ForumsScreen = () => {
                                             >
                                                 <Text style={styles.editIcon}>✏️</Text>
                                             </TouchableOpacity>
-                                            <TouchableOpacity
-                                                style={styles.deleteButton}
+                                            <Pressable
+                                                style={({ pressed }) => [
+                                                    styles.deleteButton,
+                                                    { opacity: pressed ? 0.7 : 1 }
+                                                ]}
                                                 onPress={(e) => {
                                                     e.stopPropagation(); // Prevent card press
                                                     handleDeletePost(post.id, post.title);
@@ -859,7 +923,7 @@ const ForumsScreen = () => {
                                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                             >
                                                 <Text style={styles.deleteIcon}>🗑️</Text>
-                                            </TouchableOpacity>
+                                            </Pressable>
                                         </>
                                     )}
                                 </View>
@@ -939,6 +1003,38 @@ const ForumsScreen = () => {
                     fetchTrendingTopics();
                 }}
             />
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                visible={showDeleteConfirmModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={cancelDelete}
+            >
+                <View style={styles.deleteModalOverlay}>
+                    <View style={styles.deleteModalContainer}>
+                        <Text style={styles.deleteModalTitle}>Delete Post</Text>
+                        <Text style={styles.deleteModalMessage}>
+                            Are you sure you want to delete "{postToDelete?.title}"?
+                            {'\n\n'}This action cannot be undone.
+                        </Text>
+                        <View style={styles.deleteModalButtons}>
+                            <TouchableOpacity
+                                style={styles.deleteModalCancelButton}
+                                onPress={cancelDelete}
+                            >
+                                <Text style={styles.deleteModalCancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.deleteModalConfirmButton}
+                                onPress={confirmDelete}
+                            >
+                                <Text style={styles.deleteModalConfirmText}>Delete</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -1154,6 +1250,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         marginBottom: 15,
+        position: 'relative',
+        zIndex: 1,
     },
     seeAllText: {
         fontSize: 14,
@@ -1298,12 +1396,16 @@ const styles = StyleSheet.create({
     postsSection: {
         paddingTop: 30,
         paddingHorizontal: 20,
+        paddingBottom: 20,
         backgroundColor: '#F8F9FA',
+        position: 'relative',
+        zIndex: 1,
     },
     filterContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         position: 'relative',
+        zIndex: 2,
     },
     filterButton: {
         flexDirection: 'row',
@@ -1327,19 +1429,24 @@ const styles = StyleSheet.create({
     },
     sortDropdown: {
         position: 'absolute',
-        top: 40,
+        top: 42,
         right: 0,
         backgroundColor: '#FFFFFF',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#E0E0E0',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        minWidth: 100,
-        zIndex: 1000,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 8,
+        minWidth: 120,
+        maxWidth: 150,
+        zIndex: 9999,
+        // Web-specific styles for better shadow
+        ...(Platform.OS === 'web' && {
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        }),
     },
     sortOption: {
         paddingHorizontal: 16,
@@ -1380,7 +1487,10 @@ const styles = StyleSheet.create({
         right: 12,
         flexDirection: 'row',
         alignItems: 'center',
-        zIndex: 1,
+        zIndex: 10,
+        elevation: 3,
+        // Allow touch events to pass through to children
+        pointerEvents: 'box-none',
     },
     postPriorityIndicator: {
         marginRight: 8,
@@ -1399,10 +1509,20 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
         backgroundColor: 'rgba(255, 107, 107, 0.1)',
-        padding: 6,
+        padding: 8,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: 'rgba(255, 107, 107, 0.3)',
+        zIndex: 20,
+        elevation: 5,
+        marginLeft: 8,
+        // Ensure it receives touch events
+        pointerEvents: 'auto',
+        // Ensure it's clickable on web
+        ...(Platform.OS === 'web' && {
+            cursor: 'pointer',
+            userSelect: 'none',
+        }),
     },
     deleteIcon: {
         fontSize: 12,
@@ -1549,6 +1669,72 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#7F8C8D',
         textAlign: 'center',
+    },
+    // Delete Modal Styles
+    deleteModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10000,
+    },
+    deleteModalContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 24,
+        margin: 20,
+        maxWidth: 400,
+        width: '90%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    deleteModalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#2C3E50',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    deleteModalMessage: {
+        fontSize: 16,
+        color: '#34495E',
+        lineHeight: 22,
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    deleteModalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    deleteModalCancelButton: {
+        flex: 1,
+        backgroundColor: '#E0E0E0',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    deleteModalCancelText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#666666',
+    },
+    deleteModalConfirmButton: {
+        flex: 1,
+        backgroundColor: '#FF6B6B',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    deleteModalConfirmText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
     },
 });
 
