@@ -15,6 +15,7 @@ const Tab = createBottomTabNavigator();
 
 export default function HomeBottomTabNavigation({ navigation }: any) {
     const { colors, theme } = useTheme();
+
     return (
         <Tab.Navigator
             initialRouteName={'Home'}
@@ -163,9 +164,8 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                     },
                 }}
             />
-            
-            <Tab.Screen 
-                name={'Lawyer'} 
+            <Tab.Screen
+                name={'Lawyer'}
                 component={LawyerScreen}
                 options={{
                     headerStyle: {

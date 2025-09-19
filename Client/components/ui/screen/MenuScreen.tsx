@@ -1,30 +1,3 @@
-
-import {StyleSheet, Text, View} from "react-native";
-import { Menu } from 'react-native-paper';
-import {COLOR} from "@/constants/ColorPallet";
-
-export default function ProfileScreen({navigation}: any){
-    return (
-        <View style={styles.container}>
-            <Menu.Item leadingIcon="file-multiple-outline" onPress={() => {}} title="Document Orgernizer" />
-            <Menu.Item leadingIcon="robot-outline" onPress={() => {}} title="AI ChatBot Assist" />
-            <Menu.Item leadingIcon="translate" onPress={() => {}} title="Languages"  />
-            <Menu.Item leadingIcon="charity" onPress={() => {navigation.navigate('Ngo')}} title="NGO"  />
-            <Menu.Item leadingIcon="cog-outline" onPress={() => {}} title="Settings" />
-            <Menu.Item leadingIcon="shield-account-outline" onPress={() => {}} title="About Us"  />
-            <Menu.Item leadingIcon="account-voice" onPress={() => {}} title="Contact Us"  />
-            <Menu.Item leadingIcon="exit-to-app" onPress={() => {}} title="Logout" />
-        </View>
-    )
-}
-
-const styles = StyleSheet.create({
-    container:{
-        flex:1,
-        backgroundColor:COLOR.light.light,
-    }
-})
-
 import React, { useState } from 'react';
 import { router } from 'expo-router';
 import { 
@@ -37,7 +10,9 @@ import {
   ScrollView,
   RefreshControl
 } from "react-native";
+import { Menu } from 'react-native-paper';
 import { useAuth } from '../../../context/AuthContext';
+import {COLOR} from "@/constants/ColorPallet";
 
 export default function ProfileScreen({ navigation }: { navigation?: any }) {
     const { user, logout, getCurrentUser, isLoading, isAuthenticated } = useAuth();
@@ -172,6 +147,20 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
                 </View>
             </View>
 
+            {/* Menu Items Section */}
+            <View style={styles.menuSection}>
+                <Text style={styles.menuSectionTitle}>Quick Actions</Text>
+                <View style={styles.menuContainer}>
+                    <Menu.Item leadingIcon="file-multiple-outline" onPress={() => {}} title="Document Organizer" />
+                    <Menu.Item leadingIcon="robot-outline" onPress={() => {}} title="AI ChatBot Assist" />
+                    <Menu.Item leadingIcon="translate" onPress={() => {}} title="Languages"  />
+                    <Menu.Item leadingIcon="charity" onPress={() => {navigation.navigate('Ngo')}} title="NGO"  />
+                    <Menu.Item leadingIcon="cog-outline" onPress={() => {}} title="Settings" />
+                    <Menu.Item leadingIcon="shield-account-outline" onPress={() => {}} title="About Us"  />
+                    <Menu.Item leadingIcon="account-voice" onPress={() => {}} title="Contact Us"  />
+                </View>
+            </View>
+
             <Pressable style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutButtonText}>Sign Out</Text>
             </Pressable>
@@ -296,6 +285,26 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'right',
     },
+    menuSection: {
+        marginBottom: 30,
+    },
+    menuSectionTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    menuContainer: {
+        backgroundColor: COLOR.light.light,
+        borderRadius: 12,
+        padding: 10,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
     logoutButton: {
         backgroundColor: '#dc3545',
         paddingVertical: 15,
@@ -314,4 +323,3 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 });
-

@@ -10,10 +10,6 @@ const DB_URL = process.env.DB_URL;
 
 // Middleware
 app.use(cors({
-
-  origin: 'http://localhost:3000',
-  credentials: true
-
   origin: [
     'http://localhost:3000', 'http://127.0.0.1:3000', 
     'http://10.0.2.2:3000', 'http://10.4.2.1:3000',
@@ -25,7 +21,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
   optionsSuccessStatus: 200 // For legacy browser support
-
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
