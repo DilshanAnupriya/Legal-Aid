@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
 import { COLOR } from '../../../constants/ColorPallet';
-import { useRouter } from 'expo-router';
 
-const LoginScreen: React.FC = () => {
-  const router = useRouter();
+interface LoginScreenProps {
+  navigation?: any;
+}
+
+const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -58,8 +60,10 @@ const LoginScreen: React.FC = () => {
       console.log('Calling login with', formData.email, formData.password);
       const result = await login(formData.email, formData.password);
       console.log('Login result:', result);
-      // Direct navigation after successful login (skip Alert for browser)
-      router.replace('/(tabs)');
+
+      // No need to navigate manually - AuthNavigator will handle this automatically
+      // when isAuthenticated becomes true
+
     } catch (error: any) {
       console.log('Login error:', error);
       Alert.alert('Error', error.message || 'Login failed');
@@ -76,70 +80,76 @@ const LoginScreen: React.FC = () => {
     }
   };
 
+  const handleSignUpPress = () => {
+    if (navigation && navigation.navigate) {
+      navigation.navigate('SignUp');
+    }
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          {/* Email Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="Enter your email"
-              value={formData.email}
-              onChangeText={(value) => updateFormData('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+      <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.content}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to your account</Text>
           </View>
 
-          {/* Password Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
-              placeholder="Enter your password"
-              value={formData.password}
-              onChangeText={(value) => updateFormData('password', value)}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-          </View>
+          <View style={styles.formContainer}>
+            {/* Email Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChangeText={(value) => updateFormData('email', value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
 
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.disabledButton]}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                  style={[styles.input, errors.password && styles.inputError]}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChangeText={(value) => updateFormData('password', value)}
+                  secureTextEntry
+                  autoCapitalize="none"
+              />
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            </View>
 
-          {/* Sign Up Link */}
-          <View style={styles.signUpContainer}>
-            <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/auth/signup')}>
-              <Text style={styles.signUpLink}>Create Account</Text>
+            {/* Login Button */}
+            <TouchableOpacity
+                style={[styles.loginButton, isLoading && styles.disabledButton]}
+                onPress={handleLogin}
+                disabled={isLoading}
+            >
+              {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+              ) : (
+                  <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
             </TouchableOpacity>
+
+            {/* Sign Up Link */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={handleSignUpPress}>
+                <Text style={styles.signUpLink}>Create Account</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
   );
 };
 
@@ -160,7 +170,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLOR.black || '#333',
+    color: COLOR.light.black || '#333',
     marginBottom: 8,
   },
   subtitle: {
@@ -177,7 +187,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLOR.black || '#333',
+    color: COLOR.light.black || '#333',
     marginBottom: 8,
   },
   input: {
@@ -197,7 +207,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   loginButton: {
-    backgroundColor: COLOR.orange || '#ff6b35',
+    backgroundColor: COLOR.light.orange || '#ff6b35',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -223,7 +233,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontSize: 16,
-    color: COLOR.orange || '#ff6b35',
+    color: COLOR.light.orange || '#ff6b35',
     fontWeight: '600',
   },
 });

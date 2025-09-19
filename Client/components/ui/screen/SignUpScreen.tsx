@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
 import { COLOR } from '../../../constants/ColorPallet';
-import { router } from 'expo-router';
 
 interface SignUpScreenProps {
   navigation?: any;
@@ -81,18 +80,11 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     try {
       const { email, password, birthday, genderSpectrum } = formData;
       await register({ email, password, birthday, genderSpectrum });
-      
-      Alert.alert(
-        'Success',
-        'Account created successfully!',
-        [{ 
-          text: 'OK', 
-          onPress: () => {
-            // After successful registration, user is authenticated, so navigate to main app
-            router.replace('/(tabs)');
-          }
-        }]
-      );
+
+      // No need to navigate manually - AuthNavigator will handle this automatically
+      // when isAuthenticated becomes true
+      Alert.alert('Success', 'Account created successfully!');
+
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Registration failed');
     } finally {
@@ -108,141 +100,140 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     }
   };
 
+  const handleLoginPress = () => {
+    if (navigation && navigation.navigate) {
+      navigation.navigate('Login');
+    }
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join our legal aid platform</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          {/* Email Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email *</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="Enter your email"
-              value={formData.email}
-              onChangeText={(value) => updateFormData('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+      <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join our legal aid platform</Text>
           </View>
 
-          {/* Password Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password *</Text>
-            <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
-              placeholder="Enter your password"
-              value={formData.password}
-              onChangeText={(value) => updateFormData('password', value)}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-          </View>
+          <View style={styles.formContainer}>
+            {/* Email Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email *</Text>
+              <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChangeText={(value) => updateFormData('email', value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
 
-          {/* Confirm Password Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password *</Text>
-            <TextInput
-              style={[styles.input, errors.confirmPassword && styles.inputError]}
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChangeText={(value) => updateFormData('confirmPassword', value)}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-          </View>
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password *</Text>
+              <TextInput
+                  style={[styles.input, errors.password && styles.inputError]}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChangeText={(value) => updateFormData('password', value)}
+                  secureTextEntry
+                  autoCapitalize="none"
+              />
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            </View>
 
-          {/* Birthday Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Birthday *</Text>
-            <TextInput
-              style={[styles.input, errors.birthday && styles.inputError]}
-              placeholder="MM/DD/YYYY or DD/MM/YYYY"
-              value={formData.birthday}
-              onChangeText={(value) => updateFormData('birthday', value)}
-              keyboardType="numeric"
-            />
-            {errors.birthday && <Text style={styles.errorText}>{errors.birthday}</Text>}
-          </View>
+            {/* Confirm Password Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Confirm Password *</Text>
+              <TextInput
+                  style={[styles.input, errors.confirmPassword && styles.inputError]}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChangeText={(value) => updateFormData('confirmPassword', value)}
+                  secureTextEntry
+                  autoCapitalize="none"
+              />
+              {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+            </View>
 
-          {/* Gender Spectrum Dropdown */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Gender *</Text>
-            <TouchableOpacity
-              style={[styles.input, errors.genderSpectrum && styles.inputError, { justifyContent: 'center' }]}
-              onPress={() => setShowGenderModal(true)}
-            >
-              <Text style={{ color: formData.genderSpectrum ? '#333' : '#aaa' }}>
-                {formData.genderSpectrum || 'Select your gender'}
-              </Text>
-            </TouchableOpacity>
-            <Modal
-              visible={showGenderModal}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowGenderModal(false)}
-            >
-              <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowGenderModal(false)}>
-                <View style={styles.modalContent}>
-                  {['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other'].map(option => (
-                    <TouchableOpacity
-                      key={option}
-                      style={styles.modalOption}
-                      onPress={() => {
-                        updateFormData('genderSpectrum', option);
-                        setShowGenderModal(false);
-                      }}
-                    >
-                      <Text style={styles.modalOptionText}>{option}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+            {/* Birthday Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Birthday *</Text>
+              <TextInput
+                  style={[styles.input, errors.birthday && styles.inputError]}
+                  placeholder="MM/DD/YYYY or DD/MM/YYYY"
+                  value={formData.birthday}
+                  onChangeText={(value) => updateFormData('birthday', value)}
+                  keyboardType="numeric"
+              />
+              {errors.birthday && <Text style={styles.errorText}>{errors.birthday}</Text>}
+            </View>
+
+            {/* Gender Spectrum Dropdown */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Gender *</Text>
+              <TouchableOpacity
+                  style={[styles.input, errors.genderSpectrum && styles.inputError, { justifyContent: 'center' }]}
+                  onPress={() => setShowGenderModal(true)}
+              >
+                <Text style={{ color: formData.genderSpectrum ? '#333' : '#aaa' }}>
+                  {formData.genderSpectrum || 'Select your gender'}
+                </Text>
               </TouchableOpacity>
-            </Modal>
-            {errors.genderSpectrum && <Text style={styles.errorText}>{errors.genderSpectrum}</Text>}
-          </View>
+              <Modal
+                  visible={showGenderModal}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setShowGenderModal(false)}
+              >
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowGenderModal(false)}>
+                  <View style={styles.modalContent}>
+                    {['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other'].map(option => (
+                        <TouchableOpacity
+                            key={option}
+                            style={styles.modalOption}
+                            onPress={() => {
+                              updateFormData('genderSpectrum', option);
+                              setShowGenderModal(false);
+                            }}
+                        >
+                          <Text style={styles.modalOptionText}>{option}</Text>
+                        </TouchableOpacity>
+                    ))}
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+              {errors.genderSpectrum && <Text style={styles.errorText}>{errors.genderSpectrum}</Text>}
+            </View>
 
-          {/* Sign Up Button */}
-          <TouchableOpacity
-            style={[styles.signUpButton, isLoading && styles.disabledButton]}
-            onPress={handleSignUp}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.signUpButtonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Login Link */}
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => {
-              // Handle navigation - try both methods for compatibility
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Login');
-              } else {
-                router.push('/auth/login');
-              }
-            }}>
-              <Text style={styles.loginLink}>Sign In</Text>
+            {/* Sign Up Button */}
+            <TouchableOpacity
+                style={[styles.signUpButton, isLoading && styles.disabledButton]}
+                onPress={handleSignUp}
+                disabled={isLoading}
+            >
+              {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+              ) : (
+                  <Text style={styles.signUpButtonText}>Create Account</Text>
+              )}
             </TouchableOpacity>
+
+            {/* Login Link */}
+            <View style={styles.loginContainer}>
+              <Text style={styles.loginText}>Already have an account? </Text>
+              <TouchableOpacity onPress={handleLoginPress}>
+                <Text style={styles.loginLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
   );
 };
 
@@ -263,7 +254,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLOR.black || '#333',
+    color: COLOR.light.black || '#333',
     marginBottom: 8,
   },
   subtitle: {
@@ -280,7 +271,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLOR.black || '#333',
+    color: COLOR.light.black || '#333',
     marginBottom: 8,
   },
   input: {
@@ -322,7 +313,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   signUpButton: {
-    backgroundColor: COLOR.orange || '#ff6b35',
+    backgroundColor: COLOR.light.orange || '#ff6b35',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -348,7 +339,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: 16,
-    color: COLOR.orange || '#ff6b35',
+    color: COLOR.light.black || '#ff6b35',
     fontWeight: '600',
   },
 });

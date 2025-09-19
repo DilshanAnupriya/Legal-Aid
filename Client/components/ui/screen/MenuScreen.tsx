@@ -11,7 +11,7 @@ import {
   RefreshControl
 } from "react-native";
 import { Menu } from 'react-native-paper';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import {COLOR} from "@/constants/ColorPallet";
 
 export default function ProfileScreen({ navigation }: { navigation?: any }) {
@@ -21,7 +21,7 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
     const handleLogout = async () => {
         try {
             await logout();
-            router.replace('/auth/login');
+            router.replace('/Login');
         } catch (err) {
             Alert.alert('Error', (err && typeof err === 'object' && 'message' in err) ? (err as any).message : 'Failed to logout');
         }
