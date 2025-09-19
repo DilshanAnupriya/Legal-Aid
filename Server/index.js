@@ -15,7 +15,9 @@ app.use(cors({
     'http://10.0.2.2:3000', 'http://10.4.2.1:3000',
     'http://localhost:8081', 'http://127.0.0.1:8081', // Expo web dev server
     'http://localhost:19006', 'http://127.0.0.1:19006', // Alternative Expo web port
-    'http://localhost:8080', 'http://127.0.0.1:8080', // Common dev server port
+    'http://localhost:8080', 'http://127.0.0.1:8080',
+    'http://10.0.2.2:8081', 'http://10.4.2.1:8081',
+    'http://10.164.198.42:8081','http://10.164.198.42:3000'// Common dev server port
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
@@ -37,7 +39,7 @@ app.use((req, res, next) => {
   });
   next();
 });
-
+app.use('/uploads', express.static('uploads'));
 
 app.use((error, req, res, next) => {
   if (error instanceof MulterError) {
@@ -78,9 +80,8 @@ app.use('/api/ngo', ngoRoutes);
 const postRoutes = require("./Routes/postRoutes");
 const userRoutes = require("./Routes/userRoutes");
 const lawyerRoutes = require("./Routes/lawyerRoutes");
-
-
-// API Routes
+const documentRoutes = require('./Routes/documentRoutes');
+app.use('/api/documents', documentRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/auth", userRoutes);
 app.use("/api/lawyers", lawyerRoutes);
