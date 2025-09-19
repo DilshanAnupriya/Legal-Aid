@@ -18,22 +18,40 @@ app.use((error, req, res, next) => {
   if (error instanceof MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
+        success: false,
         message: 'error',
-        error: 'File size too large. Maximum 5MB allowed.'
+        error: 'File size too large. Maximum 10MB allowed for documents, 5MB for images.'
       });
     }
     if (error.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({
+        success: false,
         message: 'error',
-        error: 'Too many files. Maximum 11 files allowed.'
+        error: 'Too many files. Maximum 11 files allowed for NGO uploads, 1 file for documents.'
+      });
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        message: 'error',
+        error: 'Unexpected file field.'
       });
     }
   }
 
   if (error.message === 'Only image files are allowed!') {
     return res.status(400).json({
+      success: false,
       message: 'error',
       error: 'Only image files are allowed!'
+    });
+  }
+
+  if (error.message && error.message.includes('Only image files') || error.message.includes('PDF files are allowed')) {
+    return res.status(400).json({
+      success: false,
+      message: 'error',
+      error: error.message
     });
   }
 
@@ -49,16 +67,18 @@ mongoose.connect(DB_URL)
 //NGO
 const ngoRoutes = require('./Routes/ngoRoutes');
 app.use('/api/ngo', ngoRoutes);
+
 // Import Routes
 const postRoutes = require("./Routes/postRoutes");
 const userRoutes = require("./Routes/userRoutes");
 const lawyerRoutes = require("./Routes/lawyerRoutes");
-
+const documentRoutes = require("./Routes/documentRoutes");
 
 // API Routes
 app.use("/api/posts", postRoutes);
 app.use("/api/auth", userRoutes);
 app.use("/api/lawyers", lawyerRoutes);
+app.use("/api/documents", documentRoutes);
 
 
 // Root route
@@ -69,7 +89,17 @@ app.get("/", (req, res) => {
     endpoints: {
       auth: "/api/auth",
       posts: "/api/posts",
+      lawyers: "/api/lawyers",
+      documents: "/api/documents",
+      ngo: "/api/ngo",
       health: "/health"
+    },
+    features: {
+      authentication: "User registration, login, and JWT-based auth",
+      posts: "Legal questions and community posts",
+      lawyers: "Lawyer directory and services",
+      documents: "AI-powered document scanning and OCR text extraction",
+      ngo: "NGO registration and management"
     }
   });
 });

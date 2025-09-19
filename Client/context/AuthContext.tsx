@@ -96,6 +96,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const API_BASE_URL ='http://localhost:3000/api/auth';
 
 
+
   const [currentApiIndex, setCurrentApiIndex] = useState(0);
   const API_URLS = getApiUrls();
   const API_BASE_URL = API_URLS[currentApiIndex];
