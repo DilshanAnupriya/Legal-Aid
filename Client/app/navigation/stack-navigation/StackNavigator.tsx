@@ -3,12 +3,16 @@ import { createStackNavigator } from "@react-navigation/stack";
 import HomeBottomTabNavigation from "@/app/navigation/tab-navigation/HomeBottomTabNavigation";
 import { COLOR } from "@/constants/ColorPallet";
 import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
+import LoginScreen from "@/components/ui/screen/LoginScreen";
+import SignUpScreen from "@/components/ui/screen/SignUpScreen";
+import React from "react";
 
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
     return (
         <Stack.Navigator
+
             screenOptions={{
                 headerStyle: styles.header, // Header background
                 headerTitleStyle: styles.headerTitle, // Header text
@@ -25,6 +29,7 @@ export default function StackNavigator() {
                 options={{title:'NGO'}}
                 component={NgoScreen}
             />
+
         </Stack.Navigator>
     );
 }

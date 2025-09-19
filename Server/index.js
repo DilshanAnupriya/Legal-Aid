@@ -11,6 +11,7 @@ const DB_URL = process.env.DB_URL;
 // Middleware
 app.use(cors({
   origin: [
+    'http://localhost:3000', 'http://127.0.0.1:3000', 
     'http://localhost:3000', 'http://127.0.0.1:3000',
     'http://10.0.2.2:3000', 'http://10.4.2.1:3000',
     'http://localhost:8081', 'http://127.0.0.1:8081', // Expo web dev server
