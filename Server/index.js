@@ -7,14 +7,28 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
-// Middleware
+// Middleware - Updated CORS for better compatibility
 app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
+  origin: [
+    'http://localhost:3000', 
+    'http://10.0.2.2:3000', 
+    'http://10.4.2.1:3000', 
+    'http://127.0.0.1:3000', 
+    'http://localhost:8081', 
+    'http://10.0.2.2:8081', 
+    'http://10.4.2.1:8081',
+    'http://10.164.198.42:8081', // Add current network IP for client
+    'http://10.164.198.42:3000'  // Add current network IP for server
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files for document uploads
+app.use('/uploads', express.static('uploads'));
 
 app.use((error, req, res, next) => {
   if (error instanceof MulterError) {
@@ -42,19 +56,51 @@ app.use((error, req, res, next) => {
   next(error);
 });
 
+// Connect to MongoDB with improved error handling
+const connectToMongoDB = async () => {
+  try {
+    await mongoose.connect(DB_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+    });
+    console.log("✅ Connected to MongoDB");
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    console.log("⚠️  Server will continue without MongoDB. Some features may not work.");
+    // Don't exit the process, allow server to start for testing
+  }
+};
+
+// Handle MongoDB connection events
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected. Attempting to reconnect...');
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('✅ MongoDB reconnected');
+});
+
 // Connect to MongoDB
-mongoose.connect(DB_URL)
-.then(() => console.log("✅ Connected to MongoDB"))
-.catch((err) => console.error("❌ MongoDB connection error:", err));
+connectToMongoDB();
 
 
 //NGO
 const ngoRoutes = require('./routes/ngoRoutes');
 app.use('/api/ngo', ngoRoutes);
-// Import Routes
+
+// Import Document Routes
+const documentRoutes = require('./Routes/documentRoutes');
+app.use('/api/documents', documentRoutes);
+
+// Import Post Routes
 const postRoutes = require("./Routes/postRoutes");
 const {MulterError} = require("multer");
-
 
 // API Routes
 app.use("/api/posts", postRoutes);
@@ -67,8 +113,13 @@ app.get("/", (req, res) => {
     version: "1.0.0",
     endpoints: {
       posts: "/api/posts",
-      users: "/api/users",
+      documents: "/api/documents",
+      ngo: "/api/ngo",
       health: "/health"
+    },
+    server: {
+      status: "running",
+      mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
     }
   });
 });
@@ -78,7 +129,16 @@ app.get("/health", (req, res) => {
   res.json({
     status: "OK",
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    mongodb: {
+      status: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      readyState: mongoose.connection.readyState
+    },
+    server: {
+      port: PORT,
+      nodeVersion: process.version,
+      platform: process.platform
+    }
   });
 });
 
