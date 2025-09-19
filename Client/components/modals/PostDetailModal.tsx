@@ -32,6 +32,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
   const [isAnonymousComment, setIsAnonymousComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [showDeleteCommentModal, setShowDeleteCommentModal] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<{id: string, content: string} | null>(null);
 
   // API URL configuration
   const getApiUrls = () => {
@@ -307,61 +309,69 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
     setEditingCommentContent('');
   };
 
-  const handleDeleteComment = (commentId: string, commentContent: string) => {
-    const truncatedContent = commentContent.length > 50 
-      ? commentContent.substring(0, 50) + '...' 
-      : commentContent;
+  const deleteComment = async (commentId: string) => {
+    try {
+      console.log('Deleting comment:', commentId);
       
-    Alert.alert(
-      'Delete Comment',
-      `Are you sure you want to delete this comment?\n\n"${truncatedContent}"\n\nThis action cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+      const response = await fetch(`${BASE_URL}/posts/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Deleting comment:', commentId);
-              
-              const response = await fetch(`${BASE_URL}/posts/comments/${commentId}`, {
-                method: 'DELETE',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              });
+      });
 
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-              const data = await response.json();
-              console.log('Delete comment response:', data);
+      const data = await response.json();
+      console.log('Delete comment response:', data);
 
-              if (data.success) {
-                // Refresh comments to remove the deleted comment
-                await fetchComments();
-                
-                // Notify parent component to refresh post data (for reply count update)
-                if (onPostUpdated) {
-                  onPostUpdated();
-                }
-                
-                Alert.alert('Success', 'Comment deleted successfully!');
-              } else {
-                throw new Error(data.message || 'Failed to delete comment');
-              }
-            } catch (error) {
-              console.error('Error deleting comment:', error);
-              Alert.alert('Error', 'Failed to delete comment. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+      if (data.success) {
+        console.log('Comment deleted successfully');
+        // Refresh comments to remove the deleted comment
+        await fetchComments();
+        
+        // Notify parent component to refresh post data (for reply count update)
+        if (onPostUpdated) {
+          onPostUpdated();
+        }
+      } else {
+        console.error('Failed to delete comment:', data.message);
+        // For web compatibility, use console.error instead of Alert
+        if (Platform.OS === 'web') {
+          console.error('Delete failed:', data.message || 'Failed to delete comment');
+        } else {
+          Alert.alert('Error', data.message || 'Failed to delete comment');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      // For web compatibility, use console.error instead of Alert
+      if (Platform.OS === 'web') {
+        console.error('Delete failed:', error instanceof Error ? error.message : 'Unknown error');
+      } else {
+        Alert.alert('Error', 'Failed to delete comment. Please try again.');
+      }
+    }
+  };
+
+  const handleDeleteComment = (commentId: string, commentContent: string) => {
+    setCommentToDelete({ id: commentId, content: commentContent });
+    setShowDeleteCommentModal(true);
+  };
+
+  const confirmDeleteComment = () => {
+    if (commentToDelete) {
+      deleteComment(commentToDelete.id);
+      setShowDeleteCommentModal(false);
+      setCommentToDelete(null);
+    }
+  };
+
+  const cancelDeleteComment = () => {
+    setShowDeleteCommentModal(false);
+    setCommentToDelete(null);
   };
 
   // Don't render anything if no post data
@@ -370,11 +380,12 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}>
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         
@@ -654,6 +665,49 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
         </ScrollView>
       </SafeAreaView>
     </Modal>
+
+    {/* Delete Comment Confirmation Modal */}
+    <Modal
+      visible={showDeleteCommentModal}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={cancelDeleteComment}
+    >
+      <View style={styles.deleteCommentModalOverlay}>
+        <View style={styles.deleteCommentModalContainer}>
+          <Text style={styles.deleteCommentModalTitle}>Delete Comment</Text>
+          <Text style={styles.deleteCommentModalMessage}>
+            Are you sure you want to delete this comment?
+            {commentToDelete && commentToDelete.content && (
+              <>
+                {'\n\n"'}
+                {commentToDelete.content.length > 100 
+                  ? commentToDelete.content.substring(0, 100) + '...' 
+                  : commentToDelete.content
+                }
+                {'"'}
+              </>
+            )}
+            {'\n\n'}This action cannot be undone.
+          </Text>
+          <View style={styles.deleteCommentModalButtons}>
+            <TouchableOpacity
+              style={styles.deleteCommentModalCancelButton}
+              onPress={cancelDeleteComment}
+            >
+              <Text style={styles.deleteCommentModalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteCommentModalConfirmButton}
+              onPress={confirmDeleteComment}
+            >
+              <Text style={styles.deleteCommentModalConfirmText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 };
 
@@ -1196,6 +1250,72 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Delete Comment Modal Styles
+  deleteCommentModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20000, // Higher than post delete modal
+  },
+  deleteCommentModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 15, // Higher elevation
+  },
+  deleteCommentModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2C3E50',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteCommentModalMessage: {
+    fontSize: 16,
+    color: '#34495E',
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  deleteCommentModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  deleteCommentModalCancelButton: {
+    flex: 1,
+    backgroundColor: '#E0E0E0',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteCommentModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  deleteCommentModalConfirmButton: {
+    flex: 1,
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteCommentModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 
