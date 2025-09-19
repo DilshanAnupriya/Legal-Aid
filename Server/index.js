@@ -12,6 +12,7 @@ const DB_URL = process.env.DB_URL;
 app.use(cors({
   origin: [
     'http://localhost:3000', 'http://127.0.0.1:3000', 
+    'http://localhost:3000', 'http://127.0.0.1:3000',
     'http://10.0.2.2:3000', 'http://10.4.2.1:3000',
     'http://localhost:8081', 'http://127.0.0.1:8081', // Expo web dev server
     'http://localhost:19006', 'http://127.0.0.1:19006', // Alternative Expo web port
@@ -69,8 +70,8 @@ app.use((error, req, res, next) => {
 
 // Connect to MongoDB
 mongoose.connect(DB_URL)
-.then(() => console.log("✅ Connected to MongoDB"))
-.catch((err) => console.error("❌ MongoDB connection error:", err));
+    .then(() => console.log("✅ Connected to MongoDB"))
+    .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 
 //NGO

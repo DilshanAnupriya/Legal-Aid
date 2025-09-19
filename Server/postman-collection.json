@@ -1,0 +1,260 @@
+{
+  "info": {
+    "name": "Legal Aid - Document Scanning API",
+    "description": "API collection for testing document upload, scanning, and management functionality",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "document",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select an image or PDF file to upload"
+                },
+                {
+                  "key": "title",
+                  "value": "Sample Legal Document",
+                  "type": "text",
+                  "description": "Optional document title"
+                },
+                {
+                  "key": "description",
+                  "value": "This is a test document upload",
+                  "type": "text",
+                  "description": "Optional document description"
+                },
+                {
+                  "key": "category",
+                  "value": "Legal",
+                  "type": "text",
+                  "description": "Document category (Legal, Personal, Business, etc.)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/documents/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "documents", "upload"]
+            },
+            "description": "Upload a document without scanning"
+          },
+          "response": []
+        },
+        {
+          "name": "Scan Document (OCR)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "document",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select an image or PDF file to scan with OCR"
+                },
+                {
+                  "key": "language",
+                  "value": "eng",
+                  "type": "text",
+                  "description": "OCR language code (eng, spa, fra, etc.)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/documents/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "documents", "scan"]
+            },
+            "description": "Upload and scan document using OCR to extract text"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/documents?page=1&limit=10&category=All",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "documents"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of documents per page"
+                },
+                {
+                  "key": "category",
+                  "value": "All",
+                  "description": "Filter by category (Legal, Personal, Business, Scanned, etc.)"
+                }
+              ]
+            },
+            "description": "Get paginated list of all documents"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Document by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/documents/{{documentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "documents", "{{documentId}}"],
+              "variable": [
+                {
+                  "key": "documentId",
+                  "value": "66e123abc456def789012345",
+                  "description": "MongoDB ObjectId of the document"
+                }
+              ]
+            },
+            "description": "Get specific document details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/documents/{{documentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "documents", "{{documentId}}"],
+              "variable": [
+                {
+                  "key": "documentId",
+                  "value": "66e123abc456def789012345",
+                  "description": "MongoDB ObjectId of the document to delete"
+                }
+              ]
+            },
+            "description": "Delete document and associated file"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Supported Languages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/documents/languages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "documents", "languages"]
+            },
+            "description": "Get list of supported OCR languages"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Server Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check if server is running"
+          },
+          "response": []
+        },
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Get API information and available endpoints"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Base URL for the API server"
+    },
+    {
+      "key": "documentId",
+      "value": "",
+      "type": "string",
+      "description": "Document ID for testing specific document operations"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set dynamic variables if needed",
+          "console.log('Running Legal Aid Document API tests...');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Basic response validation",
+          "pm.test('Status code is successful', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "});",
+          "",
+          "pm.test('Response has success field', function () {",
+          "    var jsonData = pm.response.json();",
+          "    pm.expect(jsonData).to.have.property('success');",
+          "});",
+          "",
+          "// Save document ID for subsequent requests",
+          "if (pm.response.json().data && pm.response.json().data.documentId) {",
+          "    pm.collectionVariables.set('documentId', pm.response.json().data.documentId);",
+          "}",
+          "",
+          "if (pm.response.json().data && pm.response.json().data.document && pm.response.json().data.document.id) {",
+          "    pm.collectionVariables.set('documentId', pm.response.json().data.document.id);",
+          "}"
+        ]
+      }
+    }
+  ]
+}
