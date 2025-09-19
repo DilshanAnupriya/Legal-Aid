@@ -91,7 +91,7 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
                 {!isAuthenticated && (
                     <Pressable 
                         style={[styles.retryButton, { backgroundColor: '#007AFF', marginTop: 10 }]} 
-                        onPress={() => router.replace('/auth/login')}
+                        onPress={() => navigation.navigate('Login')}
                     >
                         <Text style={styles.retryButtonText}>Go to Login</Text>
                     </Pressable>

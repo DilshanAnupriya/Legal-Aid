@@ -6,6 +6,7 @@ import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
 import LoginScreen from "@/components/ui/screen/LoginScreen";
 import SignUpScreen from "@/components/ui/screen/SignUpScreen";
 import React from "react";
+import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
 
 const Stack = createStackNavigator();
 
@@ -29,7 +30,14 @@ export default function StackNavigator() {
                 options={{title:'NGO'}}
                 component={NgoScreen}
             />
-
+            <Stack.Screen
+                name="NgoProfile"
+                component={NgoProfileScreen}
+                options={({ route }) => ({
+                    title: 'NGO Profile',
+                    // You can add more options here if needed
+                })}
+            />
         </Stack.Navigator>
     );
 }

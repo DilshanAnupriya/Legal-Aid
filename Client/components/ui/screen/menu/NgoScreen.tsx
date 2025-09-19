@@ -8,7 +8,8 @@ import CategoryFilter from '@/components/ui/screen/widget/NgoScreen/NgoCategoryF
 import NgoList from '@/components/ui/screen/widget/NgoScreen/NgoListWidget';
 import LoadingOverlay from '@/components/ui/screen/widget/NgoScreen/LoadingOverlayWidget';
 
-export default function NgoScreen() {
+// @ts-ignore
+export default function NgoScreen({ navigation }) {
     // State management
     const [ngos, setNgos] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -120,12 +121,19 @@ export default function NgoScreen() {
         setIsGridView(gridView);
     };
 
-    // @ts-ignore
-    const handleCardPress = (item) => {
-        // Handle NGO card press - navigate to detail screen or show modal
+    // Updated card press handler to navigate to profile
+    const handleCardPress = (item:any) => {
         console.log('NGO card pressed:', item.name);
-        // You can add navigation here
-        // navigation.navigate('NgoDetail', { ngo: item });
+
+        // Navigate to NGO Profile screen
+        if (navigation && item._id) {
+            navigation.navigate('NgoProfile', {
+                ngoId: item._id,
+                ngoName: item.name // Optional: pass name for header if needed
+            });
+        } else {
+            Alert.alert('Error', 'Unable to view NGO profile. Please try again.');
+        }
     };
 
     return (
