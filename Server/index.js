@@ -2,32 +2,43 @@ const express = require("express");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const cors = require("cors");
+const {MulterError} = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
-// Middleware - Updated CORS for better compatibility
+// Middleware
 app.use(cors({
   origin: [
-    'http://localhost:3000', 
-    'http://10.0.2.2:3000', 
-    'http://10.4.2.1:3000', 
-    'http://127.0.0.1:3000', 
-    'http://localhost:8081', 
-    'http://10.0.2.2:8081', 
-    'http://10.4.2.1:8081',
-    'http://10.164.198.42:8081', // Add current network IP for client
-    'http://10.164.198.42:3000'  // Add current network IP for server
+    'http://localhost:3000', 'http://127.0.0.1:3000',
+    'http://10.0.2.2:3000', 'http://10.4.2.1:3000',
+    'http://localhost:8081', 'http://127.0.0.1:8081', // Expo web dev server
+    'http://localhost:19006', 'http://127.0.0.1:19006', // Alternative Expo web port
+    'http://localhost:8080', 'http://127.0.0.1:8080',
+    'http://10.0.2.2:8081', 'http://10.4.2.1:8081',
+    'http://10.164.198.42:8081','http://10.164.198.42:3000'// Common dev server port
   ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+  optionsSuccessStatus: 200 // For legacy browser support
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files for document uploads
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`, {
+    headers: {
+      origin: req.headers.origin,
+      'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
+      'content-type': req.headers['content-type']
+    },
+    body: req.method !== 'GET' ? req.body : undefined
+  });
+  next();
+});
 app.use('/uploads', express.static('uploads'));
 
 app.use((error, req, res, next) => {
@@ -56,54 +67,24 @@ app.use((error, req, res, next) => {
   next(error);
 });
 
-// Connect to MongoDB with improved error handling
-const connectToMongoDB = async () => {
-  try {
-    await mongoose.connect(DB_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-    });
-    console.log("✅ Connected to MongoDB");
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err.message);
-    console.log("⚠️  Server will continue without MongoDB. Some features may not work.");
-    // Don't exit the process, allow server to start for testing
-  }
-};
-
-// Handle MongoDB connection events
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected. Attempting to reconnect...');
-});
-
-mongoose.connection.on('reconnected', () => {
-  console.log('✅ MongoDB reconnected');
-});
-
 // Connect to MongoDB
-connectToMongoDB();
+mongoose.connect(DB_URL)
+    .then(() => console.log("✅ Connected to MongoDB"))
+    .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 
 //NGO
-const ngoRoutes = require('./routes/ngoRoutes');
+const ngoRoutes = require('./Routes/ngoRoutes');
 app.use('/api/ngo', ngoRoutes);
-
-// Import Document Routes
+// Import Routes
+const postRoutes = require("./Routes/postRoutes");
+const userRoutes = require("./Routes/userRoutes");
+const lawyerRoutes = require("./Routes/lawyerRoutes");
 const documentRoutes = require('./Routes/documentRoutes');
 app.use('/api/documents', documentRoutes);
-
-// Import Post Routes
-const postRoutes = require("./Routes/postRoutes");
-const {MulterError} = require("multer");
-
-// API Routes
 app.use("/api/posts", postRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/lawyers", lawyerRoutes);
 
 
 // Root route
@@ -112,14 +93,9 @@ app.get("/", (req, res) => {
     message: "Legal Aid Backend API",
     version: "1.0.0",
     endpoints: {
+      auth: "/api/auth",
       posts: "/api/posts",
-      documents: "/api/documents",
-      ngo: "/api/ngo",
       health: "/health"
-    },
-    server: {
-      status: "running",
-      mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
     }
   });
 });
@@ -129,16 +105,7 @@ app.get("/health", (req, res) => {
   res.json({
     status: "OK",
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    mongodb: {
-      status: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      readyState: mongoose.connection.readyState
-    },
-    server: {
-      port: PORT,
-      nodeVersion: process.version,
-      platform: process.platform
-    }
+    uptime: process.uptime()
   });
 });
 
