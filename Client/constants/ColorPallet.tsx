@@ -8,7 +8,8 @@ export const LightColors = {
   white: '#ffffff',
   shadow: 'rgba(0,0,0,0.1)',
   black: '#000000',
-  textcol : '#ffffff'
+  textcol : '#ffffff',
+  blue: '#3498db',
 } as const;
 
 export const DarkColors = {
