@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // For Android emulator, use 10.0.2.2 instead of localhost
   // For iOS simulator, localhost should work
   // For physical device, use your computer's IP address
-  const API_BASE_URL = 'http://10.0.2.2:3000/api/auth';
+  const API_BASE_URL = 'http://localhost:3000/api/auth';
 
 
   // Configure axios interceptor

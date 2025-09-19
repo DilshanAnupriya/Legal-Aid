@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const upload = require('../config/multer');
+const { ngoUpload } = require('../config/multer');
 const {
     CreateNGO,
     FindAllNgo,
@@ -13,7 +13,7 @@ const {
 } = require('../controllers/NgoController');
 
 // Multer configuration for multiple file types
-const uploadFields = upload.fields([
+const uploadFields = ngoUpload.fields([
     { name: 'logo', maxCount: 1 },
     { name: 'images', maxCount: 10 }
 ]);

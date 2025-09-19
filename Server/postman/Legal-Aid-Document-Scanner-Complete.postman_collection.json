@@ -1,0 +1,1015 @@
+{
+	"info": {
+		"_postman_id": "legal-aid-document-scanner-v2",
+		"name": "Legal Aid - Document Scanner API",
+		"description": "Complete API collection for testing the AI document scanner feature with OCR capabilities. This collection includes authentication, document upload, processing status checks, text extraction, search functionality, and all document management operations.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "legal-aid-api"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register New User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save JWT token if registration is successful",
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('jwt_token', response.token);",
+									"        pm.collectionVariables.set('user_id', response.user.id);",
+									"        console.log('✅ User registered successfully');",
+									"        console.log('JWT Token saved:', response.token);",
+									"        console.log('User ID:', response.user.id);",
+									"    }",
+									"} else {",
+									"    console.log('❌ Registration failed:', pm.response.json().message);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"password123\",\n  \"birthday\": \"1990-01-01\",\n  \"genderSpectrum\": \"prefer-not-to-say\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account and automatically save the JWT token for subsequent requests."
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save JWT token if login is successful",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('jwt_token', response.token);",
+									"        pm.collectionVariables.set('user_id', response.user.id);",
+									"        console.log('✅ Login successful');",
+									"        console.log('JWT Token saved:', response.token);",
+									"        console.log('User ID:', response.user.id);",
+									"    }",
+									"} else {",
+									"    console.log('❌ Login failed:', pm.response.json().message);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"password123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with existing user credentials and automatically save the JWT token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Get authenticated user's profile information."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for user registration, login, and profile management."
+		},
+		{
+			"name": "Document Management",
+			"item": [
+				{
+					"name": "Upload Document (English)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save document ID if upload is successful",
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.documentId) {",
+									"        pm.collectionVariables.set('document_id', response.data.documentId);",
+									"        console.log('✅ Document uploaded successfully');",
+									"        console.log('Document ID saved:', response.data.documentId);",
+									"        console.log('Status:', response.data.status);",
+									"    }",
+									"} else {",
+									"    console.log('❌ Upload failed:', pm.response.json().message);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "document",
+									"type": "file",
+									"src": [],
+									"description": "Select an image file (JPG, PNG, WEBP, TIFF, BMP) or PDF document"
+								},
+								{
+									"key": "documentType",
+									"value": "legal_document",
+									"type": "text",
+									"description": "Options: legal_document, contract, certificate, identification, other"
+								},
+								{
+									"key": "language",
+									"value": "eng",
+									"type": "text",
+									"description": "OCR language code (eng=English)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/documents/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"upload"
+							]
+						},
+						"description": "Upload a document for OCR processing. Automatically saves the document ID for subsequent requests."
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Contract (Spanish)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "document",
+									"type": "file",
+									"src": [],
+									"description": "Select a Spanish contract document"
+								},
+								{
+									"key": "documentType",
+									"value": "contract",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "spa",
+									"type": "text",
+									"description": "spa=Spanish"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/documents/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"upload"
+							]
+						},
+						"description": "Upload a Spanish contract document for OCR processing."
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Certificate (French)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "document",
+									"type": "file",
+									"src": [],
+									"description": "Select a French certificate"
+								},
+								{
+									"key": "documentType",
+									"value": "certificate",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "fra",
+									"type": "text",
+									"description": "fra=French"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/documents/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"upload"
+							]
+						},
+						"description": "Upload a French certificate document for OCR processing."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Documents",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page (default: 10, max: 50)"
+								},
+								{
+									"key": "documentType",
+									"value": "",
+									"description": "Filter by document type",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by OCR status (pending, processing, completed, failed)",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Sort field (createdAt, confidence, etc.)"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Sort order: asc or desc"
+								}
+							]
+						},
+						"description": "Get all documents for the authenticated user with pagination and filtering options."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "Get detailed information about a specific document."
+					},
+					"response": []
+				},
+				{
+					"name": "Check Processing Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/{{document_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"{{document_id}}",
+								"status"
+							]
+						},
+						"description": "Check the OCR processing status of a document. Status can be: pending, processing, completed, or failed."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Extracted Text",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/{{document_id}}/text",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"{{document_id}}",
+								"text"
+							]
+						},
+						"description": "Get the extracted text content from a processed document along with confidence score and statistics."
+					},
+					"response": []
+				},
+				{
+					"name": "Download Document File",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/{{document_id}}/file",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"{{document_id}}",
+								"file"
+							]
+						},
+						"description": "Download or view the original document file."
+					},
+					"response": []
+				},
+				{
+					"name": "Reprocess Document",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/documents/{{document_id}}/reprocess",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"{{document_id}}",
+								"reprocess"
+							]
+						},
+						"description": "Reprocess a document's OCR, useful for failed or low-confidence extractions."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Document",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "Delete a document and all associated files from the system."
+					},
+					"response": []
+				}
+			],
+			"description": "Core document management operations including upload, processing, and file management."
+		},
+		{
+			"name": "Search & Analytics",
+			"item": [
+				{
+					"name": "Search Documents",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/search?q=contract&type=legal_document&page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "contract",
+									"description": "Search term (required, min 2 characters)"
+								},
+								{
+									"key": "type",
+									"value": "legal_document",
+									"description": "Document type filter (optional)"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page (default: 10, max: 50)"
+								}
+							]
+						},
+						"description": "Search through extracted text content of all user documents."
+					},
+					"response": []
+				},
+				{
+					"name": "Search - Terms and Conditions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/search?q=terms and conditions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "terms and conditions"
+								}
+							]
+						},
+						"description": "Search for documents containing \"terms and conditions\"."
+					},
+					"response": []
+				},
+				{
+					"name": "Search - Agreement",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/search?q=agreement&type=contract",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "agreement"
+								},
+								{
+									"key": "type",
+									"value": "contract"
+								}
+							]
+						},
+						"description": "Search for \"agreement\" in contract documents only."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Processing Statistics",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"stats"
+							]
+						},
+						"description": "Get processing statistics including success rates, confidence scores, and document counts."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Supported Languages",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents/languages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents",
+								"languages"
+							]
+						},
+						"description": "Get list of supported OCR languages with their codes."
+					},
+					"response": []
+				}
+			],
+			"description": "Search functionality and analytics for document processing insights."
+		},
+		{
+			"name": "Filter Examples",
+			"item": [
+				{
+					"name": "Get Completed Documents",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents?status=completed&sortBy=confidence&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "completed"
+								},
+								{
+									"key": "sortBy",
+									"value": "confidence"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Get only completed documents sorted by OCR confidence score."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contracts Only",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents?documentType=contract&limit=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents"
+							],
+							"query": [
+								{
+									"key": "documentType",
+									"value": "contract"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Get only contract-type documents."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Failed Processing",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/documents?status=failed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"documents"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "failed"
+								}
+							]
+						},
+						"description": "Get documents where OCR processing failed."
+					},
+					"response": []
+				}
+			],
+			"description": "Examples of filtering and sorting documents by various criteria."
+		},
+		{
+			"name": "System Info",
+			"item": [
+				{
+					"name": "API Root Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Get basic API information and available endpoints."
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check if the API server is running and responsive."
+					},
+					"response": []
+				}
+			],
+			"description": "System status and API information endpoints."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Pre-request script for debugging",
+					"console.log('Making request to:', pm.request.url.toString());"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script for all requests",
+					"console.log('Response status:', pm.response.code);",
+					"console.log('Response time:', pm.response.responseTime + 'ms');"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string",
+			"description": "Base URL for the Legal Aid API server"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string",
+			"description": "JWT authentication token (auto-populated after login)"
+		},
+		{
+			"key": "document_id",
+			"value": "",
+			"type": "string",
+			"description": "Document ID (auto-populated after upload)"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string",
+			"description": "User ID (auto-populated after authentication)"
+		}
+	]
+}

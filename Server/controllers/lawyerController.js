@@ -62,7 +62,7 @@ export const loginLawyer = async (req, res) => {
 // @route   GET /api/lawyers/profile
 export const getLawyerProfile = async (req, res) => {
   try {
-    const lawyer = await Lawyer.findById(req.user.id).select("-password");
+    const lawyer = await Lawyer.findById(req.user.userId).select("-password");
     if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
 
     res.json(lawyer);
