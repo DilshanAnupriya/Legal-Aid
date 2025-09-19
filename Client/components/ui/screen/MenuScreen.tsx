@@ -21,7 +21,8 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
     const handleLogout = async () => {
         try {
             await logout();
-            router.replace('/Login');
+            // @ts-ignore
+            navigation.navigate('Login');
         } catch (err) {
             Alert.alert('Error', (err && typeof err === 'object' && 'message' in err) ? (err as any).message : 'Failed to logout');
         }
@@ -154,7 +155,7 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
                     <Menu.Item leadingIcon="file-multiple-outline" onPress={() => {}} title="Document Organizer" />
                     <Menu.Item leadingIcon="robot-outline" onPress={() => {}} title="AI ChatBot Assist" />
                     <Menu.Item leadingIcon="translate" onPress={() => {}} title="Languages"  />
-                    <Menu.Item leadingIcon="charity" onPress={() => {router.push('/ngo')}} title="NGO"  />
+                    <Menu.Item leadingIcon="charity" onPress={() => {navigation.navigate('Ngo')}} title="NGO"  />
                     <Menu.Item leadingIcon="cog-outline" onPress={() => {}} title="Settings" />
                     <Menu.Item leadingIcon="shield-account-outline" onPress={() => {}} title="About Us"  />
                     <Menu.Item leadingIcon="account-voice" onPress={() => {}} title="Contact Us"  />
