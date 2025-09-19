@@ -1,151 +1,345 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   FlatList,
   StyleSheet,
+  StatusBar,
+  Alert,
+  Modal,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useTheme } from "../../context/ThemeContext";
-
-// Dummy lawyer data
-const lawyers = [
-  {
-    id: "1",
-    name: "Advocate Anura Silva",
-    specialty: "Family Law & Divorce",
-    rating: 4.8,
-    experience: 12,
-    location: "Colombo",
-  },
-  {
-    id: "2",
-    name: "Nayani Kodikara",
-    specialty: "Family Law & Divorce",
-    rating: 4.0,
-    experience: 10,
-    location: "Kadawatha",
-  },
-];
+import { getAllLawyers } from "../../service/lawyerService";
+import LoadingOverlay from "@/components/ui/screen/widget/NgoScreen/LoadingOverlayWidget";
+import CategoryFilter from "@/components/ui/screen/widget/NgoScreen/NgoCategoryFilterWidget";
 
 export default function LawyerNetworkScreen() {
-  const { colors, theme } = useTheme(); // from context
+  const { colors } = useTheme();
   const styles = getStyles(colors);
 
-  const [search, setSearch] = useState("");
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Hello Lawyer", sender: "user" },
-    { id: 2, text: "Hi, how can I help you?", sender: "lawyer" },
-  ]);
-  const [input, setInput] = useState("");
+  // State
+  const [lawyers, setLawyers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
-  const sendMessage = () => {
-    if (input.trim()) {
-      setMessages([
-        ...messages,
-        { id: Date.now(), text: input, sender: "user" },
-      ]);
-      setInput("");
+  // Booking Modal State
+  const [bookingVisible, setBookingVisible] = useState(false);
+  const [selectedLawyer, setSelectedLawyer] = useState(null);
+  const [appointmentName, setAppointmentName] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [meetingType, setMeetingType] = useState("Call"); // default
+
+  const categories = [
+    "All",
+    "Human Rights & Civil Liberties",
+    "Women's Rights & Gender Justice",
+    "Refugee & Migrant Rights",
+    "LGBTQ+ Rights",
+    "Criminal Law",
+    "Education & Student Rights",
+    "Consumer Rights",
+  ];
+
+  // Fetch Lawyers
+  const fetchLawyers = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+      setPage(1);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      
+
+      const data = await getAllLawyers();
+      if (data) {
+        const filteredData = data.filter(
+          (lawyer) =>
+            lawyer.firstName.toLowerCase().includes(searchText.toLowerCase()) ||
+            lawyer.specialization
+              .toLowerCase()
+              .includes(searchText.toLowerCase()) ||
+            lawyer.contactNumber.includes(searchText)
+        );
+
+        if (isRefresh || page === 1) {
+          setLawyers(filteredData);
+        } else {
+          setLawyers((prev) => [...prev, ...filteredData]);
+        }
+
+        setHasNext(false);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to fetch lawyers. Please try again.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  useEffect(() => {
+    fetchLawyers();
+  }, [searchText, selectedCategory, page]);
+
+  // Handlers
+  const handleRefresh = () => fetchLawyers(true);
+  const handleLoadMore = () => {
+    if (hasNext && !loading) setPage((prev) => prev + 1);
+  };
+  const handleSearch = (text) => {
+    setSearchText(text);
+    setPage(1);
+    setLawyers([]);
+  };
+  const handleClearSearch = () => handleSearch("");
+  const handleCardPress = (lawyer) =>
+    console.log("Lawyer pressed:", lawyer.firstName);
+
+  // Booking Handlers
+  const handleBookPress = (lawyer) => {
+    setSelectedLawyer(lawyer);
+    setBookingVisible(true);
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!appointmentName) {
+      Alert.alert("Error", "Please enter your name.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch("http://YOUR_API_URL/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: "USER_ID_HERE", // replace with logged-in user ID
+          lawyerId: selectedLawyer._id,
+          date: appointmentDate.toISOString(),
+          time: appointmentDate.toISOString(),
+          meetingType,
+          description: `Appointment booked by ${appointmentName}`,
+        }),
+      });
+      const handleCategorySelect = (category: any) => {
+        setSelectedCategory(category === "All" ? "" : category);
+        setPage(1);
+      };
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert("Success", "Appointment booked successfully!");
+        setBookingVisible(false);
+        setAppointmentName("");
+        setAppointmentDate(new Date());
+        setMeetingType("Call");
+        setSelectedLawyer(null);
+      } else {
+        Alert.alert("Error", data.message || "Booking failed");
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Server error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onChangeDate = (event, selectedDate) => {
+    const currentDate = selectedDate || appointmentDate;
+    setShowDatePicker(Platform.OS === "ios");
+    setAppointmentDate(currentDate);
+  };
+
   const renderLawyer = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card}>
       <View style={styles.avatar} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.text}>{item.specialty}</Text>
-        <Text style={styles.text}>⭐ {item.rating} / 5</Text>
-        <Text style={styles.text}>
-          Experience: {item.experience} years
-        </Text>
-        <Text style={styles.text}>Location: {item.location}</Text>
-        <Text style={styles.text}>Anonymous Chat Available</Text>
+        <Text style={styles.name}>{item.firstName}</Text>
+        <Text style={styles.text}>{item.specialization}</Text>
+        <Text style={styles.text}>📧 {item.email}</Text>
+        <Text style={styles.text}>📞 {item.contactNumber}</Text>
 
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.button}>
             <Text style={styles.buttonText}>Chat</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Book</Text>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.accent }]}
+            onPress={() => handleBookPress(item)}
+          >
+            <Text style={[styles.buttonText, { color: colors.light }]}>
+              Book
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
       <Text style={styles.header}>
         ⚖️ Legal Aid Lawyer Network{"\n"}Connect with verified lawyers for free
         legal assistance
       </Text>
 
-      {/* Search Bar */}
       <View style={styles.searchBar}>
         <Ionicons name="search" size={20} color={colors.darkgray} />
         <TextInput
           placeholder="Search Lawyers by name, specialty, location"
           placeholderTextColor={colors.darkgray}
           style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
+          value={searchText}
+          onChangeText={handleSearch}
         />
+        {searchText ? (
+          <TouchableOpacity onPress={handleClearSearch}>
+            <Ionicons name="close-circle" size={20} color={colors.darkgray} />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      {/* Lawyer List */}
+      <CategoryFilter
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategorySelect={handleCategorySelect}
+      />
+
       <FlatList
         data={lawyers}
         renderItem={renderLawyer}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
       />
 
-      {/* Anonymous Chat */}
-      <View style={styles.chatBox}>
-        <Text style={styles.chatHeader}>Anonymous Chat</Text>
-        <ScrollView style={styles.messages}>
-          {messages.map((msg) => (
-            <View
-              key={msg.id}
-              style={[
-                styles.message,
-                msg.sender === "user"
-                  ? styles.userMessage
-                  : styles.lawyerMessage,
-              ]}
+      <LoadingOverlay
+        visible={loading && page === 1}
+        message="Loading lawyers..."
+      />
+
+      {/* Booking Modal */}
+      <Modal visible={bookingVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Book Appointment with {selectedLawyer?.firstName}
+            </Text>
+
+            <TextInput
+              placeholder="Your Name"
+              placeholderTextColor={colors.darkgray}
+              style={styles.modalInput}
+              value={appointmentName}
+              onChangeText={setAppointmentName}
+            />
+
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={styles.dateButton}
             >
-              <Text style={styles.messageText}>{msg.text}</Text>
+              <Text style={styles.dateButtonText}>
+                {appointmentDate.toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={appointmentDate}
+                mode="datetime"
+                display="default"
+                onChange={onChangeDate}
+              />
+            )}
+
+            {/* Meeting Type Selection */}
+            <View style={{ marginVertical: 10 }}>
+              <Text style={{ color: colors.accent, marginBottom: 5 }}>
+                Meeting Type
+              </Text>
+              <View
+                style={{ flexDirection: "row", justifyContent: "space-around" }}
+              >
+                {["Call", "Physical", "Video Call"].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      backgroundColor:
+                        meetingType === type ? colors.accent : colors.secondary,
+                    }}
+                    onPress={() => setMeetingType(type)}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          meetingType === type ? colors.light : colors.accent,
+                      }}
+                    >
+                      {type}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          ))}
-        </ScrollView>
-        <View style={styles.inputRow}>
-          <TextInput
-            placeholder="Type your message.."
-            placeholderTextColor={colors.darkgray}
-            style={styles.chatInput}
-            value={input}
-            onChangeText={setInput}
-          />
-          <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-            <Text style={{ color: colors.white }}>Send</Text>
-          </TouchableOpacity>
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 20,
+              }}
+            >
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.secondary }]}
+                onPress={() => setBookingVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.accent }]}
+                onPress={handleConfirmBooking}
+              >
+                <Text style={[styles.buttonText, { color: colors.light }]}>
+                  Confirm
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </Modal>
+
+      <LoadingOverlay visible={loading} message="Booking appointment..." />
+    </View>
   );
 }
 
-// Theme-aware styles
+// Styles
 const getStyles = (colors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.light,
-      padding: 10,
-    },
+    container: { flex: 1, backgroundColor: colors.light, padding: 10 },
     header: {
       fontSize: 16,
       fontWeight: "bold",
@@ -186,44 +380,45 @@ const getStyles = (colors) =>
     text: { color: colors.textcol },
     buttonRow: { flexDirection: "row", marginTop: 10 },
     button: {
-      backgroundColor: colors.secondary,
       paddingVertical: 8,
       paddingHorizontal: 20,
       borderRadius: 8,
       marginRight: 10,
     },
     buttonText: { color: colors.accent },
-    chatBox: {
-      backgroundColor: colors.white,
-      borderRadius: 10,
-      padding: 10,
-      marginTop: 15,
-    },
-    chatHeader: { fontWeight: "bold", marginBottom: 5, color: colors.primary },
-    messages: { maxHeight: 200 },
-    message: {
-      padding: 10,
-      marginVertical: 5,
-      borderRadius: 8,
-      maxWidth: "75%",
-    },
-    userMessage: { backgroundColor: colors.primary, alignSelf: "flex-end" },
-    lawyerMessage: { backgroundColor: colors.darkgray, alignSelf: "flex-start" },
-    messageText: { color: colors.white },
-    inputRow: { flexDirection: "row", marginTop: 10, alignItems: "center" },
-    chatInput: {
+    modalOverlay: {
       flex: 1,
-      backgroundColor: colors.white,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    modalContent: {
+      width: "100%",
+      backgroundColor: colors.light,
+      borderRadius: 12,
+      padding: 20,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      marginBottom: 15,
+      color: colors.accent,
+    },
+    modalInput: {
+      borderWidth: 1,
+      borderColor: colors.darkgray,
       borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      marginRight: 10,
+      padding: 10,
+      marginBottom: 15,
       color: colors.primary,
     },
-    sendButton: {
-      backgroundColor: colors.accent,
-      paddingVertical: 10,
-      paddingHorizontal: 15,
+    dateButton: {
+      borderWidth: 1,
+      borderColor: colors.darkgray,
       borderRadius: 8,
+      padding: 10,
+      alignItems: "center",
     },
+    dateButtonText: { color: colors.primary },
   });

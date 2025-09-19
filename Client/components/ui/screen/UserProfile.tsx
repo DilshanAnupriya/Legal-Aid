@@ -14,6 +14,13 @@ export default function ProfileScreen() {
       >
         <Text style={styles.linkText}>Request to be a lawyer</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.linkContainer}
+        onPress={() => navigation.navigate("LawyersTableAdmin")}
+      >
+        <Text style={styles.linkText}>admin</Text>
+      </TouchableOpacity>
     </View>
   );
 }

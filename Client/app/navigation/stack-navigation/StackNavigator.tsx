@@ -4,7 +4,8 @@ import HomeBottomTabNavigation from "@/app/navigation/tab-navigation/HomeBottomT
 import { COLOR } from "@/constants/ColorPallet";
 import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
 import UserProfile from "@/components/ui/screen/UserProfile";
-import LawyerRegistrationForm from "@/components/ui/screen/LawyerRequestForm";
+import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
+import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
 
 const Stack = createStackNavigator();
 
@@ -38,6 +39,12 @@ export default function StackNavigator() {
                 name={'LawyerRegistrationForm'}
                 options={{title:'LawyerRegistrationForm'}}
                 component={LawyerRegistrationForm}
+            />
+
+            <Stack.Screen
+                name={'LawyersTableAdmin'}
+                options={{title:'Lawyers Table'}}
+                component={LawyersTableAdmin}
             />
         </Stack.Navigator>
     );

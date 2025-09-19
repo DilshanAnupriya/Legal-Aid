@@ -7,11 +7,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
-// Middleware
+// // Middleware
+// app.use(cors({
+//   origin: 'http://localhost:3000',
+//   credentials: true
+// }));
+
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'http://localhost:8081', // change to your frontend port
   credentials: true
 }));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -50,15 +57,21 @@ mongoose.connect(DB_URL)
 
 //NGO
 const ngoRoutes = require('./routes/ngoRoutes');
-app.use('/api/ngo', ngoRoutes);
+
 // Import Routes
 const postRoutes = require("./Routes/postRoutes");
 const {MulterError} = require("multer");
+const lawyerRoutes = require("./Routes/lawyerRoutes");
+const adminRoutes = require("./Routes/adminRoutes");
+const appointmentRoutes = require('./Routes/appointmentRoutes');
 
 
 // API Routes
+app.use("/api/ngo", ngoRoutes);
 app.use("/api/posts", postRoutes);
-
+app.use("/api/lawyers", lawyerRoutes);
+app.use("/api/admins",adminRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Root route
 app.get("/", (req, res) => {
@@ -68,7 +81,9 @@ app.get("/", (req, res) => {
     endpoints: {
       posts: "/api/posts",
       users: "/api/users",
-      health: "/health"
+      health: "/health",
+      lawyers: "/api/lawyers",
+      admins:"/api/admins"
     }
   });
 });
