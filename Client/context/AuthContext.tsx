@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { Platform } from 'react-native';
 
 interface User {
   id: string;
@@ -56,11 +57,38 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
-  // For Android emulator, use 10.0.2.2 instead of localhost
-  // For iOS simulator, localhost should work
-  // For physical device, use your computer's IP address
-  const API_BASE_URL = 'http://10.0.2.2:3000/api/auth';
+  // Platform-specific API URL configuration with fallback options
+  const getApiUrls = () => {
+    if (Platform.OS === 'web') {
+      return [
+        'http://localhost:3000/api/auth',
+        'http://127.0.0.1:3000/api/auth',
+      ];
+    } else if (Platform.OS === 'android') {
+      return [
+        'http://10.0.2.2:3000/api/auth',     // Android emulator
+        'http://localhost:3000/api/auth',    // Fallback
+      ];
+    } else {
+      // iOS simulator
+      return [
+        'http://localhost:3000/api/auth',
+        'http://127.0.0.1:3000/api/auth',
+      ];
+    }
+  };
 
+  const [currentApiIndex, setCurrentApiIndex] = useState(0);
+  const API_URLS = getApiUrls();
+  const API_BASE_URL = API_URLS[currentApiIndex];
+
+  // Try next API URL if current one fails
+  const tryNextApiUrl = () => {
+    const nextIndex = (currentApiIndex + 1) % API_URLS.length;
+    console.log(`[AuthContext] Trying next API URL: ${API_URLS[nextIndex]}`);
+    setCurrentApiIndex(nextIndex);
+    return nextIndex !== currentApiIndex; // Return false if we've tried all URLs
+  };
 
   // Configure axios interceptor
   useEffect(() => {
@@ -151,52 +179,112 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [checkAuthState]);
 
   const register = async (userData: RegisterData): Promise<{ success: boolean; user: User }> => {
-    try {
-  // console.log('[AuthContext] register: userData:', userData);
-      const response = await axios.post(`${API_BASE_URL}/register`, userData);
-  // console.log('[AuthContext] register: API response:', response.data);
-      if (response.data.success) {
-        const { token: newToken, user: newUser } = response.data;
-        await AsyncStorage.setItem('userToken', newToken);
-        setToken(newToken);
-        setUser(newUser);
-        setIsAuthenticated(true);
-        setHasCheckedAuth(true); // Mark as checked since we just authenticated
-  // console.log('[AuthContext] register: token set:', newToken);
-        return { success: true, user: newUser };
+    console.log(`[AuthContext] register: attempting with ${API_BASE_URL}`);
+    
+    const attemptRegister = async (url: string) => {
+      const response = await axios.post(`${url}/register`, userData);
+      return response;
+    };
+
+    let lastError: any;
+    
+    // Try current URL first, then fallbacks
+    for (let i = 0; i < API_URLS.length; i++) {
+      try {
+        const currentUrl = API_URLS[(currentApiIndex + i) % API_URLS.length];
+        console.log(`[AuthContext] register: trying ${currentUrl}`);
+        
+        const response = await attemptRegister(currentUrl);
+        
+        if (response.data.success) {
+          // Update to successful URL index
+          setCurrentApiIndex((currentApiIndex + i) % API_URLS.length);
+          
+          const { token: newToken, user: newUser } = response.data;
+          await AsyncStorage.setItem('userToken', newToken);
+          setToken(newToken);
+          setUser(newUser);
+          setIsAuthenticated(true);
+          setHasCheckedAuth(true);
+          
+          console.log('[AuthContext] register: success with', currentUrl);
+          return { success: true, user: newUser };
+        }
+        throw new Error('Registration failed');
+      } catch (error: any) {
+        console.error(`[AuthContext] register error with ${API_URLS[(currentApiIndex + i) % API_URLS.length]}:`, error.response?.data || error.message || error);
+        lastError = error;
+        
+        // If it's a network error, try next URL
+        if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error') || !error.response) {
+          continue;
+        }
+        
+        // If it's an authentication error (4xx), don't try other URLs
+        if (error.response?.status >= 400 && error.response?.status < 500) {
+          break;
+        }
       }
-      throw new Error('Registration failed');
-    } catch (error: any) {
-      console.error('Registration error:', error.response?.data || error.message || error);
-      const message = error.response?.data?.message || 'Registration failed';
-      throw new Error(message);
     }
+    
+    const message = lastError?.response?.data?.message || 'Registration failed - unable to connect to server';
+    throw new Error(message);
   };
 
   const login = async (email: string, password: string): Promise<{ success: boolean; user: User }> => {
-    try {
-  // console.log('[AuthContext] login: email:', email);
-      const response = await axios.post(`${API_BASE_URL}/login`, {
+    console.log(`[AuthContext] login: attempting with ${API_BASE_URL}`);
+    
+    const attemptLogin = async (url: string) => {
+      const response = await axios.post(`${url}/login`, {
         email,
         password
       });
-  // console.log('[AuthContext] login: API response:', response.data);
-      if (response.data.success) {
-        const { token: newToken, user: newUser } = response.data;
-        await AsyncStorage.setItem('userToken', newToken);
-        setToken(newToken);
-        setUser(newUser);
-        setIsAuthenticated(true);
-        setHasCheckedAuth(true); // Mark as checked since we just authenticated
-  // console.log('[AuthContext] login: token set:', newToken);
-        return { success: true, user: newUser };
+      return response;
+    };
+
+    let lastError: any;
+    
+    // Try current URL first, then fallbacks
+    for (let i = 0; i < API_URLS.length; i++) {
+      try {
+        const currentUrl = API_URLS[(currentApiIndex + i) % API_URLS.length];
+        console.log(`[AuthContext] login: trying ${currentUrl}`);
+        
+        const response = await attemptLogin(currentUrl);
+        
+        if (response.data.success) {
+          // Update to successful URL index
+          setCurrentApiIndex((currentApiIndex + i) % API_URLS.length);
+          
+          const { token: newToken, user: newUser } = response.data;
+          await AsyncStorage.setItem('userToken', newToken);
+          setToken(newToken);
+          setUser(newUser);
+          setIsAuthenticated(true);
+          setHasCheckedAuth(true);
+          
+          console.log('[AuthContext] login: success with', currentUrl);
+          return { success: true, user: newUser };
+        }
+        throw new Error('Login failed');
+      } catch (error: any) {
+        console.error(`[AuthContext] login error with ${API_URLS[(currentApiIndex + i) % API_URLS.length]}:`, error.response?.data || error.message || error);
+        lastError = error;
+        
+        // If it's a network error, try next URL
+        if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error') || !error.response) {
+          continue;
+        }
+        
+        // If it's an authentication error (4xx), don't try other URLs
+        if (error.response?.status >= 400 && error.response?.status < 500) {
+          break;
+        }
       }
-      throw new Error('Login failed');
-    } catch (error: any) {
-      console.error('Login error:', error.response?.data || error.message || error);
-      const message = error.response?.data?.message || 'Login failed';
-      throw new Error(message);
     }
+    
+    const message = lastError?.response?.data?.message || 'Login failed - unable to connect to server';
+    throw new Error(message);
   };
 
   const updateProfile = async (profileData: ProfileData): Promise<{ success: boolean; user: User }> => {
