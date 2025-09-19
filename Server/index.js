@@ -24,6 +24,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 }));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -101,10 +103,17 @@ app.use('/api/documents', documentRoutes);
 // Import Post Routes
 const postRoutes = require("./Routes/postRoutes");
 const {MulterError} = require("multer");
+const lawyerRoutes = require("./Routes/lawyerRoutes");
+const adminRoutes = require("./Routes/adminRoutes");
+const appointmentRoutes = require('./Routes/appointmentRoutes');
+
 
 // API Routes
+app.use("/api/ngo", ngoRoutes);
 app.use("/api/posts", postRoutes);
-
+app.use("/api/lawyers", lawyerRoutes);
+app.use("/api/admins",adminRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Root route
 app.get("/", (req, res) => {
@@ -115,7 +124,9 @@ app.get("/", (req, res) => {
       posts: "/api/posts",
       documents: "/api/documents",
       ngo: "/api/ngo",
-      health: "/health"
+      health: "/health",
+      lawyers: "/api/lawyers",
+      admins:"/api/admins"
     },
     server: {
       status: "running",
