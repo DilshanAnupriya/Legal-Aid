@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   //     'http://10.4.2.1:3000/api/auth', // Your computer's LAN IP (replace with yours)
   //     'http://localhost:3000/api/auth',     // iOS simulator
   //   ];
-  const API_BASE_URL ='http://localhost:3000/api/auth';
+  //const API_BASE_URL ='http://localhost:3000/api/auth';
 
 
 
