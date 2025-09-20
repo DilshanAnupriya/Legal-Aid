@@ -56,8 +56,9 @@ export default function LawyerScreen() {
     const categoryParam = selectedCategory && selectedCategory !== "All" ? selectedCategory : "";
     const currentPage = isRefresh ? 1 : page;
 
+    console.log("search text : ",searchText)
     // Axios request
-    const response = await getAllLawyers(categoryParam, currentPage);
+    const response = await getAllLawyers(searchText,currentPage,10,categoryParam );
     const data = response.data; // Axios automatically parses JSON
     console.log("data:", data);
 

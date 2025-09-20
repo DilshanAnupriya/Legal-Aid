@@ -82,17 +82,25 @@ export const getAllLawyers = async (req, res) => {
 
     let filter = { isApproved: true }; // Only approved lawyers
 
-    // Add search filter (search by firstName, lastName, or specialization)
-    if (searchText) {
+    console.log("search text : ", searchText, page, size, category);
+
+    // Handle search and category together
+    if (searchText && category) {
+      // Search within specific category
+      filter.specialization = category;
+      filter.$or = [
+        { firstName: { $regex: searchText, $options: "i" } },
+        { lastName: { $regex: searchText, $options: "i" } }
+      ];
+    } else if (searchText && !category) {
+      // General search across all fields
       filter.$or = [
         { firstName: { $regex: searchText, $options: "i" } },
         { lastName: { $regex: searchText, $options: "i" } },
-        { specialization: { $regex: searchText, $options: "i" } },
+        { specialization: { $regex: searchText, $options: "i" } }
       ];
-    }
-
-    // Add category filter
-    if (category) {
+    } else if (!searchText && category) {
+      // Filter by category only
       filter.specialization = category;
     }
 
@@ -121,7 +129,6 @@ export const getAllLawyers = async (req, res) => {
     res.status(500).json({ message: "error", error: error.message });
   }
 };
-
 // @desc    Search lawyers
 // @route   GET /api/lawyers/search
 export const searchLawyers = async (req, res) => {

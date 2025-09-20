@@ -24,13 +24,25 @@ export const registerAdmin = async (lawyerData) => {
 };
 
 // Get all lawyers with category and pagination
-export const getAllLawyers = async (category = "", page = 1, limit = 10) => {
+export const getAllLawyers = async (searchText = "", page = 1, limit = 10, category = "" ) => {
   try {
     const params = {
       category: category || undefined,
       page,
-      limit,
+      size: limit, // Backend uses 'size' not 'limit'
+      searchText: searchText || undefined, // Add searchText parameter
     };
+
+    console.log("params : ", params);
+
+    
+    // Remove undefined values to clean up the URL
+    Object.keys(params).forEach(key => 
+      params[key] === undefined && delete params[key]
+    );
+    
+    console.log("API Request params:", params); // Debug log
+    
     const response = await axios.get(API_URL, { params });
     return response;
   } catch (error) {
