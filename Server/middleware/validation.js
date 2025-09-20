@@ -58,12 +58,21 @@ const validateUpdatePost = (req, res, next) => {
 
 // Validate MongoDB ObjectId
 const validateObjectId = (req, res, next) => {
-  const { id } = req.params;
+  // Check for different possible parameter names
+  const { id, postId, commentId } = req.params;
+  const objectId = id || postId || commentId;
   
-  if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+  if (!objectId) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid post ID format'
+      message: 'Missing required ID parameter'
+    });
+  }
+  
+  if (!objectId.match(/^[0-9a-fA-F]{24}$/)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid ID format'
     });
   }
 

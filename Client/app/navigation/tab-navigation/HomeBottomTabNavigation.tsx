@@ -2,6 +2,7 @@ import { Image, TouchableOpacity, View, Text, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomePageScreen from "@/components/ui/screen/HomePageScreen";
 import ForumScreen from "@/components/ui/screen/ForumScreen";
+import DocumentScreen from "@/components/ui/screen/DocumentScreen";
 import LawyerScreen from "@/components/ui/screen/LawyerScreen";
 import MenuScreen from "@/components/ui/screen/MenuScreen";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,20 +17,17 @@ const Tab = createBottomTabNavigator();
 export default function HomeBottomTabNavigation({ navigation }: any) {
   const { colors, theme } = useTheme();
 
-  return (
-    <Tab.Navigator
-      initialRouteName={"Home"}
-      screenOptions={({ route, focused }: any) => ({
-        tabBarIcon: ({ color }) => {
-          let iconName;
-          if (route.name === "Home")
-            iconName = focused ? "home" : "home-outline";
-          else if (route.name === "Forum")
-            iconName = focused ? "earth" : "earth-outline";
-          else if (route.name === "Lawyer")
-            iconName = focused ? "briefcase" : "briefcase-outline";
-          else if (route.name === "Menu")
-            iconName = focused ? "menu" : "menu-outline";
+    return (
+        <Tab.Navigator
+            initialRouteName={'Home'}
+            screenOptions={({ route, focused }: any) => ({
+                tabBarIcon: ({ color }) => {
+                    let iconName;
+                    if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+                    else if (route.name === 'Forum') iconName = focused ? 'earth' : 'earth-outline';
+                    else if (route.name === 'Documents') iconName = focused ? 'document' : 'document-outline';
+                    else if (route.name === 'Lawyer') iconName = focused ? 'briefcase' : 'briefcase-outline';
+                    else if (route.name === 'Menu') iconName = focused ? 'menu' : 'menu-outline';
 
           return <Ionicons name={iconName as any} size={22} color={color} />;
         },
@@ -188,6 +186,30 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
           },
         }}
       />
+            <Tab.Screen
+                name={'Documents'}
+                component={DocumentScreen}
+                options={{
+                    headerStyle: {
+                        backgroundColor: colors.white,
+                        elevation: 8,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 8,
+                        height: 90,
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme === 'light' ? '#F5F5F7' : colors.darkgray,
+                    },
+                    headerTintColor: colors.primary,
+                    headerTitle: 'Documents',
+                    headerTitleStyle: {
+                        fontSize: 18,
+                        fontWeight: '600',
+                        color: colors.primary,
+                    },
+                }}
+            />
       <Tab.Screen
         name={"Lawyer"}
         component={LawyerScreen}

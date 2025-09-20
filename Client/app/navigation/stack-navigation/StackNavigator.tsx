@@ -7,12 +7,17 @@ import UserProfile from "@/components/ui/screen/UserProfile";
 import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
 import LawyerProfile from "@/components/ui/screen/LawyerDetails"
+import LoginScreen from "@/components/ui/screen/LoginScreen";
+import SignUpScreen from "@/components/ui/screen/SignUpScreen";
+import React from "react";
+import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
 
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
     return (
         <Stack.Navigator
+
             screenOptions={{
                 headerStyle: styles.header, // Header background
                 headerTitleStyle: styles.headerTitle, // Header text
@@ -52,6 +57,14 @@ export default function StackNavigator() {
                 name={'LawyerProfile'}
                 options={{title:'Lawyers profile'}}
                 component={LawyerProfile}
+            />
+            <Stack.Screen
+                name="NgoProfile"
+                component={NgoProfileScreen}
+                options={({ route }) => ({
+                    title: 'NGO Profile',
+                    // You can add more options here if needed
+                })}
             />
         </Stack.Navigator>
     );
