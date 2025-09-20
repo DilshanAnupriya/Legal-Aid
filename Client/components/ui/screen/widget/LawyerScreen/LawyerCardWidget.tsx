@@ -1,11 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../../../../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 // @ts-ignore
 const LawyerCardWidget = ({ item, isGridView = false, onPress, onChat, onBook }) => {
+      const { colors, theme } = useTheme();
 
     const renderStars = (rating: number) => {
         const stars = [];
@@ -103,7 +105,7 @@ const LawyerCardWidget = ({ item, isGridView = false, onPress, onChat, onBook })
                             <Ionicons name="chatbubble-ellipses-outline" size={16} color="#fff" />
                             <Text style={styles.buttonText}>Chat</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, { backgroundColor: '#007AFF' }]} onPress={() => onBook && onBook(item)}>
+                        <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={() => onBook && onBook(item)}>
                             <MaterialIcons name="event-available" size={16} color="#fff" />
                             <Text style={styles.buttonText}>Book</Text>
                         </TouchableOpacity>
@@ -141,7 +143,7 @@ const styles = StyleSheet.create({
     listLogo: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#F0F0F0', marginRight: 12 },
     cardHeaderInfo: { flex: 1 },
     listLawyerName: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 4 },
-    listSpecialization: { fontSize: 14, color: '#007AFF', marginBottom: 6, fontWeight: '500' },
+    listSpecialization: { fontSize: 14, color: '#545c64ff', marginBottom: 6, fontWeight: '500' },
     ratingContainer: { flexDirection: 'row', alignItems: 'center' },
     ratingText: { fontSize: 12, color: '#666', marginLeft: 4 },
     statusBadge: { alignSelf: 'flex-start' },
@@ -177,7 +179,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
-        backgroundColor: '#FF5722',
+        backgroundColor: '#e67e22',
         marginRight: 8,
     },
     buttonText: { color: '#fff', fontSize: 12, marginLeft: 4 },
