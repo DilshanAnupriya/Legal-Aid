@@ -110,8 +110,7 @@ export default function LawyerProfile({ route }) {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+     
         showsVerticalScrollIndicator={true}
         bounces={true}
         scrollEnabled={true}
@@ -166,12 +165,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 50,
-  },
+  
   loadingContainer: {
     flex: 1,
     alignItems: 'center',

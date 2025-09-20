@@ -8,12 +8,13 @@ import {
   ScrollView,
   Alert,
   SafeAreaView,
+  StatusBar,
+  Animated,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { registerLawyer } from "../../../service/lawyerService";
-import { useTheme } from "../../../context/ThemeContext";
 
 export default function LawyerRequestForm() {
   const [firstName, setFirstName] = useState("");
@@ -25,8 +26,35 @@ export default function LawyerRequestForm() {
   const [licenseNumber, setLicenseNumber] = useState("");
   const [practiceArea, setPracticeArea] = useState("");
   const [experience, setExperience] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { colors } = useTheme();
+  // Animation values
+  const fadeAnim = new Animated.Value(0);
+  const slideAnim = new Animated.Value(30);
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password) => {
+    return password.length >= 8;
+  };
 
   const handleSubmit = async () => {
     if (
@@ -40,14 +68,26 @@ export default function LawyerRequestForm() {
       !practiceArea ||
       !experience
     ) {
-      Alert.alert("Error", "Please fill in all required fields.");
+      Alert.alert("Incomplete Form", "Please fill in all required fields.");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      Alert.alert("Weak Password", "Password must be at least 8 characters long.");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
+      Alert.alert("Password Mismatch", "Passwords do not match.");
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const lawyerData = {
@@ -63,7 +103,11 @@ export default function LawyerRequestForm() {
 
       const response = await registerLawyer(lawyerData);
 
-      Alert.alert("Success", `Lawyer registered! Token: ${response.token}`);
+      Alert.alert(
+        "Registration Successful! ✅", 
+        "Your lawyer registration has been submitted successfully. You will receive a confirmation email shortly.",
+        [{ text: "OK", style: "default" }]
+      );
 
       // Reset form
       setFirstName("");
@@ -75,107 +119,198 @@ export default function LawyerRequestForm() {
       setLicenseNumber("");
       setPracticeArea("");
       setExperience("");
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Something went wrong");
+    } catch (error) {
+      Alert.alert(
+        "Registration Failed", 
+        error.message || "Something went wrong. Please try again.",
+        [{ text: "OK", style: "destructive" }]
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.light }]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={80}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.title}>Lawyer Registration</Text>
+  const InputField = ({ icon, ...props }) => (
+    <View style={styles.inputContainer}>
+      <View style={styles.inputIconContainer}>
+        <Text style={styles.inputIcon}>{icon}</Text>
+      </View>
+      <TextInput
+        style={styles.input}
+        placeholderTextColor="#999"
+        {...props}
+      />
+    </View>
+  );
 
-          <View
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#1a237e" />
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Animated.View 
             style={[
-              styles.formBox,
-              { backgroundColor: colors.white, shadowColor: colors.shadow },
+              styles.headerContent,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
             ]}
           >
-            <TextInput
-              style={styles.input}
-              placeholder="First Name"
-              value={firstName}
-              onChangeText={setFirstName}
-            />
+            <Text style={styles.headerIcon}>⚖️</Text>
+            <Text style={styles.title}>Join Our Legal Network</Text>
+            <Text style={styles.subtitle}>
+              Register as a verified lawyer and connect with clients who need your expertise
+            </Text>
+          </Animated.View>
+        </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Last Name"
-              value={lastName}
-              onChangeText={setLastName}
-            />
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+          scrollEnabled={true}
+          bounces={true}
+        >
+          <Animated.View 
+            style={[
+              styles.formContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            {/* Personal Information Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>👤 Personal Information</Text>
+              
+              <View style={styles.row}>
+                <View style={styles.halfInput}>
+                  <InputField
+                    icon="📝"
+                    placeholder="First Name"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                  />
+                </View>
+                <View style={styles.halfInput}>
+                  <InputField
+                    icon="📝"
+                    placeholder="Last Name"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Contact Number"
-              keyboardType="phone-pad"
-              value={contactNumber}
-              onChangeText={setContactNumber}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="License Number"
-              value={licenseNumber}
-              onChangeText={setLicenseNumber}
-            />
+              <InputField
+                icon="📧"
+                placeholder="Email Address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
 
-            <Text style={styles.label}>Practice Area</Text>
-            <Picker
-              selectedValue={practiceArea}
-              style={styles.picker}
-              onValueChange={(itemValue) => setPracticeArea(itemValue)}
+              <InputField
+                icon="📱"
+                placeholder="Contact Number"
+                keyboardType="phone-pad"
+                value={contactNumber}
+                onChangeText={setContactNumber}
+              />
+            </View>
+
+            {/* Security Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🔐 Security</Text>
+              
+              <InputField
+                icon="🔒"
+                placeholder="Password (min 8 characters)"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+
+              <InputField
+                icon="🔒"
+                placeholder="Confirm Password"
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+            </View>
+
+            {/* Professional Information Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🎓 Professional Details</Text>
+              
+              <InputField
+                icon="🆔"
+                placeholder="Bar License Number"
+                value={licenseNumber}
+                onChangeText={setLicenseNumber}
+              />
+
+              <View style={styles.pickerContainer}>
+                <View style={styles.pickerIconContainer}>
+                  <Text style={styles.pickerIcon}>⚖️</Text>
+                </View>
+                <View style={styles.pickerWrapper}>
+                  <Text style={styles.pickerLabel}>Practice Area</Text>
+                  <Picker
+                    selectedValue={practiceArea}
+                    style={styles.picker}
+                    onValueChange={(itemValue) => setPracticeArea(itemValue)}
+                  >
+                    <Picker.Item label="Select Practice Area" value="" />
+                    <Picker.Item label="Criminal Law" value="criminal" />
+                    <Picker.Item label="Family Law" value="family" />
+                    <Picker.Item label="Corporate Law" value="corporate" />
+                    <Picker.Item label="Property Law" value="property" />
+                    <Picker.Item label="Civil Litigation" value="civil" />
+                    <Picker.Item label="Human Rights" value="human-rights" />
+                    <Picker.Item label="Immigration Law" value="immigration" />
+                  </Picker>
+                </View>
+              </View>
+
+              <InputField
+                icon="📅"
+                placeholder="Years of Experience"
+                keyboardType="numeric"
+                value={experience}
+                onChangeText={setExperience}
+              />
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={isLoading}
             >
-              <Picker.Item label="Select Area" value="" />
-              <Picker.Item label="Criminal Law" value="criminal" />
-              <Picker.Item label="Family Law" value="family" />
-              <Picker.Item label="Corporate Law" value="corporate" />
-              <Picker.Item label="Property Law" value="property" />
-              <Picker.Item label="Civil Litigation" value="civil" />
-            </Picker>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Years of Experience"
-              keyboardType="numeric"
-              value={experience}
-              onChangeText={setExperience}
-            />
-
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitText}>Register</Text>
+              <Text style={styles.submitText}>
+                {isLoading ? "Registering..." : "Submit Registration ✨"}
+              </Text>
             </TouchableOpacity>
-          </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                By registering, you agree to our Terms of Service and Privacy Policy
+              </Text>
+            </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -183,50 +318,172 @@ export default function LawyerRequestForm() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1, // take full height
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#1a237e",
   },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 60, // ensures button is visible after scroll
+  container: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: "#1a237e",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+  headerContent: {
+    alignItems: "center",
+  },
+  headerIcon: {
+    fontSize: 40,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 20,
+    color: "white",
     textAlign: "center",
+    marginBottom: 8,
   },
-  label: { fontSize: 16, marginVertical: 8 },
+  subtitle: {
+    fontSize: 16,
+    color: "#e8eaf6",
+    textAlign: "center",
+    lineHeight: 22,
+    opacity: 0.9,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#f8f9fa",
+  },
+  scrollContent: {
+    paddingBottom: 30,
+    minHeight: "100%",
+  },
+  formContainer: {
+    backgroundColor: "#f8f9fa",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    flexGrow: 1,
+  },
+  section: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1a237e",
+    marginBottom: 20,
+    paddingLeft: 5,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  halfInput: {
+    width: "48%",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 15,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  inputIconContainer: {
+    width: 50,
+    height: 55,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f1f3f4",
+    borderTopLeftRadius: 15,
+    borderBottomLeftRadius: 15,
+  },
+  inputIcon: {
+    fontSize: 18,
+  },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    width: "100%",
+    flex: 1,
+    height: 55,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: "#333",
+  },
+  pickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 15,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  pickerIconContainer: {
+    width: 50,
+    height: 55,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f1f3f4",
+    borderTopLeftRadius: 15,
+    borderBottomLeftRadius: 15,
+  },
+  pickerIcon: {
+    fontSize: 18,
+  },
+  pickerWrapper: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  pickerLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: -5,
+    marginTop: 8,
   },
   picker: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 12,
-    width: "100%",
+    height: 50,
+    color: "#333",
   },
   submitButton: {
-    backgroundColor: "#007BFF",
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: "#1a237e",
+    paddingVertical: 18,
+    borderRadius: 15,
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 10,
+    elevation: 3,
+    shadowColor: "#1a237e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  submitText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  formBox: {
-    flexDirection: "column",
-    padding: 20,
-    borderRadius: 20,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+  submitButtonDisabled: {
+    backgroundColor: "#9e9e9e",
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  submitText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  footer: {
+    marginTop: 30,
+    paddingHorizontal: 20,
+  },
+  footerText: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });
