@@ -6,6 +6,7 @@ import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
 import UserProfile from "@/components/ui/screen/UserProfile";
 import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
+import LawyerProfile from "@/components/ui/screen/LawyerDetails"
 
 const Stack = createStackNavigator();
 
@@ -45,6 +46,12 @@ export default function StackNavigator() {
                 name={'LawyersTableAdmin'}
                 options={{title:'Lawyers Table'}}
                 component={LawyersTableAdmin}
+            />
+
+            <Stack.Screen
+                name={'LawyerProfile'}
+                options={{title:'Lawyers profile'}}
+                component={LawyerProfile}
             />
         </Stack.Navigator>
     );

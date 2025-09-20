@@ -1,6 +1,7 @@
 import LawyerNetworkScreen from "@/components/modals/LawyerNetworkScreen";
 import React, { useState, useEffect } from "react";
 import { StyleSheet, View, StatusBar, Alert } from "react-native";
+import { useNavigation } from '@react-navigation/native';
 
 //import custom components
 import { getAllLawyers } from "../../../service/lawyerService";
@@ -20,6 +21,7 @@ export default function LawyerScreen() {
   const [totalPages, setTotalPages] = useState(1);
   const [hasNext, setHasNext] = useState(false);
   const [isGridView, setIsGridView] = useState(true);
+  const navigation = useNavigation();
 
   const categories = [
     "All",
@@ -108,7 +110,9 @@ export default function LawyerScreen() {
 
      // @ts-ignore
     const handleCardPress = (item) => {
-        console.log('Lawyer card pressed:', item.name);
+        navigation.navigate('LawyerProfile', {
+        lawyerId: item._id, // or item.id depending on your backend
+    });
     };
   return (
     <View style={styles.container}>
