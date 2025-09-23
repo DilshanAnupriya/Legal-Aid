@@ -260,9 +260,12 @@ const getPollResults = async (req, res) => {
 const updatePoll = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, expiresAt } = req.body;
+    const { status, expiresAt, topic, category, isAnonymous } = req.body;
 
-    const allowedUpdates = ['status', 'expiresAt'];
+    console.log('Update poll request - ID:', id);
+    console.log('Update poll request - Body:', req.body);
+
+    const allowedUpdates = ['status', 'expiresAt', 'topic', 'category', 'isAnonymous'];
     const updates = {};
 
     if (status && ['active', 'closed', 'deleted'].includes(status)) {
@@ -273,11 +276,27 @@ const updatePoll = async (req, res) => {
       updates.expiresAt = expiresAt ? new Date(expiresAt) : null;
     }
 
+    if (topic && typeof topic === 'string' && topic.trim().length >= 10) {
+      updates.topic = topic.trim();
+    }
+
+    if (category && ['All', 'Family Law', 'Property Law', 'Employment Law', 'Civil Law', 'Criminal Law'].includes(category)) {
+      updates.category = category;
+    }
+
+    if (isAnonymous !== undefined) {
+      updates.isAnonymous = isAnonymous;
+    }
+
+    console.log('Updates to apply:', updates);
+
     const poll = await Poll.findByIdAndUpdate(
       id, 
       updates, 
       { new: true, runValidators: true }
     );
+
+    console.log('Poll after update:', poll);
 
     if (!poll) {
       return res.status(404).json({

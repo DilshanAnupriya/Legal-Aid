@@ -13,11 +13,14 @@ const { width } = Dimensions.get('window');
 interface PollCardProps {
   poll: any;
   onVote?: (pollId: string, optionIndex: number, userId: string) => void;
+  onEdit?: (poll: any) => void;
+  onDelete?: (pollId: string, pollTopic: string) => void;
   userId?: string;
   isPreview?: boolean;
+  canEdit?: boolean;
 }
 
-const PollCard: React.FC<PollCardProps> = ({ poll, onVote, userId, isPreview = false }) => {
+const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, userId, isPreview = false, canEdit = false }) => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [isVoting, setIsVoting] = useState<boolean>(false);
@@ -110,8 +113,39 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, userId, isPreview = f
           <Text style={styles.authorName}>{poll.author}</Text>
           <Text style={styles.timestamp}>{formatTimestamp(poll.createdAt)}</Text>
         </View>
-        <View style={styles.pollBadge}>
-          <Text style={styles.pollBadgeText}>📊 POLL</Text>
+        <View style={styles.pollActions}>
+          {/* Edit and Delete Buttons - Only show for polls by current user */}
+          {canEdit && onEdit && onDelete ? (
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  console.log('Edit button clicked for poll:', poll);
+                  onEdit(poll);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.editIcon}>✏️</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  console.log('Delete button clicked for poll:', poll);
+                  onDelete(poll._id || poll.id, poll.topic);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.deleteIcon}>🗑️</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            (() => {
+              console.log('Edit buttons not shown - canEdit:', canEdit, 'onEdit:', !!onEdit, 'onDelete:', !!onDelete);
+              return null;
+            })()
+          )}
         </View>
       </View>
 
@@ -253,16 +287,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7F8C8D',
   },
-  pollBadge: {
-    backgroundColor: '#ff7100',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+  pollActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
-  pollBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  editButton: {
+    backgroundColor: 'rgba(255, 113, 0, 0.1)',
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 113, 0, 0.3)',
+  },
+  editIcon: {
+    fontSize: 12,
+    color: '#ff7100',
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  deleteIcon: {
+    fontSize: 12,
+    color: '#ff6b6b',
   },
   pollTopic: {
     fontSize: 16,

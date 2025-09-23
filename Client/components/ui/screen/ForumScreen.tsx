@@ -55,6 +55,8 @@ const ForumsScreen = () => {
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [postToDelete, setPostToDelete] = useState<{id: string, title: string} | null>(null);
     const [isCreatePollModalVisible, setIsCreatePollModalVisible] = useState(false);
+    const [isEditPollModalVisible, setIsEditPollModalVisible] = useState(false);
+    const [editingPoll, setEditingPoll] = useState<any>(null);
     const [polls, setPolls] = useState([]);
 
     // Multiple URL options for different environments
@@ -116,28 +118,32 @@ const ForumsScreen = () => {
 
             if (data.success && data.data.polls) {
                 // Transform backend poll data to match frontend format
-                const transformedPolls = data.data.polls.map((poll: any) => ({
-                    id: poll._id,
-                    _id: poll._id,
-                    title: poll.topic, // Map topic to title for consistency
-                    topic: poll.topic,
-                    options: poll.options,
-                    votes: poll.votes,
-                    voters: poll.voters,
-                    totalVotes: poll.totalVotes,
-                    author: poll.author,
-                    category: poll.category,
-                    isAnonymous: poll.isAnonymous,
-                    createdAt: poll.createdAt,
-                    lastActivity: formatLastActivity(poll.lastActivity || poll.createdAt),
-                    lastActivityRaw: poll.lastActivity || poll.createdAt,
-                    type: 'poll', // Add type identifier
-                    tags: [], // Empty tags array for consistency
-                    replies: 0, // Polls don't have replies
-                    views: poll.totalVotes || 0, // Use total votes as views
-                    isAnswered: false, // Polls don't have answered state
-                    priority: 'medium', // Default priority
-                }));
+                const transformedPolls = data.data.polls.map((poll: any) => {
+                    const transformed = {
+                        id: poll._id,
+                        _id: poll._id,
+                        title: poll.topic, // Map topic to title for consistency
+                        topic: poll.topic,
+                        options: poll.options,
+                        votes: poll.votes,
+                        voters: poll.voters,
+                        totalVotes: poll.totalVotes,
+                        author: poll.author,
+                        category: poll.category,
+                        isAnonymous: poll.isAnonymous,
+                        createdAt: poll.createdAt,
+                        lastActivity: formatLastActivity(poll.lastActivity || poll.createdAt),
+                        lastActivityRaw: poll.lastActivity || poll.createdAt,
+                        type: 'poll', // Add type identifier
+                        tags: [], // Empty tags array for consistency
+                        replies: 0, // Polls don't have replies
+                        views: poll.totalVotes || 0, // Use total votes as views
+                        isAnswered: false, // Polls don't have answered state
+                        priority: 'medium', // Default priority
+                    };
+                    console.log('Transformed poll:', transformed);
+                    return transformed;
+                });
                 return transformedPolls;
             } else {
                 console.warn('No polls found or invalid response');
@@ -428,6 +434,109 @@ const ForumsScreen = () => {
         }
     };
 
+    const updatePoll = async (pollData: any) => {
+        try {
+            console.log('Updating poll with data:', pollData);
+            console.log('Editing poll full object:', editingPoll);
+            console.log('Editing poll ID:', editingPoll?._id);
+            
+            if (!editingPoll || !editingPoll._id) {
+                console.error('No editing poll or poll ID found!');
+                Alert.alert('Error', 'No poll selected for editing');
+                return;
+            }
+            
+            console.log('PUT URL:', `${BASE_URL}/polls/${editingPoll._id}`);
+
+            const response = await fetch(`${BASE_URL}/polls/${editingPoll._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pollData),
+            });
+
+            console.log('Update poll response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Update poll error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Update poll response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your poll has been updated successfully!');
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the posts list
+                    fetchStats(); // Refresh stats and categories
+                }, 500);
+            } else {
+                console.error('Poll update failed:', data);
+                Alert.alert('Error', data.message || 'Failed to update poll');
+            }
+        } catch (error) {
+            console.error('Error updating poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Poll Update Failed',
+                `Failed to update poll. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => updatePoll(pollData) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const deletePoll = async (pollId: string) => {
+        try {
+            console.log('Deleting poll:', pollId);
+            console.log('DELETE URL:', `${BASE_URL}/polls/${pollId}`);
+
+            const response = await fetch(`${BASE_URL}/polls/${pollId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('Delete poll response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Delete poll error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Delete poll response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Poll has been deleted successfully!');
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the posts list
+                    fetchStats(); // Refresh stats and categories
+                }, 500);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to delete poll');
+            }
+        } catch (error) {
+            console.error('Error deleting poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Poll Deletion Failed',
+                `Failed to delete poll. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => deletePoll(pollId) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
     const updatePost = async (postData: any) => {
         try {
             console.log('Updating post:', postData);
@@ -539,7 +648,13 @@ const ForumsScreen = () => {
 
     const confirmDelete = () => {
         if (postToDelete) {
-            deletePost(postToDelete.id, postToDelete.title);
+            // Check if the item to delete is a poll or post
+            const itemToDelete = forumPosts.find(item => item.id === postToDelete.id);
+            if (itemToDelete && itemToDelete.type === 'poll') {
+                deletePoll(postToDelete.id);
+            } else {
+                deletePost(postToDelete.id, postToDelete.title);
+            }
             setShowDeleteConfirmModal(false);
             setPostToDelete(null);
         }
@@ -589,10 +704,18 @@ const ForumsScreen = () => {
 
     // Helper function to check if current user can edit the post
     const canEditPost = (postAuthor: string) => {
-        if (!user?.email) return false;
+        if (!user?.email) {
+            console.log('No user email found');
+            return false;
+        }
         
         // Get current user's display name (same logic as in CreatePostModal)
         const currentUserDisplayName = user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1);
+        
+        console.log('Checking edit permissions:');
+        console.log('- Post/Poll Author:', postAuthor);
+        console.log('- Current User:', currentUserDisplayName);
+        console.log('- Can Edit:', postAuthor === currentUserDisplayName && postAuthor !== 'Anonymous User');
         
         // Check if the post author matches current user AND post is not by "Anonymous User"
         // Users cannot edit anonymous posts (even their own) for privacy reasons
@@ -746,8 +869,19 @@ const ForumsScreen = () => {
         updatePost(postData);
     };
 
-    const handleCreatePoll = (pollData: any) => {
-        createPoll(pollData);
+    const handleCreatePoll = async (pollData: any) => {
+        await createPoll(pollData);
+    };
+
+    const handleUpdatePoll = async (pollData: any) => {
+        console.log('handleUpdatePoll called with data:', pollData);
+        console.log('editingPoll state:', editingPoll);
+        await updatePoll(pollData);
+    };
+
+    const handleDeletePoll = (pollId: string, pollTopic: string) => {
+        setPostToDelete({id: pollId, title: pollTopic});
+        setShowDeleteConfirmModal(true);
     };
 
     const handleVoteOnPoll = async (pollId: string, optionIndex: number, userId: string) => {
@@ -797,6 +931,18 @@ const ForumsScreen = () => {
 
     const closeCreatePollModal = () => {
         setIsCreatePollModalVisible(false);
+    };
+
+    const closeEditPollModal = () => {
+        setIsEditPollModalVisible(false);
+        setEditingPoll(null);
+    };
+
+    const handleEditPoll = (poll: any) => {
+        console.log('handleEditPoll called with poll:', poll);
+        setEditingPoll(poll);
+        setIsEditPollModalVisible(true);
+        console.log('Edit poll modal should now be visible');
     };
 
     const closeEditPostModal = () => {
@@ -1166,7 +1312,10 @@ const ForumsScreen = () => {
                                         key={item.id}
                                         poll={item}
                                         onVote={handleVoteOnPoll}
+                                        onEdit={handleEditPoll}
+                                        onDelete={handleDeletePoll}
                                         userId={user?.email || user?.id || `anonymous_${Date.now()}`}
+                                        canEdit={canEditPost(item.author)}
                                     />
                                 );
                             }
@@ -1280,6 +1429,15 @@ const ForumsScreen = () => {
                 visible={isCreatePollModalVisible}
                 onClose={closeCreatePollModal}
                 onSubmit={handleCreatePoll}
+            />
+
+            {/* Edit Poll Modal */}
+            <CreatePollModal
+                visible={isEditPollModalVisible}
+                onClose={closeEditPollModal}
+                onSubmit={handleUpdatePoll}
+                editingPoll={editingPoll}
+                isEditMode={true}
             />
 
             {/* Edit Post Modal */}

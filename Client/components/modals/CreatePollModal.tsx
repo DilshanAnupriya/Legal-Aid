@@ -18,12 +18,16 @@ interface CreatePollModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (pollData: any) => void;
+  editingPoll?: any;
+  isEditMode?: boolean;
 }
 
 const CreatePollModal: React.FC<CreatePollModalProps> = ({
   visible,
   onClose,
   onSubmit,
+  editingPoll,
+  isEditMode = false,
 }) => {
   const { user } = useAuth();
   const [topic, setTopic] = useState('');
@@ -33,6 +37,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('Family Law');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showOptionCountModal, setShowOptionCountModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Legal categories from ForumScreen (excluding 'All' as it's not a specific category)
   const legalCategories = [
@@ -45,16 +50,38 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
   const optionCounts = [2, 3, 4, 5, 6];
 
-  // Reset form when modal is opened
+  // Populate form when editing or reset when creating new
   useEffect(() => {
-    if (visible) {
+    console.log('CreatePollModal useEffect triggered:', {
+      isEditMode,
+      editingPoll,
+      visible
+    });
+    
+    if (isEditMode && editingPoll) {
+      console.log('Setting form data from editing poll:', editingPoll);
+      setTopic(editingPoll.topic || '');
+      setSelectedCategory(editingPoll.category || 'Family Law');
+      setIsAnonymous(editingPoll.isAnonymous || false);
+      
+      // For editing, we don't allow changing options since votes might exist
+      if (editingPoll.options && editingPoll.options.length > 0) {
+        setNumberOfOptions(editingPoll.options.length);
+        setOptions([...editingPoll.options]);
+      } else {
+        setNumberOfOptions(2);
+        setOptions(['', '']);
+      }
+    } else if (visible) {
+      // Reset form when creating new poll
+      console.log('Resetting form for new poll');
       setTopic('');
       setNumberOfOptions(2);
       setOptions(['', '']);
       setSelectedCategory('Family Law');
       setIsAnonymous(false);
     }
-  }, [visible]);
+  }, [isEditMode, editingPoll, visible]);
 
   // Update options array when number of options changes
   useEffect(() => {
@@ -70,30 +97,23 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
     setOptions(updatedOptions);
   };
 
-  const handleSubmit = () => {
-    // Basic validation
-    if (!topic.trim()) {
-      Alert.alert('Validation Error', 'Please enter a poll topic');
-      return;
-    }
-    if (topic.trim().length < 10) {
-      Alert.alert('Validation Error', 'Poll topic must be at least 10 characters long');
-      return;
-    }
-
-    // Validate options
-    const filledOptions = options.filter(option => option.trim().length > 0);
-    if (filledOptions.length < 2) {
-      Alert.alert('Validation Error', 'Please provide at least 2 poll options');
-      return;
-    }
-
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].trim().length > 0 && options[i].trim().length < 2) {
-        Alert.alert('Validation Error', `Option ${i + 1} must be at least 2 characters long`);
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Basic validation
+      if (!topic.trim()) {
+        Alert.alert('Validation Error', 'Please enter a poll topic');
+        setIsSubmitting(false);
         return;
       }
-    }
+      if (topic.trim().length < 10) {
+        Alert.alert('Validation Error', 'Poll topic must be at least 10 characters long');
+        setIsSubmitting(false);
+        return;
+      }
 
     // Get user name for author field
     const getUserDisplayName = () => {
@@ -104,33 +124,71 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
       if (user?.email) {
         // Extract name part from email (before @ symbol) and capitalize
         const emailName = user.email.split('@')[0];
-        return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+        const displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+        console.log('Created poll author name:', displayName);
+        return displayName;
       }
       
       return 'User'; // Fallback if no user info
     };
 
-    const pollData = {
-      topic: topic.trim(),
-      options: filledOptions,
-      isAnonymous,
-      author: getUserDisplayName(),
-      category: selectedCategory,
-      votes: new Array(filledOptions.length).fill(0),
-      voters: [], // Array to track who voted to prevent duplicate voting
-      totalVotes: 0,
-    };
+    let pollData;
     
-    onSubmit(pollData);
+    if (isEditMode) {
+      // For editing, only send updatable fields
+      pollData = {
+        topic: topic.trim(),
+        category: selectedCategory,
+        isAnonymous,
+      };
+    } else {
+      // Validate options only for new polls
+      const filledOptions = options.filter(option => option.trim().length > 0);
+      if (filledOptions.length < 2) {
+        Alert.alert('Validation Error', 'Please provide at least 2 poll options');
+        setIsSubmitting(false);
+        return;
+      }
+
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].trim().length > 0 && options[i].trim().length < 2) {
+          Alert.alert('Validation Error', `Option ${i + 1} must be at least 2 characters long`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // For creating new poll, send full data structure
+      pollData = {
+        topic: topic.trim(),
+        options: filledOptions,
+        isAnonymous,
+        author: getUserDisplayName(),
+        category: selectedCategory,
+        votes: new Array(filledOptions.length).fill(0),
+        voters: [], // Array to track who voted to prevent duplicate voting
+        totalVotes: 0,
+      };
+    }
     
-    // Reset form
-    setTopic('');
-    setNumberOfOptions(2);
-    setOptions(['', '']);
-    setIsAnonymous(false);
-    setSelectedCategory('Family Law');
-    
-    onClose();
+      console.log('Submitting poll data:', pollData, 'Edit mode:', isEditMode);
+      await onSubmit(pollData);
+      
+      // Reset form only if not in edit mode
+      if (!isEditMode) {
+        setTopic('');
+        setNumberOfOptions(2);
+        setOptions(['', '']);
+        setIsAnonymous(false);
+        setSelectedCategory('Family Law');
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -147,9 +205,15 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create New Poll</Text>
-          <TouchableOpacity onPress={handleSubmit} style={styles.postButton}>
-            <Text style={styles.postButtonText}>Create</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Poll' : 'Create New Poll'}</Text>
+          <TouchableOpacity 
+            onPress={handleSubmit} 
+            style={[styles.postButton, isSubmitting && styles.postButtonDisabled]}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.postButtonText}>
+              {isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Create')}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -169,15 +233,17 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
           </View>
 
           {/* Number of Options */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Number of Options</Text>
-            <TouchableOpacity
-              style={styles.optionCountDropdown}
-              onPress={() => setShowOptionCountModal(true)}>
-              <Text style={styles.optionCountText}>{numberOfOptions} options</Text>
-              <Text style={styles.dropdownArrow}>▼</Text>
-            </TouchableOpacity>
-          </View>
+          {!isEditMode && (
+            <View style={styles.section}>
+              <Text style={styles.label}>Number of Options</Text>
+              <TouchableOpacity
+                style={styles.optionCountDropdown}
+                onPress={() => setShowOptionCountModal(true)}>
+                <Text style={styles.optionCountText}>{numberOfOptions} options</Text>
+                <Text style={styles.dropdownArrow}>▼</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Dynamic Options */}
           <View style={styles.section}>
@@ -186,11 +252,12 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
               <View key={index} style={styles.optionContainer}>
                 <Text style={styles.optionLabel}>Option {index + 1}</Text>
                 <TextInput
-                  style={styles.optionInput}
+                  style={[styles.optionInput, isEditMode && styles.readOnlyInput]}
                   placeholder={`Enter option ${index + 1}`}
                   placeholderTextColor="#999999"
                   value={option}
-                  onChangeText={(value) => handleOptionChange(index, value)}
+                  onChangeText={isEditMode ? undefined : (value) => handleOptionChange(index, value)}
+                  editable={!isEditMode}
                 />
               </View>
             ))}
@@ -232,8 +299,14 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Create Poll</Text>
+          <TouchableOpacity 
+            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? (isEditMode ? 'Updating Poll...' : 'Creating Poll...') : (isEditMode ? 'Update Poll' : 'Create Poll')}
+            </Text>
           </TouchableOpacity>
 
           {/* Bottom Spacing */}
@@ -241,41 +314,43 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
         </ScrollView>
       </SafeAreaView>
 
-      {/* Option Count Selection Modal */}
-      <Modal
-        visible={showOptionCountModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowOptionCountModal(false)}>
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setShowOptionCountModal(false)}>
-          <View style={styles.optionCountModalContent}>
-            <Text style={styles.optionCountModalTitle}>Select Number of Options</Text>
-            {optionCounts.map((count) => (
-              <TouchableOpacity
-                key={count}
-                style={[
-                  styles.optionCountOption,
-                  numberOfOptions === count && styles.optionCountOptionSelected
-                ]}
-                onPress={() => {
-                  setNumberOfOptions(count);
-                  setShowOptionCountModal(false);
-                }}>
-                <Text style={[
-                  styles.optionCountOptionText,
-                  numberOfOptions === count && styles.optionCountOptionTextSelected
-                ]}>{count} options</Text>
-                {numberOfOptions === count && (
-                  <Text style={styles.optionCountSelectedIcon}>✓</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      {/* Option Count Selection Modal - Only show if not in edit mode */}
+      {!isEditMode && (
+        <Modal
+          visible={showOptionCountModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowOptionCountModal(false)}>
+          <TouchableOpacity 
+            style={styles.modalOverlay} 
+            activeOpacity={1} 
+            onPress={() => setShowOptionCountModal(false)}>
+            <View style={styles.optionCountModalContent}>
+              <Text style={styles.optionCountModalTitle}>Select Number of Options</Text>
+              {optionCounts.map((count) => (
+                <TouchableOpacity
+                  key={count}
+                  style={[
+                    styles.optionCountOption,
+                    numberOfOptions === count && styles.optionCountOptionSelected
+                  ]}
+                  onPress={() => {
+                    setNumberOfOptions(count);
+                    setShowOptionCountModal(false);
+                  }}>
+                  <Text style={[
+                    styles.optionCountOptionText,
+                    numberOfOptions === count && styles.optionCountOptionTextSelected
+                  ]}>{count} options</Text>
+                  {numberOfOptions === count && (
+                    <Text style={styles.optionCountSelectedIcon}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
 
       {/* Category Selection Modal */}
       <Modal
@@ -351,6 +426,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
+  postButtonDisabled: {
+    backgroundColor: '#cccccc',
+    opacity: 0.7,
+  },
   postButtonText: {
     color: '#ffffff',
     fontSize: 14,
@@ -399,6 +478,10 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  readOnlyInput: {
+    backgroundColor: '#F8F9FA',
+    color: '#7F8C8D',
   },
   optionCountDropdown: {
     flexDirection: 'row',
@@ -492,6 +575,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#cccccc',
+    opacity: 0.7,
+    shadowColor: '#cccccc',
   },
   submitButtonText: {
     color: '#ffffff',
