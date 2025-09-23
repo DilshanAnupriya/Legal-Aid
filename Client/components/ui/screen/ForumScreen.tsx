@@ -1328,17 +1328,8 @@ const ForumsScreen = () => {
                                 onPress={() => handlePostPress(item.id)}
                                 activeOpacity={0.8}
                             >
-                                {/* Priority Indicator and Delete Button */}
+                                {/* Edit and Delete Buttons */}
                                 <View style={styles.topRightContainer}>
-                                    <View style={styles.postPriorityIndicator}>
-                                        <View style={[
-                                            styles.priorityDot,
-                                            item.priority === 'high' && styles.highPriority,
-                                            item.priority === 'medium' && styles.mediumPriority,
-                                            item.priority === 'low' && styles.lowPriority,
-                                        ]} />
-                                    </View>
-                                    
                                     {/* Edit and Delete Buttons - Only show for posts by current user */}
                                     {canEditPost(item.author) && (
                                         <>
@@ -2050,16 +2041,13 @@ const styles = StyleSheet.create({
         // Allow touch events to pass through to children
         pointerEvents: 'box-none',
     },
-    postPriorityIndicator: {
-        marginRight: 8,
-    },
     editButton: {
         backgroundColor: 'rgba(102, 126, 234, 0.1)',
         padding: 6,
-        borderRadius: 12,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: 'rgba(102, 126, 234, 0.3)',
-        marginRight: 8,
+        marginRight: 4,
     },
     editIcon: {
         fontSize: 12,
@@ -2068,12 +2056,12 @@ const styles = StyleSheet.create({
     deleteButton: {
         backgroundColor: 'rgba(255, 107, 107, 0.1)',
         padding: 8,
-        borderRadius: 12,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: 'rgba(255, 107, 107, 0.3)',
         zIndex: 20,
         elevation: 5,
-        marginLeft: 8,
+        marginLeft: 4,
         // Ensure it receives touch events
         pointerEvents: 'auto',
         // Ensure it's clickable on web
@@ -2086,20 +2074,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#FF6B6B',
     },
-    priorityDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    highPriority: {
-        backgroundColor: '#FF6B6B',
-    },
-    mediumPriority: {
-        backgroundColor: '#FFD93D',
-    },
-    lowPriority: {
-        backgroundColor: '#6BCF7F',
-    },
     postContent: {
         flex: 1,
     },
@@ -2107,13 +2081,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-start',
         marginBottom: 8,
-        paddingRight: 20,
+        paddingRight: 80,
     },
     postTitle: {
         fontSize: 15,
         fontWeight: '600',
         color: '#2C3E50',
-        flex: 1,
+        flex: 0.625,
         lineHeight: 20,
     },
     answeredBadge: {
