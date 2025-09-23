@@ -205,11 +205,6 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, use
                 </View>
               )}
 
-              {isSelected && hasVoted && (
-                <View style={styles.checkMark}>
-                  <Text style={styles.checkMarkText}>✓</Text>
-                </View>
-              )}
             </TouchableOpacity>
           );
         })}
@@ -394,24 +389,6 @@ const styles = StyleSheet.create({
   },
   selectedProgressBar: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  checkMark: {
-    position: 'absolute',
-    right: 12,
-    top: '50%',
-    marginTop: -10,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 3,
-  },
-  checkMarkText: {
-    fontSize: 12,
-    color: '#ff7100',
-    fontWeight: 'bold',
   },
   pollStats: {
     flexDirection: 'row',
