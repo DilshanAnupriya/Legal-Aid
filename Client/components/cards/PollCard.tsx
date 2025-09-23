@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     color: '#7F8C8D',
   },
   pollBadge: {
-    backgroundColor: '#f093fb',
+    backgroundColor: '#ff7100',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -285,8 +285,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   selectedOption: {
-    backgroundColor: '#f093fb',
-    borderColor: '#f093fb',
+    backgroundColor: '#ff7100',
+    borderColor: '#ff7100',
   },
   unselectedOption: {
     backgroundColor: '#F8F9FA',
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: 'rgba(240, 147, 251, 0.2)',
+    backgroundColor: 'rgba(255, 113, 0, 0.2)',
     borderRadius: 12,
   },
   selectedProgressBar: {
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   },
   checkMarkText: {
     fontSize: 12,
-    color: '#f093fb',
+    color: '#ff7100',
     fontWeight: 'bold',
   },
   pollStats: {
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#f093fb',
+    color: '#ff7100',
     fontWeight: '600',
   },
 });

@@ -50,6 +50,8 @@ const ForumsScreen = () => {
     const [trendingTopics, setTrendingTopics] = useState([]);
     const [sortOrder, setSortOrder] = useState('Newest');
     const [showSortDropdown, setShowSortDropdown] = useState(false);
+    const [contentType, setContentType] = useState('All');
+    const [showContentTypeDropdown, setShowContentTypeDropdown] = useState(false);
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [postToDelete, setPostToDelete] = useState<{id: string, title: string} | null>(null);
     const [isCreatePollModalVisible, setIsCreatePollModalVisible] = useState(false);
@@ -644,6 +646,9 @@ const ForumsScreen = () => {
             if (showSortDropdown) {
                 setShowSortDropdown(false);
             }
+            if (showContentTypeDropdown) {
+                setShowContentTypeDropdown(false);
+            }
         };
 
         // For web, add click listener to document
@@ -653,10 +658,15 @@ const ForumsScreen = () => {
                 document.removeEventListener('click', handleClickOutside);
             };
         }
-    }, [showSortDropdown]);
+    }, [showSortDropdown, showContentTypeDropdown]);
 
     const filteredPosts = forumPosts.filter((item: any) => {
         const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+        
+        // Content type filter
+        const matchesContentType = contentType === 'All' || 
+            (contentType === 'Forums' && item.type === 'post') ||
+            (contentType === 'Polls' && item.type === 'poll');
         
         let matchesSearch = false;
         if (searchQuery.trim() === '') {
@@ -687,7 +697,7 @@ const ForumsScreen = () => {
             }
         }
         
-        return matchesCategory && matchesSearch;
+        return matchesCategory && matchesContentType && matchesSearch;
     }).sort((a: any, b: any) => {
         // Sort by creation date - use createdAt if available, otherwise lastActivityRaw, otherwise fallback to id
         let dateA, dateB;
@@ -1040,6 +1050,60 @@ const ForumsScreen = () => {
                         <Text style={styles.sectionTitle}>Recent Discussions</Text>
                         <View style={styles.filterContainer}>
                             <TouchableOpacity 
+                                style={styles.contentTypeButton}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    setShowContentTypeDropdown(!showContentTypeDropdown);
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.contentTypeText}>{contentType}</Text>
+                                <Text style={styles.filterArrow}>▼</Text>
+                            </TouchableOpacity>
+                            {showContentTypeDropdown && (
+                                <View style={styles.contentTypeDropdown}>
+                                    <TouchableOpacity 
+                                        style={[styles.contentTypeOption, contentType === 'All' && styles.activeContentTypeOption]}
+                                        onPress={(e) => {
+                                            e.stopPropagation();
+                                            setContentType('All');
+                                            setShowContentTypeDropdown(false);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.contentTypeOptionText, contentType === 'All' && styles.activeContentTypeOptionText]}>
+                                            All
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        style={[styles.contentTypeOption, contentType === 'Forums' && styles.activeContentTypeOption]}
+                                        onPress={(e) => {
+                                            e.stopPropagation();
+                                            setContentType('Forums');
+                                            setShowContentTypeDropdown(false);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.contentTypeOptionText, contentType === 'Forums' && styles.activeContentTypeOptionText]}>
+                                            Forums
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        style={[styles.contentTypeOption, contentType === 'Polls' && styles.activeContentTypeOption]}
+                                        onPress={(e) => {
+                                            e.stopPropagation();
+                                            setContentType('Polls');
+                                            setShowContentTypeDropdown(false);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.contentTypeOptionText, contentType === 'Polls' && styles.activeContentTypeOptionText]}>
+                                            Polls
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                            <TouchableOpacity 
                                 style={styles.filterButton}
                                 onPress={(e) => {
                                     e.stopPropagation();
@@ -1086,12 +1150,12 @@ const ForumsScreen = () => {
                     {loading ? (
                         <View style={styles.loadingContainer}>
                             <ActivityIndicator size="large" color="#667eea" />
-                            <Text style={styles.loadingText}>Loading posts...</Text>
+                            <Text style={styles.loadingText}>Loading content...</Text>
                         </View>
                     ) : filteredPosts.length === 0 ? (
                         <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>No posts found</Text>
-                            <Text style={styles.emptySubtext}>Be the first to ask a question!</Text>
+                            <Text style={styles.emptyText}>No content found</Text>
+                            <Text style={styles.emptySubtext}>Be the first to ask a question or create a poll!</Text>
                         </View>
                     ) : (
                         filteredPosts.map((item: any) => {
@@ -1420,11 +1484,11 @@ const styles = StyleSheet.create({
     addPollCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f093fb',
+        backgroundColor: '#ff7100',
         borderRadius: 20,
         padding: 20,
         marginBottom: 12,
-        shadowColor: '#f093fb',
+        shadowColor: '#ff7100',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -1692,7 +1756,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         paddingHorizontal: 12,
         paddingVertical: 8,
-        borderRadius: 20,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: '#E0E0E0',
     },
@@ -1743,6 +1807,63 @@ const styles = StyleSheet.create({
     },
     activeSortOptionText: {
         color: '#667eea',
+        fontWeight: '600',
+    },
+    // Content Type Filter Dropdown
+    contentTypeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        marginRight: 10,
+    },
+    contentTypeText: {
+        fontSize: 14,
+        color: '#2C3E50',
+        fontWeight: '500',
+        marginRight: 5,
+    },
+    contentTypeDropdown: {
+        position: 'absolute',
+        top: 42,
+        left: 0,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 8,
+        minWidth: 120,
+        maxWidth: 150,
+        zIndex: 9999,
+        // Web-specific styles for better shadow
+        ...(Platform.OS === 'web' && {
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        }),
+    },
+    contentTypeOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    activeContentTypeOption: {
+        backgroundColor: '#F8F9FA',
+    },
+    contentTypeOptionText: {
+        fontSize: 14,
+        color: '#2C3E50',
+        fontWeight: '500',
+    },
+    activeContentTypeOptionText: {
+        color: '#ff7100',
         fontWeight: '600',
     },
     // Post Cards - Compact Design

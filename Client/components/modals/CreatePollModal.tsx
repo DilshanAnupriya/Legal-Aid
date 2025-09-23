@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
   },
   postButton: {
-    backgroundColor: '#f093fb',
+    backgroundColor: '#ff7100',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -462,8 +462,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#f093fb',
-    borderColor: '#f093fb',
+    backgroundColor: '#ff7100',
+    borderColor: '#ff7100',
   },
   checkmark: {
     fontSize: 12,
@@ -482,12 +482,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   submitButton: {
-    backgroundColor: '#f093fb',
+    backgroundColor: '#ff7100',
     borderRadius: 12,
     paddingVertical: 16,
     marginHorizontal: 20,
     marginTop: 20,
-    shadowColor: '#f093fb',
+    shadowColor: '#ff7100',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -541,8 +541,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   optionCountOptionSelected: {
-    backgroundColor: '#f093fb',
-    borderColor: '#f093fb',
+    backgroundColor: '#ff7100',
+    borderColor: '#ff7100',
   },
   optionCountOptionText: {
     fontSize: 16,
@@ -589,8 +589,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   categoryOptionSelected: {
-    backgroundColor: '#f093fb',
-    borderColor: '#f093fb',
+    backgroundColor: '#ff7100',
+    borderColor: '#ff7100',
   },
   categoryOptionIcon: {
     fontSize: 20,
