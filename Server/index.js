@@ -79,11 +79,13 @@ const ngoRoutes = require('./Routes/ngoRoutes');
 app.use('/api/ngo', ngoRoutes);
 // Import Routes
 const postRoutes = require("./Routes/postRoutes");
+const pollRoutes = require("./Routes/pollRoutes");
 const userRoutes = require("./Routes/userRoutes");
 const lawyerRoutes = require("./Routes/lawyerRoutes");
 const documentRoutes = require('./Routes/documentRoutes');
 app.use('/api/documents', documentRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/polls", pollRoutes);
 app.use("/api/auth", userRoutes);
 app.use("/api/lawyers", lawyerRoutes);
 
@@ -96,6 +98,7 @@ app.get("/", (req, res) => {
     endpoints: {
       auth: "/api/auth",
       posts: "/api/posts",
+      polls: "/api/polls",
       health: "/health"
     }
   });

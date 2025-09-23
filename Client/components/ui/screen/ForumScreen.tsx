@@ -16,7 +16,9 @@ import {
     Modal,
 } from 'react-native';
 import CreatePostModal from '../../modals/CreatePostModal';
+import CreatePollModal from '../../modals/CreatePollModal';
 import PostDetailModal from '../../modals/PostDetailModal';
+import PollCard from '../../cards/PollCard';
 import { useAuth } from '../../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
@@ -50,6 +52,8 @@ const ForumsScreen = () => {
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [postToDelete, setPostToDelete] = useState<{id: string, title: string} | null>(null);
+    const [isCreatePollModalVisible, setIsCreatePollModalVisible] = useState(false);
+    const [polls, setPolls] = useState([]);
 
     // Multiple URL options for different environments
     const getApiUrls = () => {
@@ -87,6 +91,62 @@ const ForumsScreen = () => {
     };
 
     // API Functions
+    const fetchPolls = async () => {
+        try {
+            console.log('Fetching polls from:', `${BASE_URL}/polls`);
+
+            const response = await fetch(`${BASE_URL}/polls?category=${activeCategory}&search=${searchQuery}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                timeout: 10000,
+            });
+
+            console.log('Polls response status:', response.status);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Polls response data:', data);
+
+            if (data.success && data.data.polls) {
+                // Transform backend poll data to match frontend format
+                const transformedPolls = data.data.polls.map((poll: any) => ({
+                    id: poll._id,
+                    _id: poll._id,
+                    title: poll.topic, // Map topic to title for consistency
+                    topic: poll.topic,
+                    options: poll.options,
+                    votes: poll.votes,
+                    voters: poll.voters,
+                    totalVotes: poll.totalVotes,
+                    author: poll.author,
+                    category: poll.category,
+                    isAnonymous: poll.isAnonymous,
+                    createdAt: poll.createdAt,
+                    lastActivity: formatLastActivity(poll.lastActivity || poll.createdAt),
+                    lastActivityRaw: poll.lastActivity || poll.createdAt,
+                    type: 'poll', // Add type identifier
+                    tags: [], // Empty tags array for consistency
+                    replies: 0, // Polls don't have replies
+                    views: poll.totalVotes || 0, // Use total votes as views
+                    isAnswered: false, // Polls don't have answered state
+                    priority: 'medium', // Default priority
+                }));
+                return transformedPolls;
+            } else {
+                console.warn('No polls found or invalid response');
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching polls:', error);
+            return [];
+        }
+    };
+
     const fetchPosts = async () => {
         try {
             setLoading(true);
@@ -125,8 +185,21 @@ const ForumsScreen = () => {
                     isAnswered: post.isAnswered,
                     priority: post.priority,
                     tags: post.tags,
+                    type: 'post', // Add type identifier
                 }));
-                setForumPosts(transformedPosts);
+
+                // Fetch polls and combine with posts
+                const polls = await fetchPolls();
+                const combinedContent = [...transformedPosts, ...polls];
+                
+                // Sort combined content by creation date (newest first)
+                combinedContent.sort((a, b) => {
+                    const dateA = new Date(a.createdAt);
+                    const dateB = new Date(b.createdAt);
+                    return dateB.getTime() - dateA.getTime();
+                });
+
+                setForumPosts(combinedContent);
             } else {
                 throw new Error(data.message || 'Failed to fetch posts');
             }
@@ -299,6 +372,54 @@ const ForumsScreen = () => {
                 `Failed to create post. Please check your connection and try again.\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => createPost(postData) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const createPoll = async (pollData: any) => {
+        try {
+            console.log('Creating poll:', pollData);
+            console.log('POST URL:', `${BASE_URL}/polls`);
+
+            const response = await fetch(`${BASE_URL}/polls`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pollData),
+            });
+
+            console.log('Create poll response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Create poll error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Create poll response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your poll has been created successfully!');
+                // Add a small delay to ensure server has processed the poll
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the posts list (which will include polls)
+                    fetchStats(); // Refresh stats and categories
+                }, 500);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to create poll');
+            }
+        } catch (error) {
+            console.error('Error creating poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Poll Creation Failed',
+                `Failed to create poll. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => createPoll(pollData) },
                     { text: 'OK' }
                 ]
             );
@@ -534,10 +655,38 @@ const ForumsScreen = () => {
         }
     }, [showSortDropdown]);
 
-    const filteredPosts = forumPosts.filter((post: any) => {
-        const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
-        const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            post.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredPosts = forumPosts.filter((item: any) => {
+        const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+        
+        let matchesSearch = false;
+        if (searchQuery.trim() === '') {
+            matchesSearch = true; // If no search query, include all items
+        } else {
+            const query = searchQuery.toLowerCase();
+            
+            // For posts, check title and tags
+            if (item.type === 'post') {
+                const titleMatch = item.title && item.title.toLowerCase().includes(query);
+                const tagMatch = item.tags && Array.isArray(item.tags) && 
+                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query));
+                matchesSearch = titleMatch || tagMatch;
+            }
+            // For polls, check topic and options
+            else if (item.type === 'poll') {
+                const topicMatch = item.topic && item.topic.toLowerCase().includes(query);
+                const optionMatch = item.options && Array.isArray(item.options) && 
+                    item.options.some((option: string) => option && option.toLowerCase().includes(query));
+                matchesSearch = topicMatch || optionMatch;
+            }
+            // Fallback for items without type
+            else {
+                const titleMatch = (item.title || item.topic || '').toLowerCase().includes(query);
+                const tagMatch = item.tags && Array.isArray(item.tags) && 
+                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query));
+                matchesSearch = titleMatch || tagMatch;
+            }
+        }
+        
         return matchesCategory && matchesSearch;
     }).sort((a: any, b: any) => {
         // Sort by creation date - use createdAt if available, otherwise lastActivityRaw, otherwise fallback to id
@@ -587,12 +736,57 @@ const ForumsScreen = () => {
         updatePost(postData);
     };
 
+    const handleCreatePoll = (pollData: any) => {
+        createPoll(pollData);
+    };
+
+    const handleVoteOnPoll = async (pollId: string, optionIndex: number, userId: string) => {
+        try {
+            console.log('Voting on poll:', pollId, optionIndex, userId);
+            const response = await fetch(`${BASE_URL}/polls/${pollId}/vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ optionIndex, userId }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Refresh posts to show updated poll results
+                setTimeout(() => {
+                    fetchPosts();
+                }, 300);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to cast vote');
+            }
+        } catch (error) {
+            console.error('Error voting on poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert('Voting Failed', `Failed to cast vote: ${errorMessage}`);
+        }
+    };
+
     const openCreatePostModal = () => {
         setIsCreatePostModalVisible(true);
     };
 
     const closeCreatePostModal = () => {
         setIsCreatePostModalVisible(false);
+    };
+
+    const openCreatePollModal = () => {
+        setIsCreatePollModalVisible(true);
+    };
+
+    const closeCreatePollModal = () => {
+        setIsCreatePollModalVisible(false);
     };
 
     const closeEditPostModal = () => {
@@ -602,6 +796,12 @@ const ForumsScreen = () => {
 
     const handlePostPress = async (postId: string) => {
         try {
+            // Don't handle clicks for polls - they're already interactive
+            const item = forumPosts.find(p => p.id === postId);
+            if (item && item.type === 'poll') {
+                return; // Do nothing for polls
+            }
+
             setLoading(true);
             console.log('Fetching post details for ID:', postId);
 
@@ -682,6 +882,20 @@ const ForumsScreen = () => {
                         <Text style={styles.askQuestionArrow}>→</Text>
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={styles.addPollCard}
+                        onPress={openCreatePollModal}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.addPollIcon}>
+                            <Text style={styles.addPollEmoji}>📊</Text>
+                        </View>
+                        <View style={styles.addPollContent}>
+                            <Text style={styles.addPollTitle}>Add a Poll</Text>
+                            <Text style={styles.addPollSubtitle}>Create polls to gather community opinions</Text>
+                        </View>
+                        <Text style={styles.addPollArrow}>→</Text>
+                    </TouchableOpacity>
 
                 </View>
 
@@ -880,11 +1094,25 @@ const ForumsScreen = () => {
                             <Text style={styles.emptySubtext}>Be the first to ask a question!</Text>
                         </View>
                     ) : (
-                        filteredPosts.map((post: any) => (
-                            <TouchableOpacity
-                                key={post.id}
+                        filteredPosts.map((item: any) => {
+                            // Render PollCard for polls, regular post card for posts
+                            if (item.type === 'poll') {
+                                return (
+                                    <PollCard
+                                        key={item.id}
+                                        poll={item}
+                                        onVote={handleVoteOnPoll}
+                                        userId={user?.email || user?.id || `anonymous_${Date.now()}`}
+                                    />
+                                );
+                            }
+                            
+                            // Regular post rendering
+                            return (
+                                <TouchableOpacity
+                                    key={item.id}
                                 style={styles.postCard}
-                                onPress={() => handlePostPress(post.id)}
+                                onPress={() => handlePostPress(item.id)}
                                 activeOpacity={0.8}
                             >
                                 {/* Priority Indicator and Delete Button */}
@@ -892,20 +1120,20 @@ const ForumsScreen = () => {
                                     <View style={styles.postPriorityIndicator}>
                                         <View style={[
                                             styles.priorityDot,
-                                            post.priority === 'high' && styles.highPriority,
-                                            post.priority === 'medium' && styles.mediumPriority,
-                                            post.priority === 'low' && styles.lowPriority,
+                                            item.priority === 'high' && styles.highPriority,
+                                            item.priority === 'medium' && styles.mediumPriority,
+                                            item.priority === 'low' && styles.lowPriority,
                                         ]} />
                                     </View>
                                     
                                     {/* Edit and Delete Buttons - Only show for posts by current user */}
-                                    {canEditPost(post.author) && (
+                                    {canEditPost(item.author) && (
                                         <>
                                             <TouchableOpacity
                                                 style={styles.editButton}
                                                 onPress={(e) => {
                                                     e.stopPropagation(); // Prevent card press
-                                                    handleEditPost(post);
+                                                    handleEditPost(item);
                                                 }}
                                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                             >
@@ -918,7 +1146,7 @@ const ForumsScreen = () => {
                                                 ]}
                                                 onPress={(e) => {
                                                     e.stopPropagation(); // Prevent card press
-                                                    handleDeletePost(post.id, post.title);
+                                                    handleDeletePost(item.id, item.title);
                                                 }}
                                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                             >
@@ -931,8 +1159,8 @@ const ForumsScreen = () => {
                                 {/* Post Header */}
                                 <View style={styles.postHeader}>
                                     <View style={styles.postTitleRow}>
-                                        <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
-                                        {post.isAnswered && (
+                                        <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
+                                        {item.isAnswered && (
                                             <View style={styles.answeredBadge}>
                                                 <Text style={styles.answeredIcon}>✓</Text>
                                             </View>
@@ -942,7 +1170,7 @@ const ForumsScreen = () => {
 
                                 {/* Tags */}
                                 <View style={styles.postTagsContainer}>
-                                    {post.tags.slice(0, 2).map((tag: string, index: number) => (
+                                    {(item.tags || []).slice(0, 2).map((tag: string, index: number) => (
                                         <View key={index} style={styles.tagChip}>
                                             <Text style={styles.tagText}>#{tag}</Text>
                                         </View>
@@ -953,21 +1181,22 @@ const ForumsScreen = () => {
                                 <View style={styles.postMeta}>
                                     <View style={styles.postAuthor}>
                                         <View style={styles.avatarPlaceholder}>
-                                            <Text style={styles.avatarText}>{post.author.charAt(0)}</Text>
+                                            <Text style={styles.avatarText}>{item.author.charAt(0)}</Text>
                                         </View>
-                                        <Text style={styles.authorName}>{post.author}</Text>
+                                        <Text style={styles.authorName}>{item.author}</Text>
                                     </View>
 
                                     <View style={styles.postStats}>
                                         <Text style={styles.statIcon}>💬</Text>
-                                        <Text style={styles.statText}>{post.replies}</Text>
+                                        <Text style={styles.statText}>{item.replies || 0}</Text>
                                         <Text style={styles.statIcon}>👁</Text>
-                                        <Text style={styles.statText}>{post.views}</Text>
-                                        <Text style={styles.timeText}>{post.lastActivity}</Text>
+                                        <Text style={styles.statText}>{item.views || 0}</Text>
+                                        <Text style={styles.timeText}>{item.lastActivity || 'Just now'}</Text>
                                     </View>
                                 </View>
                             </TouchableOpacity>
-                        ))
+                            );
+                        })
                     )}
                 </View>
 
@@ -980,6 +1209,13 @@ const ForumsScreen = () => {
                 visible={isCreatePostModalVisible}
                 onClose={closeCreatePostModal}
                 onSubmit={handleCreatePost}
+            />
+
+            {/* Create Poll Modal */}
+            <CreatePollModal
+                visible={isCreatePollModalVisible}
+                onClose={closeCreatePollModal}
+                onSubmit={handleCreatePoll}
             />
 
             {/* Edit Post Modal */}
@@ -1177,6 +1413,49 @@ const styles = StyleSheet.create({
         color: '#E8E8E8',
     },
     askQuestionArrow: {
+        fontSize: 20,
+        color: '#FFFFFF',
+        fontWeight: '600',
+    },
+    addPollCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f093fb',
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 12,
+        shadowColor: '#f093fb',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    addPollIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    addPollEmoji: {
+        fontSize: 24,
+    },
+    addPollContent: {
+        flex: 1,
+    },
+    addPollTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        marginBottom: 4,
+    },
+    addPollSubtitle: {
+        fontSize: 14,
+        color: '#E8E8E8',
+    },
+    addPollArrow: {
         fontSize: 20,
         color: '#FFFFFF',
         fontWeight: '600',
