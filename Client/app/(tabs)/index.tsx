@@ -4,6 +4,8 @@ import SplashScreen from "@/components/ui/screen/SplashScreen";
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from "@/context/AuthContext";
 import AuthNavigator from "@/app/navigation/stack-navigation/AuthStackNavigator";
+// Initialize i18n
+import '@/i18n';
 
 export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);

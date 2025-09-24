@@ -9,8 +9,6 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Platform,
-  Alert,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 
@@ -32,10 +30,13 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Family Law');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  // Validation error states
+  const [titleError, setTitleError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
 
   // Legal categories from ForumScreen (excluding 'All' as it's not a specific category)
   const legalCategories = [
@@ -51,37 +52,58 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     if (isEditMode && editingPost) {
       setTitle(editingPost.title || '');
       setDescription(editingPost.description || '');
-
       setSelectedCategory(editingPost.category || 'Family Law');
       setIsAnonymous(editingPost.isAnonymous || false);
     } else {
       // Reset form when not editing
       setTitle('');
       setDescription('');
-
       setSelectedCategory('Family Law');
       setIsAnonymous(false);
     }
+    // Clear validation errors when modal opens/closes
+    setTitleError('');
+    setDescriptionError('');
   }, [isEditMode, editingPost, visible]);
+
+  // Clear errors when user starts typing
+  const handleTitleChange = (text: string) => {
+    setTitle(text);
+    if (titleError) setTitleError('');
+  };
+
+  const handleDescriptionChange = (text: string) => {
+    setDescription(text);
+    if (descriptionError) setDescriptionError('');
+  };
 
 
 
   const handleSubmit = () => {
+    // Clear previous errors
+    setTitleError('');
+    setDescriptionError('');
+
+    let hasErrors = false;
+
     // Basic validation
     if (!title.trim()) {
-      Alert.alert('Validation Error', 'Please enter a title');
-      return;
+      setTitleError('Please enter a title');
+      hasErrors = true;
+    } else if (title.trim().length < 10) {
+      setTitleError('Title must be at least 10 characters long');
+      hasErrors = true;
     }
+
     if (!description.trim()) {
-      Alert.alert('Validation Error', 'Please enter a description');
-      return;
+      setDescriptionError('Please enter a description');
+      hasErrors = true;
+    } else if (description.trim().length < 20) {
+      setDescriptionError('Description must be at least 20 characters long');
+      hasErrors = true;
     }
-    if (title.trim().length < 10) {
-      Alert.alert('Validation Error', 'Title must be at least 10 characters long');
-      return;
-    }
-    if (description.trim().length < 20) {
-      Alert.alert('Validation Error', 'Description must be at least 20 characters long');
+
+    if (hasErrors) {
       return;
     }
 
@@ -148,27 +170,29 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.label}>Post Title</Text>
             <TextInput
-              style={styles.titleInput}
+              style={[styles.titleInput, titleError && styles.inputError]}
               placeholder="Share your thoughts!"
               placeholderTextColor="#999999"
               value={title}
-              onChangeText={setTitle}
+              onChangeText={handleTitleChange}
               multiline={false}
             />
+            {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
           </View>
 
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.label}>Description</Text>
             <TextInput
-              style={styles.descriptionInput}
+              style={[styles.descriptionInput, descriptionError && styles.inputError]}
               placeholder="Elaborate on your post here..."
               placeholderTextColor="#999999"
               value={description}
-              onChangeText={setDescription}
+              onChangeText={handleDescriptionChange}
               multiline={true}
               textAlignVertical="top"
             />
+            {descriptionError ? <Text style={styles.errorText}>{descriptionError}</Text> : null}
           </View>
 
           {/* Legal Categories */}
@@ -332,6 +356,17 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     minHeight: 120,
     maxHeight: 200,
+  },
+  inputError: {
+    borderColor: '#FF6B6B',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    marginTop: 5,
+    marginLeft: 5,
+    fontWeight: '500',
   },
 
   checkboxContainer: {
