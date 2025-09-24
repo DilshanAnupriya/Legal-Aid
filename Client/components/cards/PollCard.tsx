@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +22,7 @@ interface PollCardProps {
 }
 
 const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, userId, isPreview = false, canEdit = false }) => {
+  const { theme, colors } = useTheme();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [isVoting, setIsVoting] = useState<boolean>(false);
@@ -100,6 +102,9 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, use
     };
     return icons[category] || '📋';
   };
+
+  // Create dynamic styles based on theme
+  const styles = createStyles(colors, theme);
 
   return (
     <View style={styles.pollCard}>
@@ -229,20 +234,20 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, use
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, theme: string) => StyleSheet.create({
   pollCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
     marginHorizontal: 16,
-    shadowColor: '#000',
+    shadowColor: theme === 'dark' ? colors.primary : '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: theme === 'dark' ? colors.secondary : '#F0F0F0',
   },
   pollHeader: {
     flexDirection: 'row',
@@ -256,7 +261,7 @@ const styles = StyleSheet.create({
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme === 'dark' ? colors.secondary : '#F8F9FA',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -269,18 +274,18 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#666666',
+    color: theme === 'dark' ? colors.primary : '#666666',
     fontWeight: '500',
   },
   authorName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2C3E50',
+    color: theme === 'dark' ? colors.primary : '#2C3E50',
     marginBottom: 2,
   },
   timestamp: {
     fontSize: 12,
-    color: '#7F8C8D',
+    color: theme === 'dark' ? colors.darkgray : '#7F8C8D',
   },
   pollActions: {
     flexDirection: 'row',
@@ -318,7 +323,7 @@ const styles = StyleSheet.create({
   pollTopic: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2C3E50',
+    color: theme === 'dark' ? colors.primary : '#2C3E50',
     lineHeight: 22,
     marginBottom: 16,
   },
@@ -326,7 +331,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   optionButton: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme === 'dark' ? colors.secondary : '#F8F9FA',
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
@@ -340,7 +345,7 @@ const styles = StyleSheet.create({
     borderColor: '#ff7100',
   },
   unselectedOption: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme === 'dark' ? colors.secondary : '#F8F9FA',
     opacity: 0.7,
   },
   optionContent: {
@@ -352,7 +357,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2C3E50',
+    color: theme === 'dark' ? colors.primary : '#2C3E50',
     flex: 1,
   },
   selectedOptionText: {
@@ -360,14 +365,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   unselectedOptionText: {
-    color: '#7F8C8D',
+    color: theme === 'dark' ? colors.darkgray : '#7F8C8D',
   },
   resultInfo: {
     alignItems: 'flex-end',
   },
   voteCount: {
     fontSize: 12,
-    color: '#666666',
+    color: theme === 'dark' ? colors.darkgray : '#666666',
     fontWeight: '500',
   },
   selectedVoteCount: {
@@ -396,11 +401,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: theme === 'dark' ? colors.darkgray : '#F0F0F0',
   },
   totalVotes: {
     fontSize: 13,
-    color: '#7F8C8D',
+    color: theme === 'dark' ? colors.darkgray : '#7F8C8D',
     fontWeight: '500',
   },
   votedIndicator: {
@@ -414,7 +419,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: theme === 'dark' ? 'rgba(23, 21, 47, 0.8)' : 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 16,
