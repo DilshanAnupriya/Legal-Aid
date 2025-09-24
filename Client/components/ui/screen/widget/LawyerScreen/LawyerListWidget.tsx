@@ -1,0 +1,118 @@
+import React from 'react';
+import { StyleSheet, Text, View, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import LawyerCard from './LawyerCardWidget';
+
+
+const LawyerListWidget = ({
+                           // @ts-ignore
+                     data,
+                           // @ts-ignore
+                     isGridView,
+                           // @ts-ignore
+                     loading,
+                           // @ts-ignore
+                     refreshing,
+                           // @ts-ignore
+                     onRefresh,
+                           // @ts-ignore
+                     onLoadMore,
+                           // @ts-ignore
+                     onCardPress
+                 }) => {
+    // @ts-ignore
+    const renderLawyerCard = ({ item }) => (
+        <LawyerCard
+            item={item}
+            isGridView={isGridView}
+            onPress={onCardPress}
+        />
+    );
+
+    const renderFooter = () => {
+        if (!loading) return null;
+        return (
+            <View style={styles.loadingFooter}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.loadingText}>Loading more Lawyerss...</Text>
+            </View>
+        );
+    };
+
+    const renderEmptyComponent = () => {
+        if (loading) return null;
+        return (
+            <View style={styles.emptyContainer}>
+                <Ionicons name="search-outline" size={64} color="#DDD" />
+                <Text style={styles.emptyText}>No Lawyers found</Text>
+                <Text style={styles.emptySubtext}>
+                    Try adjusting your search or filter criteria
+                </Text>
+            </View>
+        );
+    };
+
+    return (
+        <FlatList
+            data={data}
+            renderItem={renderLawyerCard}
+            keyExtractor={(item) => item._id}
+            style={styles.ngoList}
+            contentContainerStyle={styles.ngoListContent}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#007AFF']}
+                    tintColor="#007AFF"
+                />
+            }
+            onEndReached={onLoadMore}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={renderFooter}
+            showsVerticalScrollIndicator={false}
+            numColumns={isGridView ? 2 : 1}
+            key={isGridView ? 'grid' : 'list'}
+            ListEmptyComponent={renderEmptyComponent}
+        />
+    );
+};
+
+const styles = StyleSheet.create({
+    ngoList: {
+        flex: 1,
+    },
+    ngoListContent: {
+        padding: 16,
+    },
+    loadingFooter: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 20,
+    },
+    loadingText: {
+        marginLeft: 8,
+        fontSize: 14,
+        color: '#666',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#999',
+        marginTop: 16,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: '#BBB',
+        marginTop: 4,
+        textAlign: 'center',
+    },
+});
+
+export default LawyerListWidget;

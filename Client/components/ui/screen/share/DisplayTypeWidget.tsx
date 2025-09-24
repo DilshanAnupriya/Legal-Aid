@@ -2,10 +2,11 @@ import {StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import {Icon} from "react-native-paper";
 import {COLOR} from "@/constants/ColorPallet";
 import {useState, useEffect} from "react";
-
+import { useTheme } from "../../../../context/ThemeContext"
 // @ts-ignore
 export default function DisplayTypeWidget({ onViewChange, initialGridState = true }) {
     const [gridStatus, setGridStatus] = useState(initialGridState);
+    const { colors, theme } = useTheme();
 
     // Update parent component when view changes
     useEffect(() => {
@@ -27,7 +28,7 @@ export default function DisplayTypeWidget({ onViewChange, initialGridState = tru
             <TouchableOpacity
                 style={[
                     styles.button,
-                    {backgroundColor: gridStatus ? COLOR.light.blue : COLOR.light.white}
+                    {backgroundColor: gridStatus ? colors.accent: COLOR.light.white}
                 ]}
                 onPress={handleGridPress}
             >
@@ -40,7 +41,7 @@ export default function DisplayTypeWidget({ onViewChange, initialGridState = tru
             <TouchableOpacity
                 style={[
                     styles.button,
-                    {backgroundColor: !gridStatus ? COLOR.light.blue : COLOR.light.white}
+                    {backgroundColor: !gridStatus ? colors.accent : COLOR.light.white}
                 ]}
                 onPress={handleListPress}
             >
