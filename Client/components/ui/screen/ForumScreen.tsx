@@ -21,6 +21,7 @@ import CreatePollModal from '../../modals/CreatePollModal';
 import PostDetailModal from '../../modals/PostDetailModal';
 import PollCard from '../../cards/PollCard';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -53,6 +54,7 @@ interface ForumPost {
 const ForumsScreen = () => {
     const { user } = useAuth();
     const { t } = useTranslation();
+    const { theme, colors } = useTheme();
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
@@ -1051,6 +1053,9 @@ const ForumsScreen = () => {
         }
     };
 
+    // Create dynamic styles based on theme
+    const styles = createStyles(colors, theme);
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView 
@@ -1398,78 +1403,101 @@ const ForumsScreen = () => {
                             return (
                                 <TouchableOpacity
                                     key={item.id}
-                                style={styles.postCard}
+                                style={styles.modernPostCard}
                                 onPress={() => handlePostPress(item.id)}
-                                activeOpacity={0.8}
+                                activeOpacity={0.9}
                             >
-                                {/* Edit and Delete Buttons */}
-                                <View style={styles.topRightContainer}>
-                                    {/* Edit and Delete Buttons - Only show for posts by current user */}
-                                    {canEditPost(item.author) && (
-                                        <>
-                                            <TouchableOpacity
-                                                style={styles.editButton}
-                                                onPress={(e) => {
-                                                    e.stopPropagation(); // Prevent card press
-                                                    handleEditPost(item);
-                                                }}
-                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                            >
-                                                <Text style={styles.editIcon}>✏️</Text>
-                                            </TouchableOpacity>
-                                            <Pressable
-                                                style={({ pressed }) => [
-                                                    styles.deleteButton,
-                                                    { opacity: pressed ? 0.7 : 1 }
-                                                ]}
-                                                onPress={(e) => {
-                                                    e.stopPropagation(); // Prevent card press
-                                                    handleDeletePost(item.id, item.title);
-                                                }}
-                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                            >
-                                                <Text style={styles.deleteIcon}>🗑️</Text>
-                                            </Pressable>
-                                        </>
-                                    )}
-                                </View>
-
-                                {/* Post Header */}
-                                <View style={styles.postHeader}>
-                                    <View style={styles.postTitleRow}>
-                                        <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
-                                        {item.isAnswered && (
-                                            <View style={styles.answeredBadge}>
-                                                <Text style={styles.answeredIcon}>✓</Text>
-                                            </View>
+                                {/* Status Indicator Bar */}
+                                <View style={[styles.statusBar, item.isAnswered ? styles.answeredBar : styles.pendingBar]} />
+                                
+                                {/* Card Header with Actions */}
+                                <View style={styles.modernCardHeader}>
+                                    <View style={styles.priorityBadge}>
+                                        <Text style={styles.priorityText}>{item.priority?.toUpperCase() || 'MEDIUM'}</Text>
+                                    </View>
+                                    
+                                    {/* Edit and Delete Buttons */}
+                                    <View style={styles.actionButtons}>
+                                        {canEditPost(item.author) && (
+                                            <>
+                                                <TouchableOpacity
+                                                    style={styles.modernEditButton}
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditPost(item);
+                                                    }}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                >
+                                                    <Text style={styles.modernEditIcon}>✎</Text>
+                                                </TouchableOpacity>
+                                                <Pressable
+                                                    style={({ pressed }) => [
+                                                        styles.modernDeleteButton,
+                                                        { opacity: pressed ? 0.7 : 1 }
+                                                    ]}
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeletePost(item.id, item.title);
+                                                    }}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                >
+                                                    <Text style={styles.modernDeleteIcon}>✕</Text>
+                                                </Pressable>
+                                            </>
                                         )}
                                     </View>
                                 </View>
 
-                                {/* Tags */}
-                                <View style={styles.postTagsContainer}>
-                                    {(item.tags || []).slice(0, 2).map((tag: string, index: number) => (
-                                        <View key={index} style={styles.tagChip}>
-                                            <Text style={styles.tagText}>#{tag}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-
-                                {/* Post Meta */}
-                                <View style={styles.postMeta}>
-                                    <View style={styles.postAuthor}>
-                                        <View style={styles.avatarPlaceholder}>
-                                            <Text style={styles.avatarText}>{item.author.charAt(0)}</Text>
-                                        </View>
-                                        <Text style={styles.authorName}>{item.author}</Text>
+                                {/* Main Content */}
+                                <View style={styles.modernCardContent}>
+                                    <View style={styles.titleSection}>
+                                        <Text style={styles.modernPostTitle} numberOfLines={2}>{item.title}</Text>
+                                        {item.isAnswered && (
+                                            <View style={styles.modernAnsweredBadge}>
+                                                <Text style={styles.modernAnsweredIcon}>✓</Text>
+                                                <Text style={styles.answeredText}>SOLVED</Text>
+                                            </View>
+                                        )}
                                     </View>
 
-                                    <View style={styles.postStats}>
-                                        <Text style={styles.statIcon}>💬</Text>
-                                        <Text style={styles.statText}>{item.replies || 0}</Text>
-                                        <Text style={styles.statIcon}>👁</Text>
-                                        <Text style={styles.statText}>{item.views || 0}</Text>
-                                        <Text style={styles.timeText}>{item.lastActivity || 'Just now'}</Text>
+                                    {/* Category and Tags Row */}
+                                    <View style={styles.categoryTagsRow}>
+                                        <View style={styles.categoryBadge}>
+                                            <Text style={styles.categoryText}>{item.category}</Text>
+                                        </View>
+                                        <View style={styles.tagsContainer}>
+                                            {(item.tags || []).slice(0, 2).map((tag: string, index: number) => (
+                                                <View key={index} style={styles.modernTagChip}>
+                                                    <Text style={styles.modernTagText}>{tag}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Card Footer */}
+                                <View style={styles.modernCardFooter}>
+                                    <View style={styles.authorSection}>
+                                        <View style={styles.modernAvatarPlaceholder}>
+                                            <Text style={styles.modernAvatarText}>{item.author.charAt(0)}</Text>
+                                        </View>
+                                        <View style={styles.authorDetails}>
+                                            <Text style={styles.modernAuthorName}>{item.author}</Text>
+                                            <Text style={styles.postTime}>{item.lastActivity || 'Just now'}</Text>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.statsSection}>
+                                        <View style={styles.statGroup}>
+                                            <View style={styles.postStatItem}>
+                                                <Text style={styles.modernStatIcon}>💬</Text>
+                                                <Text style={styles.modernStatText}>{item.replies || 0}</Text>
+                                            </View>
+                                            <View style={styles.postStatItem}>
+                                                <Text style={styles.modernStatIcon}>👁</Text>
+                                                <Text style={styles.modernStatText}>{item.views || 0}</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </View>
                             </TouchableOpacity>
@@ -1562,14 +1590,14 @@ const ForumsScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, theme: string) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
     },
     // Header Styles
     header: {
-        backgroundColor: '#667eea',
+        backgroundColor: theme === 'dark' ? colors.secondary : '#667eea',
         paddingHorizontal: 20,
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 20,
         paddingBottom: 30,
@@ -1582,13 +1610,13 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 28,
         fontWeight: '800',
-        color: '#FFFFFF',
+        color: colors.textcol,
         marginBottom: 8,
         textAlign: 'center',
     },
     headerSubtitle: {
         fontSize: 16,
-        color: '#E8E8E8',
+        color: theme === 'dark' ? '#B0B0B0' : '#E8E8E8',
         marginBottom: 20,
         textAlign: 'center',
         fontWeight: '500',
@@ -1626,12 +1654,12 @@ const styles = StyleSheet.create({
     searchSection: {
         paddingHorizontal: 20,
         paddingVertical: 20,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
     },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
+        backgroundColor: theme === 'dark' ? colors.white : '#F5F5F5',
         borderRadius: 25,
         paddingHorizontal: 15,
         paddingVertical: 12,
@@ -1645,12 +1673,12 @@ const styles = StyleSheet.create({
     searchIcon: {
         fontSize: 18,
         marginRight: 10,
-        color: '#666666',
+        color: theme === 'dark' ? colors.primary : '#666666',
     },
     searchInput: {
         flex: 1,
         fontSize: 16,
-        color: '#333333',
+        color: theme === 'dark' ? colors.primary : '#333333',
         fontWeight: '500',
         backgroundColor: 'transparent',
         borderWidth: 0,
@@ -1667,7 +1695,7 @@ const styles = StyleSheet.create({
     },
     clearIcon: {
         fontSize: 16,
-        color: '#999999',
+        color: theme === 'dark' ? colors.darkgray : '#999999',
         marginLeft: 10,
     },
     // Quick Actions
@@ -1675,16 +1703,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 20,
         paddingBottom: 20,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
     },
     askQuestionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#667eea',
+        backgroundColor: theme === 'dark' ? colors.white : '#667eea',
         borderRadius: 20,
         padding: 20,
         marginBottom: 12,
-        shadowColor: '#667eea',
+        shadowColor: theme === 'dark' ? colors.primary : '#667eea',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -1694,7 +1722,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: theme === 'dark' ? colors.secondary : 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
@@ -1708,26 +1736,26 @@ const styles = StyleSheet.create({
     askQuestionTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
         marginBottom: 4,
     },
     askQuestionSubtitle: {
         fontSize: 14,
-        color: '#E8E8E8',
+        color: theme === 'dark' ? colors.darkgray : '#E8E8E8',
     },
     askQuestionArrow: {
         fontSize: 20,
-        color: '#FFFFFF',
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
         fontWeight: '600',
     },
     addPollCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#ff7100',
+        backgroundColor: theme === 'dark' ? colors.white : '#ff7100',
         borderRadius: 20,
         padding: 20,
         marginBottom: 12,
-        shadowColor: '#ff7100',
+        shadowColor: theme === 'dark' ? colors.primary : '#ff7100',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -1737,7 +1765,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: theme === 'dark' ? colors.secondary : 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
@@ -1751,16 +1779,16 @@ const styles = StyleSheet.create({
     addPollTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
         marginBottom: 4,
     },
     addPollSubtitle: {
         fontSize: 14,
-        color: '#E8E8E8',
+        color: theme === 'dark' ? colors.darkgray : '#E8E8E8',
     },
     addPollArrow: {
         fontSize: 20,
-        color: '#FFFFFF',
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
         fontWeight: '600',
     },
 
@@ -1768,12 +1796,12 @@ const styles = StyleSheet.create({
     categoriesSection: {
         paddingTop: 20,
         paddingBottom: 10,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
     },
     sectionTitle: {
         fontSize: 22,
         fontWeight: '700',
-        color: '#2C3E50',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
         marginBottom: 15,
         paddingHorizontal: 20,
     },
@@ -1781,23 +1809,23 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
     },
     categoryCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
         borderRadius: 16,
         padding: 16,
         marginRight: 12,
         alignItems: 'center',
         minWidth: 100,
         borderWidth: 2,
-        borderColor: '#E0E0E0',
-        shadowColor: '#000',
+        borderColor: theme === 'dark' ? colors.secondary : '#E0E0E0',
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
     },
     activeCategoryCard: {
-        backgroundColor: '#667eea',
-        borderColor: '#667eea',
+        backgroundColor: theme === 'dark' ? colors.secondary : '#667eea',
+        borderColor: theme === 'dark' ? colors.secondary : '#667eea',
     },
     categoryIcon: {
         fontSize: 28,
@@ -1806,25 +1834,25 @@ const styles = StyleSheet.create({
     categoryName: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#2C3E50',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
         textAlign: 'center',
         marginBottom: 4,
     },
     activeCategoryName: {
-        color: '#FFFFFF',
+        color: colors.textcol,
     },
     categoryCount: {
         fontSize: 12,
-        color: '#7F8C8D',
+        color: theme === 'dark' ? colors.darkgray : '#7F8C8D',
         textAlign: 'center',
     },
     activeCategoryCount: {
-        color: '#E8E8E8',
+        color: theme === 'dark' ? '#B0B0B0' : '#E8E8E8',
     },
     // Trending Section
     trendingSection: {
         paddingVertical: 30,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -1847,20 +1875,20 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     trendingCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
         borderRadius: 12,
         marginRight: 12,
         padding: 0,
         paddingBottom: 0,
         width: 220,
         height: 110,
-        shadowColor: '#000',
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
         shadowRadius: 6,
         elevation: 4,
         borderWidth: 1,
-        borderColor: '#E5E5E5',
+        borderColor: theme === 'dark' ? colors.secondary : '#E5E5E5',
         overflow: 'hidden',
         flexDirection: 'row',
     },
@@ -1912,13 +1940,13 @@ const styles = StyleSheet.create({
     trendingTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#2C3E50',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
         marginBottom: 6,
         lineHeight: 18,
     },
     trendingDescription: {
         fontSize: 12,
-        color: '#5D6D7E',
+        color: theme === 'dark' ? colors.darkgray : '#5D6D7E',
         lineHeight: 16,
         marginBottom: 8,
         overflow: 'hidden',
@@ -1930,7 +1958,7 @@ const styles = StyleSheet.create({
         marginBottom: 0,
         paddingVertical: 6,
         paddingHorizontal: 8,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.secondary : '#F8F9FA',
         borderRadius: 8,
     },
     trendingStatItem: {
@@ -1944,7 +1972,7 @@ const styles = StyleSheet.create({
     },
     trendingStatText: {
         fontSize: 10,
-        color: '#34495E',
+        color: theme === 'dark' ? colors.primary : '#34495E',
         fontWeight: '600',
     },
     trendingFooter: {
@@ -1979,7 +2007,7 @@ const styles = StyleSheet.create({
         paddingTop: 30,
         paddingHorizontal: 20,
         paddingBottom: 20,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
         position: 'relative',
         zIndex: 1,
     },
@@ -2105,159 +2133,256 @@ const styles = StyleSheet.create({
         color: '#ff7100',
         fontWeight: '600',
     },
-    // Post Cards - Compact Design
-    postCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        marginBottom: 12,
-        padding: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 3,
+    // Modern Post Cards Design
+    modernPostCard: {
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
+        borderRadius: 16,
+        marginBottom: 16,
+        overflow: 'hidden',
+        shadowColor: theme === 'dark' ? colors.primary : '#667eea',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+        elevation: 6,
+        borderWidth: 1,
+        borderColor: theme === 'dark' ? colors.secondary : '#F0F2FF',
+        position: 'relative',
     },
-    postHeader: {
-        marginBottom: 8,
-    },
-    topRightContainer: {
+    
+    // Status Indicator
+    statusBar: {
         position: 'absolute',
-        top: 12,
-        right: 12,
+        top: 0,
+        left: 0,
+        width: 4,
+        height: '100%',
+        zIndex: 1,
+    },
+    answeredBar: {
+        backgroundColor: '#10B981',
+    },
+    pendingBar: {
+        backgroundColor: '#F59E0B',
+    },
+    
+    // Card Header
+    modernCardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+        marginLeft: 4, // Account for status bar
+    },
+    priorityBadge: {
+        backgroundColor: theme === 'dark' ? colors.secondary : '#F3F4F6',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: theme === 'dark' ? colors.darkgray : '#E5E7EB',
+    },
+    priorityText: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#6B7280',
+        letterSpacing: 0.5,
+    },
+    actionButtons: {
         flexDirection: 'row',
         alignItems: 'center',
-        zIndex: 10,
-        elevation: 3,
-        // Allow touch events to pass through to children
-        pointerEvents: 'box-none',
+        gap: 8,
     },
-    editButton: {
-        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-        padding: 6,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: 'rgba(102, 126, 234, 0.3)',
-        marginRight: 4,
-    },
-    editIcon: {
-        fontSize: 12,
-        color: '#667eea',
-    },
-    deleteButton: {
-        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    modernEditButton: {
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         padding: 8,
-        borderRadius: 8,
+        borderRadius: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255, 107, 107, 0.3)',
-        zIndex: 20,
-        elevation: 5,
-        marginLeft: 4,
-        // Ensure it receives touch events
+        borderColor: 'rgba(59, 130, 246, 0.2)',
+    },
+    modernEditIcon: {
+        fontSize: 14,
+        color: '#3B82F6',
+    },
+    modernDeleteButton: {
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        padding: 8,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.2)',
         pointerEvents: 'auto',
-        // Ensure it's clickable on web
         ...(Platform.OS === 'web' && {
             cursor: 'pointer',
             userSelect: 'none',
         }),
     },
-    deleteIcon: {
-        fontSize: 12,
-        color: '#FF6B6B',
-    },
-    postContent: {
-        flex: 1,
-    },
-    postTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginBottom: 8,
-        paddingRight: 80,
-    },
-    postTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#2C3E50',
-        flex: 0.625,
-        lineHeight: 20,
-    },
-    answeredBadge: {
-        backgroundColor: '#6BCF7F',
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 8,
-    },
-    answeredIcon: {
-        fontSize: 10,
-        color: '#FFFFFF',
+    modernDeleteIcon: {
+        fontSize: 14,
+        color: '#EF4444',
         fontWeight: 'bold',
     },
-    postTagsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+    
+    // Card Content
+    modernCardContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        marginLeft: 4, // Account for status bar
+    },
+    titleSection: {
+        marginBottom: 12,
+    },
+    modernPostTitle: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#1F2937',
+        lineHeight: 24,
         marginBottom: 8,
     },
-    tagChip: {
-        backgroundColor: '#F0F0F0',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
+    modernAnsweredBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+        alignSelf: 'flex-start',
+    },
+    modernAnsweredIcon: {
+        fontSize: 12,
+        color: '#10B981',
+        fontWeight: 'bold',
         marginRight: 4,
-        marginBottom: 2,
     },
-    tagText: {
+    answeredText: {
         fontSize: 10,
-        color: '#667eea',
-        fontWeight: '500',
+        color: '#059669',
+        fontWeight: '700',
+        letterSpacing: 0.3,
     },
-    postMeta: {
+    
+    // Category and Tags
+    categoryTagsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+    },
+    categoryBadge: {
+        backgroundColor: '#EEF2FF',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#C7D2FE',
+    },
+    categoryText: {
+        fontSize: 11,
+        color: '#4F46E5',
+        fontWeight: '600',
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    modernTagChip: {
+        backgroundColor: '#FFF7ED',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        marginLeft: 6,
+        borderWidth: 1,
+        borderColor: '#FED7AA',
+    },
+    modernTagText: {
+        fontSize: 10,
+        color: '#EA580C',
+        fontWeight: '600',
+    },
+    
+    // Card Footer
+    modernCardFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: theme === 'dark' ? colors.secondary : '#F9FAFB',
+        marginLeft: 4, // Account for status bar
+        borderTopWidth: 1,
+        borderTopColor: theme === 'dark' ? colors.darkgray : '#F3F4F6',
     },
-    postAuthor: {
+    authorSection: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
     },
-    avatarPlaceholder: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+    modernAvatarPlaceholder: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         backgroundColor: '#667eea',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 6,
+        marginRight: 10,
+        shadowColor: '#667eea',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    avatarText: {
-        fontSize: 10,
+    modernAvatarText: {
+        fontSize: 14,
         color: '#FFFFFF',
-        fontWeight: '600',
+        fontWeight: '700',
     },
-    authorName: {
-        fontSize: 12,
-        color: '#2C3E50',
+    authorDetails: {
+        flex: 1,
+    },
+    modernAuthorName: {
+        fontSize: 13,
+        color: theme === 'dark' ? colors.primary : '#1F2937',
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    postTime: {
+        fontSize: 11,
+        color: theme === 'dark' ? colors.darkgray : '#9CA3AF',
         fontWeight: '500',
     },
-    postStats: {
+    statsSection: {
+        alignItems: 'flex-end',
+    },
+    statGroup: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 12,
     },
-    statIcon: {
+    postStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    modernStatIcon: {
+        fontSize: 14,
+        marginRight: 4,
+    },
+    modernStatText: {
         fontSize: 12,
-        marginRight: 2,
-    },
-    statText: {
-        fontSize: 10,
-        color: '#7F8C8D',
-        fontWeight: '500',
-        marginRight: 8,
-    },
-    timeText: {
-        fontSize: 10,
-        color: '#BDC3C7',
+        color: theme === 'dark' ? colors.primary : '#374151',
+        fontWeight: '600',
     },
     bottomSpacing: {
         height: 100,
