@@ -7,6 +7,8 @@ import LoginScreen from "@/components/ui/screen/LoginScreen";
 import SignUpScreen from "@/components/ui/screen/SignUpScreen";
 import React from "react";
 import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
+import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
+import LanguageDemo from "@/components/screens/LanguageDemo";
 
 const Stack = createStackNavigator();
 
@@ -37,6 +39,21 @@ export default function StackNavigator() {
                     title: 'NGO Profile',
                     // You can add more options here if needed
                 })}
+            />
+            <Stack.Screen
+                name="LanguageSettings"
+                component={LanguageSettingsScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="LanguageDemo"
+                component={LanguageDemo}
+                options={{
+                    title: 'Language Demo',
+                    headerShown: false,
+                }}
             />
         </Stack.Navigator>
     );

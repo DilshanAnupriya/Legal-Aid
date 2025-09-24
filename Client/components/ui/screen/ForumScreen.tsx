@@ -15,6 +15,7 @@ import {
     Alert,
     Modal,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import CreatePostModal from '../../modals/CreatePostModal';
 import CreatePollModal from '../../modals/CreatePollModal';
 import PostDetailModal from '../../modals/PostDetailModal';
@@ -23,8 +24,35 @@ import { useAuth } from '../../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
+// Define interfaces for better type safety
+interface ForumPost {
+    id: string;
+    _id?: string;
+    title: string;
+    author: string;
+    replies: number;
+    views: number;
+    lastActivity: string;
+    lastActivityRaw?: string;
+    createdAt: string;
+    category: string;
+    isAnswered: boolean;
+    priority: string;
+    tags: string[];
+    type: 'post' | 'poll';
+    // Poll-specific properties
+    topic?: string;
+    options?: string[];
+    votes?: number[];
+    voters?: string[];
+    totalVotes?: number;
+    isAnonymous?: boolean;
+    description?: string;
+}
+
 const ForumsScreen = () => {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
@@ -32,23 +60,64 @@ const ForumsScreen = () => {
     const [isPostDetailModalVisible, setIsPostDetailModalVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState<any>(null);
     const [editingPost, setEditingPost] = useState<any>(null);
-    const [forumPosts, setForumPosts] = useState([]);
+    const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalPosts: 0,
         totalViews: 0,
         answerRate: 0,
     });
-    const [categories, setCategories] = useState([
-        { id: 1, name: 'All', count: 0, icon: '📋' },
-        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
-        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
-        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
-        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
-        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
-    ]);
-    const [trendingTopics, setTrendingTopics] = useState([]);
+    // Create categories with translated names
+    const getTranslatedCategories = () => [
+        { id: 1, name: 'All', translatedName: t('forum.all'), count: 0, icon: '📋' },
+        { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), count: 0, icon: '👨‍👩‍👧‍👦' },
+        { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), count: 0, icon: '🏠' },
+        { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), count: 0, icon: '💼' },
+        { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), count: 0, icon: '⚖️' },
+        { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), count: 0, icon: '🚔' },
+    ];
+
+    const [categories, setCategories] = useState(getTranslatedCategories());
+    const [trendingTopics, setTrendingTopics] = useState<any[]>([]);
     const [sortOrder, setSortOrder] = useState('Newest');
+
+    // Update categories when language changes
+    useEffect(() => {
+        setCategories(prevCategories => 
+            prevCategories.map((category, index) => {
+                const translatedCategories = getTranslatedCategories();
+                return {
+                    ...category,
+                    translatedName: translatedCategories[index].translatedName
+                };
+            })
+        );
+    }, [t]);
+
+    // Helper functions to get translated dropdown values
+    const getTranslatedContentType = (type: string) => {
+        switch (type) {
+            case 'All':
+                return t('forum.all');
+            case 'Forums':
+                return t('forum.forums');
+            case 'Polls':
+                return t('forum.polls');
+            default:
+                return type;
+        }
+    };
+
+    const getTranslatedSortOrder = (order: string) => {
+        switch (order) {
+            case 'Newest':
+                return t('forum.newest');
+            case 'Oldest':
+                return t('forum.oldest');
+            default:
+                return order;
+        }
+    };
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [contentType, setContentType] = useState('All');
     const [showContentTypeDropdown, setShowContentTypeDropdown] = useState(false);
@@ -57,7 +126,7 @@ const ForumsScreen = () => {
     const [isCreatePollModalVisible, setIsCreatePollModalVisible] = useState(false);
     const [isEditPollModalVisible, setIsEditPollModalVisible] = useState(false);
     const [editingPoll, setEditingPoll] = useState<any>(null);
-    const [polls, setPolls] = useState([]);
+    const [polls, setPolls] = useState<ForumPost[]>([]);
 
     // Multiple URL options for different environments
     const getApiUrls = () => {
@@ -104,7 +173,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                timeout: 10000,
             });
 
             console.log('Polls response status:', response.status);
@@ -165,8 +233,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000, // 10 second timeout
             });
 
             console.log('Response status:', response.status);
@@ -250,8 +316,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -270,24 +334,26 @@ const ForumsScreen = () => {
 
                 // Update categories with real counts from backend
                 if (data.data.categoryBreakdown) {
-                    const updatedCategories = [
-                        { id: 1, name: 'All', count: data.data.totalPosts || 0, icon: '📋' },
-                        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
-                        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
-                        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
-                        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
-                        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
-                    ];
+                    setCategories(prevCategories => {
+                        const updatedCategories = [
+                            { id: 1, name: 'All', translatedName: t('forum.all'), count: data.data.totalPosts || 0, icon: '📋' },
+                            { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), count: 0, icon: '👨‍👩‍👧‍👦' },
+                            { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), count: 0, icon: '🏠' },
+                            { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), count: 0, icon: '💼' },
+                            { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), count: 0, icon: '⚖️' },
+                            { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), count: 0, icon: '🚔' },
+                        ];
 
-                    // Map backend category counts to frontend categories
-                    data.data.categoryBreakdown.forEach((cat: any) => {
-                        const categoryIndex = updatedCategories.findIndex(c => c.name === cat._id);
-                        if (categoryIndex !== -1) {
-                            updatedCategories[categoryIndex].count = cat.count;
-                        }
+                        // Map backend category counts to frontend categories
+                        data.data.categoryBreakdown.forEach((cat: any) => {
+                            const categoryIndex = updatedCategories.findIndex(c => c.name === cat._id);
+                            if (categoryIndex !== -1) {
+                                updatedCategories[categoryIndex].count = cat.count;
+                            }
+                        });
+
+                        return updatedCategories;
                     });
-
-                    setCategories(updatedCategories);
                 }
             }
         } catch (error) {
@@ -310,8 +376,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -675,8 +739,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -783,7 +845,7 @@ const ForumsScreen = () => {
         }
     }, [showSortDropdown, showContentTypeDropdown]);
 
-    const filteredPosts = forumPosts.filter((item: any) => {
+    const filteredPosts = forumPosts.filter((item: ForumPost) => {
         const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
         
         // Content type filter
@@ -799,29 +861,29 @@ const ForumsScreen = () => {
             
             // For posts, check title and tags
             if (item.type === 'post') {
-                const titleMatch = item.title && item.title.toLowerCase().includes(query);
-                const tagMatch = item.tags && Array.isArray(item.tags) && 
-                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query));
+                const titleMatch = item.title ? item.title.toLowerCase().includes(query) : false;
+                const tagMatch = item.tags && Array.isArray(item.tags) ? 
+                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query)) : false;
                 matchesSearch = titleMatch || tagMatch;
             }
             // For polls, check topic and options
             else if (item.type === 'poll') {
-                const topicMatch = item.topic && item.topic.toLowerCase().includes(query);
-                const optionMatch = item.options && Array.isArray(item.options) && 
-                    item.options.some((option: string) => option && option.toLowerCase().includes(query));
+                const topicMatch = item.topic ? item.topic.toLowerCase().includes(query) : false;
+                const optionMatch = item.options && Array.isArray(item.options) ? 
+                    item.options.some((option: string) => option && option.toLowerCase().includes(query)) : false;
                 matchesSearch = topicMatch || optionMatch;
             }
             // Fallback for items without type
             else {
                 const titleMatch = (item.title || item.topic || '').toLowerCase().includes(query);
-                const tagMatch = item.tags && Array.isArray(item.tags) && 
-                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query));
+                const tagMatch = item.tags && Array.isArray(item.tags) ? 
+                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query)) : false;
                 matchesSearch = titleMatch || tagMatch;
             }
         }
         
         return matchesCategory && matchesContentType && matchesSearch;
-    }).sort((a: any, b: any) => {
+    }).sort((a: ForumPost, b: ForumPost) => {
         // Sort by creation date - use createdAt if available, otherwise lastActivityRaw, otherwise fallback to id
         let dateA, dateB;
         
@@ -966,8 +1028,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -1000,22 +1060,22 @@ const ForumsScreen = () => {
                 {/* Modern Header with Gradient Background */}
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
-                        <Text style={styles.headerTitle}>Legal Community</Text>
+                        <Text style={styles.headerTitle}>{t('forum.title')}</Text>
                         <Text style={styles.headerSubtitle}>Connect • Ask • Learn • Grow</Text>
                         <View style={styles.statsContainer}>
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>{stats.totalPosts}</Text>
-                                <Text style={styles.statLabel}>Total Posts</Text>
+                                <Text style={styles.statLabel}>{t('common.posts', { defaultValue: 'Total Posts' })}</Text>
                             </View>
                             <View style={styles.statDivider} />
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>{stats.totalViews}</Text>
-                                <Text style={styles.statLabel}>Total Views</Text>
+                                <Text style={styles.statLabel}>{t('common.views', { defaultValue: 'Total Views' })}</Text>
                             </View>
                             <View style={styles.statDivider} />
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>{stats.answerRate}%</Text>
-                                <Text style={styles.statLabel}>Answered</Text>
+                                <Text style={styles.statLabel}>{t('common.answered', { defaultValue: 'Answered' })}</Text>
                             </View>
                         </View>
                     </View>
@@ -1032,8 +1092,8 @@ const ForumsScreen = () => {
                             <Text style={styles.askQuestionEmoji}>💭</Text>
                         </View>
                         <View style={styles.askQuestionContent}>
-                            <Text style={styles.askQuestionTitle}>Ask a Question</Text>
-                            <Text style={styles.askQuestionSubtitle}>Get expert legal advice anonymously</Text>
+                            <Text style={styles.askQuestionTitle}>{t('forum.askQuestion')}</Text>
+                            <Text style={styles.askQuestionSubtitle}>{t('forum.askQuestionSubtitle', { defaultValue: 'Get expert legal advice anonymously' })}</Text>
                         </View>
                         <Text style={styles.askQuestionArrow}>→</Text>
                     </TouchableOpacity>
@@ -1047,8 +1107,8 @@ const ForumsScreen = () => {
                             <Text style={styles.addPollEmoji}>📊</Text>
                         </View>
                         <View style={styles.addPollContent}>
-                            <Text style={styles.addPollTitle}>Add a Poll</Text>
-                            <Text style={styles.addPollSubtitle}>Create polls to gather community opinions</Text>
+                            <Text style={styles.addPollTitle}>{t('forum.addPoll')}</Text>
+                            <Text style={styles.addPollSubtitle}>{t('forum.addPollSubtitle', { defaultValue: 'Create polls to gather community opinions' })}</Text>
                         </View>
                         <Text style={styles.addPollArrow}>→</Text>
                     </TouchableOpacity>
@@ -1057,7 +1117,7 @@ const ForumsScreen = () => {
 
                 {/* Categories with Icons */}
                 <View style={styles.categoriesSection}>
-                    <Text style={styles.sectionTitle}>Legal Categories</Text>
+                    <Text style={styles.sectionTitle}>{t('forum.legalCategories')}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
                         {categories.map((category) => (
                             <TouchableOpacity
@@ -1071,11 +1131,11 @@ const ForumsScreen = () => {
                                 <Text style={[
                                     styles.categoryName,
                                     activeCategory === category.name && styles.activeCategoryName,
-                                ]}>{category.name}</Text>
+                                ]}>{category.translatedName}</Text>
                                 <Text style={[
                                     styles.categoryCount,
                                     activeCategory === category.name && styles.activeCategoryCount,
-                                ]}>{category.count} posts</Text>
+                                ]}>{category.count} {t('common.posts', { defaultValue: 'posts' })}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -1084,9 +1144,9 @@ const ForumsScreen = () => {
                 {/* Trending Topics */}
                 <View style={styles.trendingSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>🔥 Trending Topics</Text>
+                        <Text style={styles.sectionTitle}>🔥 {t('forum.trendingTopics')}</Text>
                         <TouchableOpacity>
-                            <Text style={styles.seeAllText}>See All</Text>
+                            <Text style={styles.seeAllText}>{t('common.seeAll', { defaultValue: 'See All' })}</Text>
                         </TouchableOpacity>
                     </View>
                     
@@ -1177,10 +1237,24 @@ const ForumsScreen = () => {
                         <Text style={styles.searchIcon}>🔍</Text>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Search questions, topics, or keywords..."
+                            placeholder={t('forum.searchPlaceholder')}
                             placeholderTextColor="#8E8E93"
                             value={searchQuery}
                             onChangeText={setSearchQuery}
+                            selectionColor="#667eea"
+                            underlineColorAndroid="transparent"
+                            autoComplete="off"
+                            autoCorrect={false}
+                            blurOnSubmit={false}
+                            selectTextOnFocus={false}
+                            {...(Platform.OS === 'web' && {
+                                style: {
+                                    ...styles.searchInput,
+                                    outline: 'none',
+                                    border: 'none',
+                                    boxShadow: 'none',
+                                }
+                            })}
                         />
                         {searchQuery.length > 0 && (
                             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -1193,7 +1267,7 @@ const ForumsScreen = () => {
                 {/* Forum Posts with Enhanced Design */}
                 <View style={styles.postsSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Recent Discussions</Text>
+                        <Text style={styles.sectionTitle}>{t('forum.recentDiscussions')}</Text>
                         <View style={styles.filterContainer}>
                             <TouchableOpacity 
                                 style={styles.contentTypeButton}
@@ -1203,7 +1277,7 @@ const ForumsScreen = () => {
                                 }}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.contentTypeText}>{contentType}</Text>
+                                <Text style={styles.contentTypeText}>{getTranslatedContentType(contentType)}</Text>
                                 <Text style={styles.filterArrow}>▼</Text>
                             </TouchableOpacity>
                             {showContentTypeDropdown && (
@@ -1218,7 +1292,7 @@ const ForumsScreen = () => {
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.contentTypeOptionText, contentType === 'All' && styles.activeContentTypeOptionText]}>
-                                            All
+                                            {t('forum.all')}
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity 
@@ -1231,7 +1305,7 @@ const ForumsScreen = () => {
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.contentTypeOptionText, contentType === 'Forums' && styles.activeContentTypeOptionText]}>
-                                            Forums
+                                            {t('forum.forums')}
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity 
@@ -1244,7 +1318,7 @@ const ForumsScreen = () => {
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.contentTypeOptionText, contentType === 'Polls' && styles.activeContentTypeOptionText]}>
-                                            Polls
+                                            {t('forum.polls')}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -1257,7 +1331,7 @@ const ForumsScreen = () => {
                                 }}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.filterText}>{sortOrder}</Text>
+                                <Text style={styles.filterText}>{getTranslatedSortOrder(sortOrder)}</Text>
                                 <Text style={styles.filterArrow}>▼</Text>
                             </TouchableOpacity>
                             {showSortDropdown && (
@@ -1272,7 +1346,7 @@ const ForumsScreen = () => {
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.sortOptionText, sortOrder === 'Newest' && styles.activeSortOptionText]}>
-                                            Newest
+                                            {t('forum.newest')}
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity 
@@ -1285,7 +1359,7 @@ const ForumsScreen = () => {
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.sortOptionText, sortOrder === 'Oldest' && styles.activeSortOptionText]}>
-                                            Oldest
+                                            {t('forum.oldest', { defaultValue: 'Oldest' })}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -1296,15 +1370,15 @@ const ForumsScreen = () => {
                     {loading ? (
                         <View style={styles.loadingContainer}>
                             <ActivityIndicator size="large" color="#667eea" />
-                            <Text style={styles.loadingText}>Loading content...</Text>
+                            <Text style={styles.loadingText}>{t('common.loading')}</Text>
                         </View>
                     ) : filteredPosts.length === 0 ? (
                         <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>No content found</Text>
-                            <Text style={styles.emptySubtext}>Be the first to ask a question or create a poll!</Text>
+                            <Text style={styles.emptyText}>{t('forum.noResults')}</Text>
+                            <Text style={styles.emptySubtext}>{t('forum.noResultsSubtext', { defaultValue: 'Be the first to ask a question or create a poll!' })}</Text>
                         </View>
                     ) : (
-                        filteredPosts.map((item: any) => {
+                        filteredPosts.map((item: ForumPost) => {
                             // Render PollCard for polls, regular post card for posts
                             if (item.type === 'poll') {
                                 return (
@@ -1462,23 +1536,23 @@ const ForumsScreen = () => {
             >
                 <View style={styles.deleteModalOverlay}>
                     <View style={styles.deleteModalContainer}>
-                        <Text style={styles.deleteModalTitle}>Delete Post</Text>
+                        <Text style={styles.deleteModalTitle}>{t('messages.deletePost', { defaultValue: 'Delete Post' })}</Text>
                         <Text style={styles.deleteModalMessage}>
-                            Are you sure you want to delete "{postToDelete?.title}"?
-                            {'\n\n'}This action cannot be undone.
+                            {t('messages.deleteConfirm')} "{postToDelete?.title}"?
+                            {'\n\n'}{t('messages.deleteWarning', { defaultValue: 'This action cannot be undone.' })}
                         </Text>
                         <View style={styles.deleteModalButtons}>
                             <TouchableOpacity
                                 style={styles.deleteModalCancelButton}
                                 onPress={cancelDelete}
                             >
-                                <Text style={styles.deleteModalCancelText}>Cancel</Text>
+                                <Text style={styles.deleteModalCancelText}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.deleteModalConfirmButton}
                                 onPress={confirmDelete}
                             >
-                                <Text style={styles.deleteModalConfirmText}>Delete</Text>
+                                <Text style={styles.deleteModalConfirmText}>{t('common.delete')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -1561,8 +1635,12 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         paddingHorizontal: 15,
         paddingVertical: 12,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderWidth: 0,
+        borderColor: 'transparent',
+        ...(Platform.OS === 'web' && {
+            outline: 'none',
+            boxShadow: 'none',
+        }),
     },
     searchIcon: {
         fontSize: 18,
@@ -1574,6 +1652,18 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333333',
         fontWeight: '500',
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+        ...(Platform.OS === 'web' && {
+            outline: 'none',
+            boxShadow: 'none',
+            border: 'none',
+            '&:focus': {
+                outline: 'none',
+                border: 'none',
+                boxShadow: 'none',
+            },
+        }),
     },
     clearIcon: {
         fontSize: 16,

@@ -7,6 +7,8 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import StackNavigator from "@/app/navigation/stack-navigation/StackNavigator";
 import {AuthProvider} from "@/context/AuthContext";
 import AuthNavigator from "@/app/navigation/stack-navigation/AuthStackNavigator";
+// Initialize i18n
+import '@/i18n';
 
 export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
