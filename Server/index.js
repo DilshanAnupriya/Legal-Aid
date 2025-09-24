@@ -8,12 +8,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
-// // Middleware
-// app.use(cors({
-//   origin: 'http://localhost:3000',
-//   credentials: true
-// }));
-
 app.use(cors({
   origin: [
     'http://localhost:3000', 'http://127.0.0.1:3000', 
@@ -91,7 +85,6 @@ const userRoutes = require("./Routes/userRoutes");
 const lawyerRoutes = require("./Routes/lawyerRoutes");
 const adminRoutes = require("./Routes/adminRoutes");
 const appointmentRoutes = require('./Routes/appointmentRoutes');
-const userRoutes = require("./Routes/userRoutes");
 const documentRoutes = require('./Routes/documentRoutes');
 
 
