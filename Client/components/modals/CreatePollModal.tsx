@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 
 interface CreatePollModalProps {
@@ -30,6 +31,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
   isEditMode = false,
 }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [topic, setTopic] = useState('');
   const [numberOfOptions, setNumberOfOptions] = useState(2);
   const [options, setOptions] = useState(['', '']);
@@ -39,14 +41,16 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [showOptionCountModal, setShowOptionCountModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Legal categories from ForumScreen (excluding 'All' as it's not a specific category)
-  const legalCategories = [
-    { id: 2, name: 'Family Law', icon: '👨‍👩‍👧‍👦' },
-    { id: 3, name: 'Property Law', icon: '🏠' },
-    { id: 4, name: 'Employment Law', icon: '💼' },
-    { id: 5, name: 'Civil Law', icon: '⚖️' },
-    { id: 6, name: 'Criminal Law', icon: '🚔' },
+  // Legal categories with translations
+  const getLegalCategories = () => [
+    { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), icon: '👨‍👩‍👧‍👦' },
+    { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), icon: '🏠' },
+    { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), icon: '💼' },
+    { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), icon: '⚖️' },
+    { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), icon: '🚔' },
   ];
+  
+  const legalCategories = getLegalCategories();
 
   const optionCounts = [2, 3, 4, 5, 6];
 
@@ -105,12 +109,12 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
     try {
       // Basic validation
       if (!topic.trim()) {
-        Alert.alert('Validation Error', 'Please enter a poll topic');
+        Alert.alert(t('common.error'), t('createPoll.validation.topicRequired', { defaultValue: 'Please enter a poll topic' }));
         setIsSubmitting(false);
         return;
       }
       if (topic.trim().length < 10) {
-        Alert.alert('Validation Error', 'Poll topic must be at least 10 characters long');
+        Alert.alert(t('common.error'), t('createPoll.validation.topicTooShort', { defaultValue: 'Poll topic must be at least 10 characters long' }));
         setIsSubmitting(false);
         return;
       }
@@ -118,7 +122,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
     // Get user name for author field
     const getUserDisplayName = () => {
       if (isAnonymous) {
-        return 'Anonymous User';
+        return t('createPoll.anonymousUser', { defaultValue: 'Anonymous User' });
       }
       
       if (user?.email) {
@@ -129,7 +133,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
         return displayName;
       }
       
-      return 'User'; // Fallback if no user info
+      return t('createPoll.defaultUser', { defaultValue: 'User' }); // Fallback if no user info
     };
 
     let pollData;
@@ -145,14 +149,14 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
       // Validate options only for new polls
       const filledOptions = options.filter(option => option.trim().length > 0);
       if (filledOptions.length < 2) {
-        Alert.alert('Validation Error', 'Please provide at least 2 poll options');
+        Alert.alert(t('common.error'), t('createPoll.validation.optionsRequired', { defaultValue: 'Please provide at least 2 poll options' }));
         setIsSubmitting(false);
         return;
       }
 
       for (let i = 0; i < options.length; i++) {
         if (options[i].trim().length > 0 && options[i].trim().length < 2) {
-          Alert.alert('Validation Error', `Option ${i + 1} must be at least 2 characters long`);
+          Alert.alert(t('common.error'), t('createPoll.validation.optionTooShort', { number: i + 1, defaultValue: `Option ${i + 1} must be at least 2 characters long` }));
           setIsSubmitting(false);
           return;
         }
@@ -205,14 +209,22 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Poll' : 'Create New Poll'}</Text>
+          <Text style={styles.headerTitle}>
+            {isEditMode ? t('createPoll.editPoll', { defaultValue: 'Edit Poll' }) : t('createPoll.title', { defaultValue: 'Create New Poll' })}
+          </Text>
           <TouchableOpacity 
             onPress={handleSubmit} 
             style={[styles.postButton, isSubmitting && styles.postButtonDisabled]}
             disabled={isSubmitting}
           >
             <Text style={styles.postButtonText}>
-              {isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Create')}
+              {isSubmitting 
+                ? (isEditMode 
+                  ? t('createPoll.updating', { defaultValue: 'Updating...' }) 
+                  : t('createPoll.creating', { defaultValue: 'Creating...' })) 
+                : (isEditMode 
+                  ? t('common.update', { defaultValue: 'Update' }) 
+                  : t('common.create', { defaultValue: 'Create' }))}
             </Text>
           </TouchableOpacity>
         </View>
@@ -220,10 +232,10 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Poll Topic */}
           <View style={styles.section}>
-            <Text style={styles.label}>Poll Topic</Text>
+            <Text style={styles.label}>{t('createPoll.pollTopic', { defaultValue: 'Poll Topic' })}</Text>
             <TextInput
               style={styles.titleInput}
-              placeholder="What question would you like to ask the community?"
+              placeholder={t('createPoll.topicPlaceholder', { defaultValue: 'What question would you like to ask the community?' })}
               placeholderTextColor="#999999"
               value={topic}
               onChangeText={setTopic}
@@ -235,11 +247,13 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
           {/* Number of Options */}
           {!isEditMode && (
             <View style={styles.section}>
-              <Text style={styles.label}>Number of Options</Text>
+              <Text style={styles.label}>{t('createPoll.numberOfOptions', { defaultValue: 'Number of Options' })}</Text>
               <TouchableOpacity
                 style={styles.optionCountDropdown}
                 onPress={() => setShowOptionCountModal(true)}>
-                <Text style={styles.optionCountText}>{numberOfOptions} options</Text>
+                <Text style={styles.optionCountText}>
+                  {t('createPoll.optionsCount', { count: numberOfOptions, defaultValue: `${numberOfOptions} options` })}
+                </Text>
                 <Text style={styles.dropdownArrow}>▼</Text>
               </TouchableOpacity>
             </View>
@@ -247,13 +261,13 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
           {/* Dynamic Options */}
           <View style={styles.section}>
-            <Text style={styles.label}>Poll Options</Text>
+            <Text style={styles.label}>{t('createPoll.pollOptions', { defaultValue: 'Poll Options' })}</Text>
             {options.map((option, index) => (
               <View key={index} style={styles.optionContainer}>
-                <Text style={styles.optionLabel}>Option {index + 1}</Text>
+                <Text style={styles.optionLabel}>{t('createPoll.option', { number: index + 1, defaultValue: `Option ${index + 1}` })}</Text>
                 <TextInput
                   style={[styles.optionInput, isEditMode && styles.readOnlyInput]}
-                  placeholder={`Enter option ${index + 1}`}
+                  placeholder={t('createPoll.optionPlaceholder', { number: index + 1, defaultValue: `Enter option ${index + 1}` })}
                   placeholderTextColor="#999999"
                   value={option}
                   onChangeText={isEditMode ? undefined : (value) => handleOptionChange(index, value)}
@@ -265,7 +279,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
 
           {/* Legal Categories */}
           <View style={styles.section}>
-            <Text style={styles.label}>Legal Categories</Text>
+            <Text style={styles.label}>{t('createPoll.legalCategories', { defaultValue: 'Legal Categories' })}</Text>
             <TouchableOpacity
               style={styles.categoryDropdown}
               onPress={() => setShowCategoryModal(true)}>
@@ -273,7 +287,9 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 <Text style={styles.selectedCategoryIcon}>
                   {legalCategories.find(cat => cat.name === selectedCategory)?.icon}
                 </Text>
-                <Text style={styles.selectedCategoryText}>{selectedCategory}</Text>
+                <Text style={styles.selectedCategoryText}>
+                  {legalCategories.find(cat => cat.name === selectedCategory)?.translatedName || selectedCategory}
+                </Text>
               </View>
               <Text style={styles.dropdownArrow}>▼</Text>
             </TouchableOpacity>
@@ -287,14 +303,14 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
               <View style={[styles.checkbox, isAnonymous && styles.checkboxChecked]}>
                 {isAnonymous && <Text style={styles.checkmark}>✓</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>Submit Anonymously</Text>
+              <Text style={styles.checkboxLabel}>{t('createPoll.submitAnonymously', { defaultValue: 'Submit Anonymously' })}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Guidelines */}
           <View style={styles.section}>
             <Text style={styles.guidelinesText}>
-              Create meaningful polls that encourage community discussion. Keep options clear and concise.
+              {t('createPoll.guidelines', { defaultValue: 'Create meaningful polls that encourage community discussion. Keep options clear and concise.' })}
             </Text>
           </View>
 
@@ -305,7 +321,13 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
             disabled={isSubmitting}
           >
             <Text style={styles.submitButtonText}>
-              {isSubmitting ? (isEditMode ? 'Updating Poll...' : 'Creating Poll...') : (isEditMode ? 'Update Poll' : 'Create Poll')}
+              {isSubmitting 
+                ? (isEditMode 
+                  ? t('createPoll.updatingPoll', { defaultValue: 'Updating Poll...' })
+                  : t('createPoll.creatingPoll', { defaultValue: 'Creating Poll...' }))
+                : (isEditMode 
+                  ? t('createPoll.updatePoll', { defaultValue: 'Update Poll' }) 
+                  : t('createPoll.createPoll', { defaultValue: 'Create Poll' }))}
             </Text>
           </TouchableOpacity>
 
@@ -326,7 +348,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
             activeOpacity={1} 
             onPress={() => setShowOptionCountModal(false)}>
             <View style={styles.optionCountModalContent}>
-              <Text style={styles.optionCountModalTitle}>Select Number of Options</Text>
+              <Text style={styles.optionCountModalTitle}>{t('createPoll.selectNumberOfOptions', { defaultValue: 'Select Number of Options' })}</Text>
               {optionCounts.map((count) => (
                 <TouchableOpacity
                   key={count}
@@ -341,7 +363,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
                   <Text style={[
                     styles.optionCountOptionText,
                     numberOfOptions === count && styles.optionCountOptionTextSelected
-                  ]}>{count} options</Text>
+                  ]}>{t('createPoll.optionsCount', { count: count, defaultValue: `${count} options` })}</Text>
                   {numberOfOptions === count && (
                     <Text style={styles.optionCountSelectedIcon}>✓</Text>
                   )}
@@ -363,7 +385,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
           activeOpacity={1} 
           onPress={() => setShowCategoryModal(false)}>
           <View style={styles.categoryModalContent}>
-            <Text style={styles.categoryModalTitle}>Select Legal Category</Text>
+            <Text style={styles.categoryModalTitle}>{t('createPoll.selectCategory', { defaultValue: 'Select Legal Category' })}</Text>
             {legalCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
@@ -379,7 +401,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
                 <Text style={[
                   styles.categoryOptionText,
                   selectedCategory === category.name && styles.categoryOptionTextSelected
-                ]}>{category.name}</Text>
+                ]}>{category.translatedName}</Text>
                 {selectedCategory === category.name && (
                   <Text style={styles.categorySelectedIcon}>✓</Text>
                 )}

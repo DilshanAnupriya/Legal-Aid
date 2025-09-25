@@ -70,14 +70,22 @@ const ForumsScreen = () => {
         answerRate: 0,
     });
     // Create categories with translated names
-    const getTranslatedCategories = () => [
-        { id: 1, name: 'All', translatedName: t('forum.all'), count: 0, icon: '📋' },
-        { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), count: 0, icon: '👨‍👩‍👧‍👦' },
-        { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), count: 0, icon: '🏠' },
-        { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), count: 0, icon: '💼' },
-        { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), count: 0, icon: '⚖️' },
-        { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), count: 0, icon: '🚔' },
-    ];
+    const getTranslatedCategories = () => {
+        const categories = [
+            { id: 1, name: 'All', translatedName: t('forum.all'), count: 0, icon: '📋' },
+            { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), count: 0, icon: '👨‍👩‍👧‍👦' },
+            { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), count: 0, icon: '🏠' },
+            { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), count: 0, icon: '💼' },
+            { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), count: 0, icon: '⚖️' },
+            { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), count: 0, icon: '🚔' },
+        ];
+        
+        // Calculate 'All' count based on available posts
+        const totalLegalCount = forumPosts.length;
+        categories[0].count = totalLegalCount;
+        
+        return categories;
+    };
 
     const [categories, setCategories] = useState(getTranslatedCategories());
     const [trendingTopics, setTrendingTopics] = useState<any[]>([]);
@@ -85,15 +93,24 @@ const ForumsScreen = () => {
 
     // Update categories when language changes
     useEffect(() => {
-        setCategories(prevCategories => 
-            prevCategories.map((category, index) => {
-                const translatedCategories = getTranslatedCategories();
+        setCategories(prevCategories => {
+            const translatedCategories = getTranslatedCategories();
+            return prevCategories.map((category, index) => {
+                // For 'All' category, recalculate count as sum of all legal categories
+                if (index === 0) {
+                    const totalLegalCount = prevCategories.slice(1).reduce((sum, cat) => sum + cat.count, 0);
+                    return {
+                        ...category,
+                        translatedName: translatedCategories[index].translatedName,
+                        count: totalLegalCount
+                    };
+                }
                 return {
                     ...category,
                     translatedName: translatedCategories[index].translatedName
                 };
-            })
-        );
+            });
+        });
     }, [t]);
 
     // Helper functions to get translated dropdown values
@@ -338,7 +355,7 @@ const ForumsScreen = () => {
                 if (data.data.categoryBreakdown) {
                     setCategories(prevCategories => {
                         const updatedCategories = [
-                            { id: 1, name: 'All', translatedName: t('forum.all'), count: data.data.totalPosts || 0, icon: '📋' },
+                            { id: 1, name: 'All', translatedName: t('forum.all'), count: 0, icon: '📋' }, // Will be calculated below
                             { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), count: 0, icon: '👨‍👩‍👧‍👦' },
                             { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), count: 0, icon: '🏠' },
                             { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), count: 0, icon: '💼' },
@@ -347,12 +364,20 @@ const ForumsScreen = () => {
                         ];
 
                         // Map backend category counts to frontend categories
+                        let totalLegalCategoriesCount = 0;
                         data.data.categoryBreakdown.forEach((cat: any) => {
                             const categoryIndex = updatedCategories.findIndex(c => c.name === cat._id);
                             if (categoryIndex !== -1) {
                                 updatedCategories[categoryIndex].count = cat.count;
+                                // Sum up counts for legal categories (excluding 'All')
+                                if (categoryIndex > 0) {
+                                    totalLegalCategoriesCount += cat.count;
+                                }
                             }
                         });
+
+                        // Set 'All' category count as the sum of all 5 legal categories
+                        updatedCategories[0].count = totalLegalCategoriesCount;
 
                         return updatedCategories;
                     });
@@ -1066,7 +1091,7 @@ const ForumsScreen = () => {
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
                         <Text style={styles.headerTitle}>{t('forum.title')}</Text>
-                        <Text style={styles.headerSubtitle}>Connect • Ask • Learn • Grow</Text>
+                        <Text style={styles.headerSubtitle}>{t('forum.subtitle', { defaultValue: 'Connect • Ask • Learn • Grow' })}</Text>
                         <View style={styles.statsContainer}>
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>{stats.totalPosts}</Text>
@@ -1079,8 +1104,8 @@ const ForumsScreen = () => {
                             </View>
                             <View style={styles.statDivider} />
                             <View style={styles.statItem}>
-                                <Text style={styles.statNumber}>{stats.answerRate}%</Text>
-                                <Text style={styles.statLabel}>{t('common.answered', { defaultValue: 'Answered' })}</Text>
+                                <Text style={styles.statNumber}>{forumPosts.filter((post: ForumPost) => post.type === 'poll').length}</Text>
+                                <Text style={styles.statLabel}>{t('forum.polls', { defaultValue: 'Polls' })}</Text>
                             </View>
                         </View>
                     </View>
@@ -1411,11 +1436,7 @@ const ForumsScreen = () => {
                                 <View style={[styles.statusBar, item.isAnswered ? styles.answeredBar : styles.pendingBar]} />
                                 
                                 {/* Card Header with Actions */}
-                                <View style={styles.modernCardHeader}>
-                                    <View style={styles.priorityBadge}>
-                                        <Text style={styles.priorityText}>{item.priority?.toUpperCase() || 'MEDIUM'}</Text>
-                                    </View>
-                                    
+                                <View style={styles.modernCardHeaderNoTitle}>
                                     {/* Edit and Delete Buttons */}
                                     <View style={styles.actionButtons}>
                                         {canEditPost(item.author) && (
@@ -2175,19 +2196,14 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         paddingBottom: 8,
         marginLeft: 4, // Account for status bar
     },
-    priorityBadge: {
-        backgroundColor: theme === 'dark' ? colors.secondary : '#F3F4F6',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: theme === 'dark' ? colors.darkgray : '#E5E7EB',
-    },
-    priorityText: {
-        fontSize: 9,
-        fontWeight: '700',
-        color: theme === 'dark' ? colors.primary : '#6B7280',
-        letterSpacing: 0.5,
+    modernCardHeaderNoTitle: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+        marginLeft: 4, // Account for status bar
     },
     actionButtons: {
         flexDirection: 'row',
