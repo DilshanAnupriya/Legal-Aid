@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface CreatePostModalProps {
   visible: boolean;
@@ -30,6 +31,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { colors, theme } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -148,6 +150,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     }
     onClose();
   };
+
+  // Create dynamic styles based on theme
+  const styles = createStyles(colors, theme);
 
   return (
     <Modal
@@ -297,7 +302,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, theme: string) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -326,7 +331,7 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
   },
   postButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -401,8 +406,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: 'colors.primary',
+    borderColor: 'colors.primary',
   },
   checkmark: {
     fontSize: 12,
@@ -421,12 +426,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   submitButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     marginHorizontal: 20,
     marginTop: 20,
-    shadowColor: '#667eea',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -508,8 +513,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   categoryOptionSelected: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: 'colors.primary',
+    borderColor: 'colors.primary',
   },
   categoryOptionIcon: {
     fontSize: 20,

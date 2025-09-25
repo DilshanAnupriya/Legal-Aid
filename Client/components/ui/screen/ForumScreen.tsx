@@ -1271,7 +1271,7 @@ const ForumsScreen = () => {
                             placeholderTextColor="#8E8E93"
                             value={searchQuery}
                             onChangeText={setSearchQuery}
-                            selectionColor="#667eea"
+                            selectionColor={colors.primary}
                             underlineColorAndroid="transparent"
                             autoComplete="off"
                             autoCorrect={false}
@@ -1399,7 +1399,7 @@ const ForumsScreen = () => {
 
                     {loading ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#667eea" />
+                            <ActivityIndicator size="large" color={colors.primary} />
                             <Text style={styles.loadingText}>{t('common.loading')}</Text>
                         </View>
                     ) : filteredPosts.length === 0 ? (
@@ -1618,7 +1618,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     // Header Styles
     header: {
-        backgroundColor: theme === 'dark' ? colors.secondary : '#667eea',
+        backgroundColor: theme === 'dark' ? colors.secondary : colors.primary,
         paddingHorizontal: 20,
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 20,
         paddingBottom: 30,
@@ -1729,11 +1729,11 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     askQuestionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme === 'dark' ? colors.white : '#667eea',
+        backgroundColor: theme === 'dark' ? colors.white : colors.primary,
         borderRadius: 20,
         padding: 20,
         marginBottom: 12,
-        shadowColor: theme === 'dark' ? colors.primary : '#667eea',
+        shadowColor: theme === 'dark' ? colors.primary : colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -1772,11 +1772,11 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     addPollCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme === 'dark' ? colors.white : '#ff7100',
+        backgroundColor: theme === 'dark' ? colors.white : colors.accent,
         borderRadius: 20,
         padding: 20,
         marginBottom: 12,
-        shadowColor: theme === 'dark' ? colors.primary : '#ff7100',
+        shadowColor: theme === 'dark' ? colors.primary : colors.accent,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -1845,8 +1845,8 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         elevation: 3,
     },
     activeCategoryCard: {
-        backgroundColor: theme === 'dark' ? colors.secondary : '#667eea',
-        borderColor: theme === 'dark' ? colors.secondary : '#667eea',
+        backgroundColor: theme === 'dark' ? colors.secondary : colors.primary,
+        borderColor: theme === 'dark' ? colors.secondary : colors.primary,
     },
     categoryIcon: {
         fontSize: 28,
@@ -1886,7 +1886,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     seeAllText: {
         fontSize: 14,
-        color: '#667eea',
+        color: colors.primary,
         fontWeight: '600',
     },
 
@@ -1914,7 +1914,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         flexDirection: 'row',
     },
     trendingBadgeContainer: {
-        backgroundColor: '#FF6B6B',
+        backgroundColor: colors.accent,
         paddingVertical: 8,
         paddingHorizontal: 12,
     },
@@ -1948,7 +1948,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     trendingLeftBadge: {
         width: 8,
-        backgroundColor: '#FF7100',
+        backgroundColor: colors.accent,
         borderTopLeftRadius: 12,
         borderBottomLeftRadius: 12,
     },
@@ -2094,7 +2094,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         fontWeight: '500',
     },
     activeSortOptionText: {
-        color: '#667eea',
+        color: colors.primary,
         fontWeight: '600',
     },
     // Content Type Filter Dropdown
@@ -2151,7 +2151,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         fontWeight: '500',
     },
     activeContentTypeOptionText: {
-        color: '#ff7100',
+        color: colors.accent,
         fontWeight: '600',
     },
     // Modern Post Cards Design
@@ -2160,7 +2160,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         borderRadius: 16,
         marginBottom: 16,
         overflow: 'hidden',
-        shadowColor: theme === 'dark' ? colors.primary : '#667eea',
+        shadowColor: theme === 'dark' ? colors.primary : colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.12,
         shadowRadius: 12,
@@ -2341,11 +2341,11 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#667eea',
+        backgroundColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
-        shadowColor: '#667eea',
+        shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 4,
@@ -2488,7 +2488,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     deleteModalConfirmButton: {
         flex: 1,
-        backgroundColor: '#FF6B6B',
+        backgroundColor: colors.accent,
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 8,
