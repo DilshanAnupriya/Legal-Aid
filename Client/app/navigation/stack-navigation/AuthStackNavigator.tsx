@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import LoginScreen from '@/components/ui/screen/LoginScreen';
 import SignUpScreen from '@/components/ui/screen/SignUpScreen';
+import AdminDashboard from '@/components/ui/screen/AdminDashboard';
 import StackNavigator from './StackNavigator';
 
 const Stack = createStackNavigator();
@@ -54,6 +55,14 @@ export default function AuthNavigator() {
                 component={SignUpScreen}
                 options={{
                     title: 'Create Account',
+                }}
+            />
+            <Stack.Screen
+                name="AdminDashboard"
+                component={AdminDashboard}
+                options={{
+                    title: 'Admin Dashboard',
+                    headerLeft: () => null, // Disable back button
                 }}
             />
         </Stack.Navigator>

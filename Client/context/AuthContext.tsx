@@ -6,22 +6,66 @@ import { Platform } from 'react-native';
 interface User {
   id: string;
   email: string;
-  birthday: string;
-  genderSpectrum: string;
+  role: 'user' | 'lawyer' | 'ngo';
+  status: string;
   createdAt: string;
   updatedAt?: string;
+  // User-specific fields
+  birthday?: string;
+  genderSpectrum?: string;
+  // Lawyer-specific fields
+  firstName?: string;
+  lastName?: string;
+  specialization?: string;
+  contactNumber?: string;
+  // NGO-specific fields
+  organizationName?: string;
+  description?: string;
+  category?: string;
+  logo?: string;
+  contact?: string;
+  images?: string[];
+  rating?: number;
 }
 
 interface RegisterData {
   email: string;
   password: string;
-  birthday: string;
-  genderSpectrum: string;
+  role: 'user' | 'lawyer' | 'ngo';
+  // User-specific fields
+  birthday?: string;
+  genderSpectrum?: string;
+  // Lawyer-specific fields
+  firstName?: string;
+  lastName?: string;
+  specialization?: string;
+  contactNumber?: string;
+  // NGO-specific fields
+  organizationName?: string;
+  description?: string;
+  category?: string;
+  logo?: string;
+  contact?: string;
+  images?: string[];
 }
 
 interface ProfileData {
+  // User-specific fields
   birthday?: string;
   genderSpectrum?: string;
+  // Lawyer-specific fields
+  firstName?: string;
+  lastName?: string;
+  specialization?: string;
+  contactNumber?: string;
+  // NGO-specific fields
+  organizationName?: string;
+  description?: string;
+  category?: string;
+  logo?: string;
+  contact?: string;
+  images?: string[];
+  status?: string;
 }
 
 interface AuthContextType {
@@ -34,6 +78,11 @@ interface AuthContextType {
   logout: () => Promise<void>;
   getCurrentUser: (authToken?: string) => Promise<User>;
   updateProfile: (profileData: ProfileData) => Promise<{ success: boolean; user: User }>;
+  // Role-based helper functions
+  isUser: () => boolean;
+  isLawyer: () => boolean;
+  isNgo: () => boolean;
+  hasRole: (role: 'user' | 'lawyer' | 'ngo') => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,13 +147,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const API_URLS = getApiUrls();
   const API_BASE_URL = API_URLS[currentApiIndex];
 
-  // Try next API URL if current one fails
-  const tryNextApiUrl = () => {
-    const nextIndex = (currentApiIndex + 1) % API_URLS.length;
-    console.log(`[AuthContext] Trying next API URL: ${API_URLS[nextIndex]}`);
-    setCurrentApiIndex(nextIndex);
-    return nextIndex !== currentApiIndex; // Return false if we've tried all URLs
-  };
+  // Try next API URL if current one fails (currently unused but kept for future extensibility)
+  // const tryNextApiUrl = () => {
+  //   const nextIndex = (currentApiIndex + 1) % API_URLS.length;
+  //   console.log(`[AuthContext] Trying next API URL: ${API_URLS[nextIndex]}`);
+  //   setCurrentApiIndex(nextIndex);
+  //   return nextIndex !== currentApiIndex; // Return false if we've tried all URLs
+  // };
 
   // Configure axios interceptor
   useEffect(() => {
@@ -150,13 +199,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return response.data.user;
       }
       throw new Error('Failed to get user profile');
-    } catch (error) {
-      const err = error as any;
-      console.error('Error getting current user:', err?.response?.data || err?.message || err);
+    } catch (err) {
+      const error = err as any;
+      console.error('Error getting current user:', error?.response?.data || error?.message || error);
       logout();
-      throw error;
+      throw err;
     }
-  }, [token, logout]);
+  }, [token, logout, API_BASE_URL]);
 
   const checkAuthState = React.useCallback(async () => {
     // Prevent multiple executions
@@ -174,7 +223,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           await getCurrentUser(storedToken);
           console.log('[AuthContext] checkAuthState: User authenticated successfully');
-        } catch (error) {
+        } catch {
           console.log('[AuthContext] checkAuthState: Token validation failed, logging out');
           // If token is invalid, logout will be called from getCurrentUser
         }
@@ -320,6 +369,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  // Role-based helper functions
+  const isUser = (): boolean => {
+    return user?.role === 'user';
+  };
+
+  const isLawyer = (): boolean => {
+    return user?.role === 'lawyer';
+  };
+
+  const isNgo = (): boolean => {
+    return user?.role === 'ngo';
+  };
+
+  const hasRole = (role: 'user' | 'lawyer' | 'ngo'): boolean => {
+    return user?.role === role;
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -329,7 +395,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     login,
     logout,
     getCurrentUser,
-    updateProfile
+    updateProfile,
+    isUser,
+    isLawyer,
+    isNgo,
+    hasRole
   };
 
   return (

@@ -1,90 +1,113 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  StyleSheet,
   ScrollView,
   Alert,
-  KeyboardAvoidingView,
-  ActivityIndicator,
-  TouchableOpacity,
-  Platform,
-  Modal,
+  StyleSheet,
 } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
-import { COLOR } from '../../../constants/ColorPallet';
-
-interface SignUpScreenProps {
-  navigation?: any;
-}
+import { useTheme } from '../../../context/ThemeContext';
+import { 
+  SignUpScreenProps, 
+  SignUpFormData, 
+  FormErrors, 
+  UserRole,
+  GENDER_OPTIONS,
+  NGO_CATEGORIES 
+} from '../../../types/signup';
+import { validateSignUpForm } from '../../../utils/signupValidation';
+import RoleSelection from '../../signup/RoleSelection';
+import RegistrationForm from '../../signup/RegistrationForm';
+import ModalSelection from '../../signup/ModalSelection';
 
 const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
-  const [formData, setFormData] = useState({
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [formData, setFormData] = useState<SignUpFormData>({
+    // Common fields
     email: '',
     password: '',
     confirmPassword: '',
+    // User fields
     birthday: '',
     genderSpectrum: '',
+    // Lawyer fields
+    firstName: '',
+    lastName: '',
+    specialization: '',
+    contactNumber: '',
+    // NGO fields
+    organizationName: '',
+    description: '',
+    category: '',
+    contact: '',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const { register } = useAuth();
+  const { colors } = useTheme();
 
-  const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    // Confirm password validation
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    // Birthday validation
-    if (!formData.birthday) {
-      newErrors.birthday = 'Birthday is required';
-    }
-
-    // Gender validation
-    if (!formData.genderSpectrum) {
-      newErrors.genderSpectrum = 'Gender is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.light,
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: 50,
+    },
+  });
 
   const handleSignUp = async () => {
-    if (!validateForm()) {
+    const { errors: validationErrors, isValid } = validateSignUpForm(formData, selectedRole);
+    setErrors(validationErrors);
+    
+    if (!isValid) {
       return;
     }
 
     setIsLoading(true);
     try {
-      const { email, password, birthday, genderSpectrum } = formData;
-      await register({ email, password, birthday, genderSpectrum });
+      const { email, password } = formData;
+      let registrationData: any = {
+        email,
+        password,
+        role: selectedRole!,
+      };
 
-      // No need to navigate manually - AuthNavigator will handle this automatically
-      // when isAuthenticated becomes true
+      // Add role-specific data
+      if (selectedRole === 'user') {
+        registrationData = {
+          ...registrationData,
+          birthday: formData.birthday,
+          genderSpectrum: formData.genderSpectrum,
+        };
+      } else if (selectedRole === 'lawyer') {
+        registrationData = {
+          ...registrationData,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          specialization: formData.specialization,
+          contactNumber: formData.contactNumber,
+        };
+      } else if (selectedRole === 'ngo') {
+        registrationData = {
+          ...registrationData,
+          organizationName: formData.organizationName,
+          description: formData.description,
+          category: formData.category,
+          contact: formData.contact,
+        };
+      }
+
+      await register(registrationData);
       Alert.alert('Success', 'Account created successfully!');
-
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Registration failed');
     } finally {
@@ -106,242 +129,84 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     }
   };
 
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role);
+    // Clear role error if it exists
+    if (errors.role) {
+      setErrors(prev => ({ ...prev, role: '' }));
+    }
+  };
+
+  const handleContinue = () => {
+    if (selectedRole) {
+      setCurrentStep(2);
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(1);
+  };
+
+  const handleGenderSelect = (gender: string) => {
+    updateFormData('genderSpectrum', gender);
+    setShowGenderModal(false);
+  };
+
+  const handleCategorySelect = (category: string) => {
+    updateFormData('category', category);
+    setShowCategoryModal(false);
+  };
+
   return (
-      <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join our legal aid platform</Text>
-          </View>
+        {currentStep === 1 ? (
+          <RoleSelection
+            selectedRole={selectedRole}
+            onRoleSelect={handleRoleSelect}
+            onContinue={handleContinue}
+            error={errors.role}
+          />
+        ) : (
+          <RegistrationForm
+            selectedRole={selectedRole}
+            formData={formData}
+            errors={errors}
+            isLoading={isLoading}
+            updateFormData={updateFormData}
+            onBack={handleBack}
+            onSubmit={handleSignUp}
+            onLoginPress={handleLoginPress}
+            onGenderPress={() => setShowGenderModal(true)}
+            onCategoryPress={() => setShowCategoryModal(true)}
+          />
+        )}
+      </ScrollView>
 
-          <View style={styles.formContainer}>
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email *</Text>
-              <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChangeText={(value) => updateFormData('email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-              />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-            </View>
+      {/* Gender Selection Modal */}
+      <ModalSelection
+        visible={showGenderModal}
+        title="Select Gender"
+        options={GENDER_OPTIONS}
+        onSelect={handleGenderSelect}
+        onClose={() => setShowGenderModal(false)}
+      />
 
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password *</Text>
-              <TextInput
-                  style={[styles.input, errors.password && styles.inputError]}
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChangeText={(value) => updateFormData('password', value)}
-                  secureTextEntry
-                  autoCapitalize="none"
-              />
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-            </View>
-
-            {/* Confirm Password Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirm Password *</Text>
-              <TextInput
-                  style={[styles.input, errors.confirmPassword && styles.inputError]}
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChangeText={(value) => updateFormData('confirmPassword', value)}
-                  secureTextEntry
-                  autoCapitalize="none"
-              />
-              {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-            </View>
-
-            {/* Birthday Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Birthday *</Text>
-              <TextInput
-                  style={[styles.input, errors.birthday && styles.inputError]}
-                  placeholder="MM/DD/YYYY or DD/MM/YYYY"
-                  value={formData.birthday}
-                  onChangeText={(value) => updateFormData('birthday', value)}
-                  keyboardType="numeric"
-              />
-              {errors.birthday && <Text style={styles.errorText}>{errors.birthday}</Text>}
-            </View>
-
-            {/* Gender Spectrum Dropdown */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Gender *</Text>
-              <TouchableOpacity
-                  style={[styles.input, errors.genderSpectrum && styles.inputError, { justifyContent: 'center' }]}
-                  onPress={() => setShowGenderModal(true)}
-              >
-                <Text style={{ color: formData.genderSpectrum ? '#333' : '#aaa' }}>
-                  {formData.genderSpectrum || 'Select your gender'}
-                </Text>
-              </TouchableOpacity>
-              <Modal
-                  visible={showGenderModal}
-                  transparent
-                  animationType="fade"
-                  onRequestClose={() => setShowGenderModal(false)}
-              >
-                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowGenderModal(false)}>
-                  <View style={styles.modalContent}>
-                    {['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other'].map(option => (
-                        <TouchableOpacity
-                            key={option}
-                            style={styles.modalOption}
-                            onPress={() => {
-                              updateFormData('genderSpectrum', option);
-                              setShowGenderModal(false);
-                            }}
-                        >
-                          <Text style={styles.modalOptionText}>{option}</Text>
-                        </TouchableOpacity>
-                    ))}
-                  </View>
-                </TouchableOpacity>
-              </Modal>
-              {errors.genderSpectrum && <Text style={styles.errorText}>{errors.genderSpectrum}</Text>}
-            </View>
-
-            {/* Sign Up Button */}
-            <TouchableOpacity
-                style={[styles.signUpButton, isLoading && styles.disabledButton]}
-                onPress={handleSignUp}
-                disabled={isLoading}
-            >
-              {isLoading ? (
-                  <ActivityIndicator color="#fff" />
-              ) : (
-                  <Text style={styles.signUpButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Login Link */}
-            <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity onPress={handleLoginPress}>
-                <Text style={styles.loginLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      {/* NGO Category Selection Modal */}
+      <ModalSelection
+        visible={showCategoryModal}
+        title="Select Category"
+        options={NGO_CATEGORIES}
+        onSelect={handleCategorySelect}
+        onClose={() => setShowCategoryModal(false)}
+      />
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 20,
-  },
-  headerContainer: {
-    marginTop: 40,
-    marginBottom: 30,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLOR.light.black || '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  formContainer: {
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLOR.light.black || '#333',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  inputError: {
-    borderColor: '#ff4444',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    width: 300,
-    alignItems: 'center',
-  },
-  modalOption: {
-    paddingVertical: 12,
-    width: '100%',
-    alignItems: 'center',
-  },
-  modalOptionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  errorText: {
-    color: '#ff4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  signUpButton: {
-    backgroundColor: COLOR.light.orange || '#ff6b35',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  signUpButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loginText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  loginLink: {
-    fontSize: 16,
-    color: COLOR.light.black || '#ff6b35',
-    fontWeight: '600',
-  },
-});
 
 export default SignUpScreen;
