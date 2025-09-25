@@ -19,9 +19,10 @@ interface PollCardProps {
   userId?: string;
   isPreview?: boolean;
   canEdit?: boolean;
+  isGridView?: boolean;
 }
 
-const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, userId, isPreview = false, canEdit = false }) => {
+const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, userId, isPreview = false, canEdit = false, isGridView = false }) => {
   const { theme, colors } = useTheme();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState<boolean>(false);
@@ -104,7 +105,7 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, use
   };
 
   // Create dynamic styles based on theme
-  const styles = createStyles(colors, theme);
+  const styles = createStyles(colors, theme, isGridView);
 
   return (
     <View style={styles.pollCard}>
@@ -234,18 +235,19 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, use
   );
 };
 
-const createStyles = (colors: any, theme: string) => StyleSheet.create({
+const createStyles = (colors: any, theme: string, isGridView: boolean = false) => StyleSheet.create({
   pollCard: {
     backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginVertical: 8,
-    marginHorizontal: 16,
+    borderRadius: isGridView ? 12 : 16,
+    padding: isGridView ? 12 : 20,
+    marginVertical: isGridView ? 0 : 8,
+    marginHorizontal: isGridView ? 0 : 16,
     shadowColor: theme === 'dark' ? colors.primary : '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: isGridView ? 4 : 8,
+    elevation: isGridView ? 2 : 3,
+    minHeight: isGridView ? 180 : 'auto',
     borderWidth: 1,
     borderColor: theme === 'dark' ? colors.secondary : '#F0F0F0',
   },
@@ -321,20 +323,21 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     color: '#ff6b6b',
   },
   pollTopic: {
-    fontSize: 16,
+    fontSize: isGridView ? 14 : 16,
     fontWeight: '600',
     color: theme === 'dark' ? colors.primary : '#2C3E50',
-    lineHeight: 22,
-    marginBottom: 16,
+    lineHeight: isGridView ? 18 : 22,
+    marginBottom: isGridView ? 12 : 16,
+    minHeight: isGridView ? 36 : 'auto', // Ensure consistent height in grid
   },
   optionsContainer: {
-    marginBottom: 16,
+    marginBottom: isGridView ? 12 : 16,
   },
   optionButton: {
     backgroundColor: theme === 'dark' ? colors.secondary : '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+    borderRadius: isGridView ? 8 : 12,
+    padding: isGridView ? 10 : 16,
+    marginBottom: isGridView ? 6 : 8,
     borderWidth: 2,
     borderColor: 'transparent',
     position: 'relative',
@@ -355,7 +358,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     zIndex: 2,
   },
   optionText: {
-    fontSize: 15,
+    fontSize: isGridView ? 12 : 15,
     fontWeight: '500',
     color: theme === 'dark' ? colors.primary : '#2C3E50',
     flex: 1,

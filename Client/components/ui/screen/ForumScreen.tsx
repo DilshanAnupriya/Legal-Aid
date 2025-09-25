@@ -14,6 +14,7 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
+    FlatList,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import CreatePostModal from '../../modals/CreatePostModal';
@@ -22,6 +23,7 @@ import PostDetailModal from '../../modals/PostDetailModal';
 import PollCard from '../../cards/PollCard';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -56,7 +58,6 @@ const ForumsScreen = () => {
     const { t } = useTranslation();
     const { theme, colors } = useTheme();
     const [activeCategory, setActiveCategory] = useState('All');
-    const [searchQuery, setSearchQuery] = useState('');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
     const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false);
     const [isPostDetailModalVisible, setIsPostDetailModalVisible] = useState(false);
@@ -146,6 +147,8 @@ const ForumsScreen = () => {
     const [isEditPollModalVisible, setIsEditPollModalVisible] = useState(false);
     const [editingPoll, setEditingPoll] = useState<any>(null);
     const [polls, setPolls] = useState<ForumPost[]>([]);
+    const [isGridView, setIsGridView] = useState(true);
+    const [searchBarText, setSearchBarText] = useState('');
 
     // Multiple URL options for different environments
     const getApiUrls = () => {
@@ -187,7 +190,7 @@ const ForumsScreen = () => {
         try {
             console.log('Fetching polls from:', `${BASE_URL}/polls`);
 
-            const response = await fetch(`${BASE_URL}/polls?category=${activeCategory}&search=${searchQuery}`, {
+            const response = await fetch(`${BASE_URL}/polls?category=${activeCategory}&search=${searchBarText}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -247,7 +250,7 @@ const ForumsScreen = () => {
             setLoading(true);
             console.log('Fetching posts from:', `${BASE_URL}/posts`);
 
-            const response = await fetch(`${BASE_URL}/posts?category=${activeCategory}&search=${searchQuery}`, {
+            const response = await fetch(`${BASE_URL}/posts?category=${activeCategory}&search=${searchBarText}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -850,7 +853,7 @@ const ForumsScreen = () => {
         fetchPosts();
         fetchStats();
         fetchTrendingTopics();
-    }, [activeCategory, searchQuery]);
+    }, [activeCategory, searchBarText]);
 
     // Close dropdown when clicking outside or when component unmounts
     useEffect(() => {
@@ -881,10 +884,10 @@ const ForumsScreen = () => {
             (contentType === 'Polls' && item.type === 'poll');
         
         let matchesSearch = false;
-        if (searchQuery.trim() === '') {
+        if (searchBarText.trim() === '') {
             matchesSearch = true; // If no search query, include all items
         } else {
-            const query = searchQuery.toLowerCase();
+            const query = searchBarText.toLowerCase();
             
             // For posts, check title and tags
             if (item.type === 'post') {
@@ -1111,6 +1114,57 @@ const ForumsScreen = () => {
                     </View>
                 </View>
 
+                {/* Search Bar with Grid/List View Toggle */}
+                <View style={styles.searchBarSection}>
+                    <View style={styles.searchBarContainer}>
+                        <Ionicons name="search-outline" size={20} color={theme === 'dark' ? colors.primary : '#666'} style={styles.searchBarIcon} />
+                        <TextInput
+                            style={styles.searchBarInput}
+                            placeholder={t('forum.searchPlaceholder', { defaultValue: 'Search discussions...' })}
+                            value={searchBarText}
+                            onChangeText={setSearchBarText}
+                            placeholderTextColor={theme === 'dark' ? colors.darkgray : '#999'}
+                            selectionColor={colors.primary}
+                        />
+                        {searchBarText.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchBarText('')}>
+                                <Ionicons name="close-circle-outline" size={20} color={theme === 'dark' ? colors.primary : '#666'} />
+                            </TouchableOpacity>
+                        )}
+                        {/* Grid/List View Toggle */}
+                        <View style={styles.viewToggleContainer}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.viewToggleButton,
+                                    { backgroundColor: isGridView ? colors.accent : (theme === 'dark' ? colors.white : '#FFFFFF') }
+                                ]}
+                                onPress={() => setIsGridView(true)}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons
+                                    name="grid-outline"
+                                    size={18}
+                                    color={isGridView ? '#FFFFFF' : (theme === 'dark' ? colors.primary : '#000000')}
+                                />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.viewToggleButton,
+                                    { backgroundColor: !isGridView ? colors.accent : (theme === 'dark' ? colors.white : '#FFFFFF') }
+                                ]}
+                                onPress={() => setIsGridView(false)}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons
+                                    name="list-outline"
+                                    size={18}
+                                    color={!isGridView ? '#FFFFFF' : (theme === 'dark' ? colors.primary : '#000000')}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+
                 {/* Quick Action Cards */}
                 <View style={styles.quickActionsSection}>
                     <TouchableOpacity
@@ -1261,39 +1315,6 @@ const ForumsScreen = () => {
                     )}
                 </View>
 
-                {/* Enhanced Search Bar */}
-                <View style={styles.searchSection}>
-                    <View style={styles.searchContainer}>
-                        <Text style={styles.searchIcon}>🔍</Text>
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder={t('forum.searchPlaceholder')}
-                            placeholderTextColor="#8E8E93"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            selectionColor={colors.primary}
-                            underlineColorAndroid="transparent"
-                            autoComplete="off"
-                            autoCorrect={false}
-                            blurOnSubmit={false}
-                            selectTextOnFocus={false}
-                            {...(Platform.OS === 'web' && {
-                                style: {
-                                    ...styles.searchInput,
-                                    outline: 'none',
-                                    border: 'none',
-                                    boxShadow: 'none',
-                                }
-                            })}
-                        />
-                        {searchQuery.length > 0 && (
-                            <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <Text style={styles.clearIcon}>✕</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-
                 {/* Forum Posts with Enhanced Design */}
                 <View style={styles.postsSection}>
                     <View style={styles.sectionHeader}>
@@ -1408,26 +1429,83 @@ const ForumsScreen = () => {
                             <Text style={styles.emptySubtext}>{t('forum.noResultsSubtext', { defaultValue: 'Be the first to ask a question or create a poll!' })}</Text>
                         </View>
                     ) : (
-                        filteredPosts.map((item: ForumPost) => {
-                            // Render PollCard for polls, regular post card for posts
-                            if (item.type === 'poll') {
+                        <FlatList
+                            data={filteredPosts}
+                            numColumns={isGridView ? 2 : 1}
+                            key={isGridView ? 'grid' : 'list'}
+                            showsVerticalScrollIndicator={false}
+                            renderItem={({ item }: { item: ForumPost }) => {
+                                // Render PollCard for polls
+                                if (item.type === 'poll') {
+                                    return (
+                                        <View style={isGridView ? styles.gridItemContainer : null}>
+                                            <PollCard
+                                                poll={item}
+                                                onVote={handleVoteOnPoll}
+                                                onEdit={handleEditPoll}
+                                                onDelete={handleDeletePoll}
+                                                userId={user?.email || user?.id || `anonymous_${Date.now()}`}
+                                                canEdit={canEditPost(item.author)}
+                                                isGridView={isGridView}
+                                            />
+                                        </View>
+                                    );
+                                }
+                                
+                                // Regular post rendering
                                 return (
-                                    <PollCard
-                                        key={item.id}
-                                        poll={item}
-                                        onVote={handleVoteOnPoll}
-                                        onEdit={handleEditPoll}
-                                        onDelete={handleDeletePoll}
-                                        userId={user?.email || user?.id || `anonymous_${Date.now()}`}
-                                        canEdit={canEditPost(item.author)}
-                                    />
-                                );
-                            }
-                            
-                            // Regular post rendering
-                            return (
-                                <TouchableOpacity
-                                    key={item.id}
+                                    <View style={isGridView ? styles.gridItemContainer : null}>
+                                        {isGridView ? (
+                                            // Grid View Post Card
+                                            <TouchableOpacity
+                                                style={styles.gridPostCard}
+                                                onPress={() => handlePostPress(item.id)}
+                                                activeOpacity={0.9}
+                                            >
+                                                {/* Status Indicator */}
+                                                <View style={[styles.gridStatusBar, item.isAnswered ? styles.answeredBar : styles.pendingBar]} />
+                                                
+                                                {/* Card Content */}
+                                                <View style={styles.gridPostContent}>
+                                                    <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                    
+                                                    {/* Category Badge */}
+                                                    <View style={styles.gridCategoryBadge}>
+                                                        <Text style={styles.gridCategoryText}>{item.category}</Text>
+                                                    </View>
+                                                    
+                                                    {/* Author Info */}
+                                                    <View style={styles.gridAuthorSection}>
+                                                        <View style={styles.gridAvatarPlaceholder}>
+                                                            <Text style={styles.gridAvatarText}>{item.author.charAt(0)}</Text>
+                                                        </View>
+                                                        <View style={styles.gridAuthorDetails}>
+                                                            <Text style={styles.gridAuthorName} numberOfLines={1}>{item.author}</Text>
+                                                            <Text style={styles.gridPostTime}>{item.lastActivity || 'Just now'}</Text>
+                                                        </View>
+                                                    </View>
+                                                    
+                                                    {/* Stats */}
+                                                    <View style={styles.gridStatsSection}>
+                                                        <View style={styles.gridStatItem}>
+                                                            <Text style={styles.gridStatIcon}>💬</Text>
+                                                            <Text style={styles.gridStatText}>{item.replies || 0}</Text>
+                                                        </View>
+                                                        <View style={styles.gridStatItem}>
+                                                            <Text style={styles.gridStatIcon}>👁</Text>
+                                                            <Text style={styles.gridStatText}>{item.views || 0}</Text>
+                                                        </View>
+                                                        {item.isAnswered && (
+                                                            <View style={styles.gridSolvedBadge}>
+                                                                <Text style={styles.gridSolvedIcon}>✓</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                            </TouchableOpacity>
+                                        ) : (
+                                            // List View Post Card (existing design)
+                                            <TouchableOpacity
                                 style={styles.modernPostCard}
                                 onPress={() => handlePostPress(item.id)}
                                 activeOpacity={0.9}
@@ -1522,8 +1600,12 @@ const ForumsScreen = () => {
                                     </View>
                                 </View>
                             </TouchableOpacity>
-                            );
-                        })
+                                        )}
+                                    </View>
+                                );
+                            }}
+                            keyExtractor={(item: ForumPost) => item.id}
+                        />
                     )}
                 </View>
 
@@ -1671,53 +1753,56 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
         alignSelf: 'center',
     },
-    // Search Section
-    searchSection: {
+    // Search Bar Section
+    searchBarSection: {
         paddingHorizontal: 20,
-        paddingVertical: 20,
+        paddingVertical: 15,
         backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
     },
-    searchContainer: {
+    searchBarContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme === 'dark' ? colors.white : '#F5F5F5',
-        borderRadius: 25,
-        paddingHorizontal: 15,
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
+        borderRadius: 12,
+        paddingHorizontal: 16,
         paddingVertical: 12,
-        borderWidth: 0,
-        borderColor: 'transparent',
-        ...(Platform.OS === 'web' && {
-            outline: 'none',
-            boxShadow: 'none',
-        }),
+        borderWidth: 1,
+        borderColor: theme === 'dark' ? colors.secondary : '#E5E5E5',
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    searchIcon: {
-        fontSize: 18,
-        marginRight: 10,
-        color: theme === 'dark' ? colors.primary : '#666666',
+    searchBarIcon: {
+        marginRight: 12,
     },
-    searchInput: {
+    searchBarInput: {
         flex: 1,
         fontSize: 16,
-        color: theme === 'dark' ? colors.primary : '#333333',
-        fontWeight: '500',
+        color: theme === 'dark' ? colors.primary : '#1A1A1A',
         backgroundColor: 'transparent',
         borderWidth: 0,
         ...(Platform.OS === 'web' && {
             outline: 'none',
             boxShadow: 'none',
             border: 'none',
-            '&:focus': {
-                outline: 'none',
-                border: 'none',
-                boxShadow: 'none',
-            },
         }),
     },
-    clearIcon: {
-        fontSize: 16,
-        color: theme === 'dark' ? colors.darkgray : '#999999',
+    viewToggleContainer: {
+        flexDirection: 'row',
         marginLeft: 10,
+        backgroundColor: theme === 'dark' ? colors.secondary : '#F5F5F5',
+        borderRadius: 8,
+        padding: 2,
+    },
+    viewToggleButton: {
+        width: 36,
+        height: 32,
+        borderRadius: 6,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 1,
     },
     // Quick Actions
     quickActionsSection: {
@@ -2402,6 +2487,127 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     bottomSpacing: {
         height: 100,
+    },
+    // Grid View Styles
+    gridItemContainer: {
+        flex: 1,
+        maxWidth: '50%',
+        paddingHorizontal: 6,
+    },
+    gridPostCard: {
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
+        borderRadius: 12,
+        marginBottom: 12,
+        overflow: 'hidden',
+        shadowColor: theme === 'dark' ? colors.primary : colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: theme === 'dark' ? colors.secondary : '#F0F2FF',
+        position: 'relative',
+        minHeight: 180,
+    },
+    gridStatusBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: 3,
+        height: '100%',
+        zIndex: 1,
+    },
+    gridPostContent: {
+        padding: 12,
+        marginLeft: 3, // Account for status bar
+    },
+    gridPostTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#1F2937',
+        lineHeight: 18,
+        marginBottom: 8,
+        minHeight: 36, // Ensure consistent height
+    },
+    gridCategoryBadge: {
+        backgroundColor: '#EEF2FF',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+    },
+    gridCategoryText: {
+        fontSize: 10,
+        color: '#4F46E5',
+        fontWeight: '600',
+    },
+    gridAuthorSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    gridAvatarPlaceholder: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 6,
+    },
+    gridAvatarText: {
+        fontSize: 10,
+        color: '#FFFFFF',
+        fontWeight: '700',
+    },
+    gridAuthorDetails: {
+        flex: 1,
+    },
+    gridAuthorName: {
+        fontSize: 11,
+        color: theme === 'dark' ? colors.primary : '#1F2937',
+        fontWeight: '600',
+    },
+    gridPostTime: {
+        fontSize: 9,
+        color: theme === 'dark' ? colors.darkgray : '#9CA3AF',
+        fontWeight: '500',
+    },
+    gridStatsSection: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    gridStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    gridStatIcon: {
+        fontSize: 12,
+        marginRight: 3,
+    },
+    gridStatText: {
+        fontSize: 10,
+        color: theme === 'dark' ? colors.primary : '#374151',
+        fontWeight: '600',
+    },
+    gridSolvedBadge: {
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+    gridSolvedIcon: {
+        fontSize: 10,
+        color: '#10B981',
+        fontWeight: 'bold',
     },
     // Loading and Empty States
     loadingContainer: {
