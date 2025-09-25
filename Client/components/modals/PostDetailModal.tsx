@@ -531,7 +531,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
             {/* Existing Comments */}
             {commentsLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#667eea" />
+                <ActivityIndicator size="large" color="colors.primary" />
                 <Text style={styles.loadingText}>{t('postDetail.comments.loading', { defaultValue: 'Loading comments...' })}</Text>
               </View>
             ) : comments.length === 0 ? (
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
   },
   closeIcon: {
     fontSize: 24,
-    color: '#667eea',
+    color: 'colors.primary',
     fontWeight: '600',
   },
   headerTitle: {
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   categoryBadge: {
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
-    color: '#667eea',
+    color: 'colors.primary',
     fontWeight: '500',
   },
   descriptionSection: {
@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 12,
     borderLeftWidth: 3,
-    borderLeftColor: '#667eea',
+    borderLeftColor: 'colors.primary',
   },
   commentHeader: {
     flexDirection: 'row',
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
   },
   editCommentIcon: {
     fontSize: 12,
-    color: '#667eea',
+    color: 'colors.primary',
   },
   deleteCommentButton: {
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
@@ -1073,7 +1073,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2C3E50',
     borderWidth: 1,
-    borderColor: '#667eea',
+    borderColor: 'colors.primary',
     minHeight: 80,
     maxHeight: 120,
     textAlignVertical: 'top',
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveEditButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -1118,7 +1118,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#667eea',
+    borderColor: 'colors.primary',
   },
   currentUserLabel: {
     fontSize: 14,
@@ -1126,7 +1126,7 @@ const styles = StyleSheet.create({
   },
   currentUserName: {
     fontWeight: '600',
-    color: '#667eea',
+    color: 'colors.primary',
   },
   noCommentsContainer: {
     padding: 20,
@@ -1215,8 +1215,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: 'colors.primary',
+    borderColor: 'colors.primary',
   },
   checkmark: {
     fontSize: 12,
@@ -1229,11 +1229,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   submitCommentButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-    shadowColor: '#667eea',
+    shadowColor: 'colors.primary',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
