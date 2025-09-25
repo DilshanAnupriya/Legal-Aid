@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 
 interface CreatePostModalProps {
@@ -28,6 +29,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isEditMode = false,
 }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -38,14 +40,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [titleError, setTitleError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
 
-  // Legal categories from ForumScreen (excluding 'All' as it's not a specific category)
-  const legalCategories = [
-    { id: 2, name: 'Family Law', icon: '👨‍👩‍👧‍👦' },
-    { id: 3, name: 'Property Law', icon: '🏠' },
-    { id: 4, name: 'Employment Law', icon: '💼' },
-    { id: 5, name: 'Civil Law', icon: '⚖️' },
-    { id: 6, name: 'Criminal Law', icon: '🚔' },
+  // Legal categories with translations
+  const getLegalCategories = () => [
+    { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), icon: '👨‍👩‍👧‍👦' },
+    { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), icon: '🏠' },
+    { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), icon: '💼' },
+    { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), icon: '⚖️' },
+    { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), icon: '🚔' },
   ];
+  
+  const legalCategories = getLegalCategories();
 
   // Populate form when editing
   useEffect(() => {
@@ -88,18 +92,18 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
     // Basic validation
     if (!title.trim()) {
-      setTitleError('Please enter a title');
+      setTitleError(t('createPost.validation.titleRequired', { defaultValue: 'Please enter a title' }));
       hasErrors = true;
     } else if (title.trim().length < 10) {
-      setTitleError('Title must be at least 10 characters long');
+      setTitleError(t('createPost.validation.titleTooShort', { defaultValue: 'Title must be at least 10 characters long' }));
       hasErrors = true;
     }
 
     if (!description.trim()) {
-      setDescriptionError('Please enter a description');
+      setDescriptionError(t('createPost.validation.descriptionRequired', { defaultValue: 'Please enter a description' }));
       hasErrors = true;
     } else if (description.trim().length < 20) {
-      setDescriptionError('Description must be at least 20 characters long');
+      setDescriptionError(t('createPost.validation.descriptionTooShort', { defaultValue: 'Description must be at least 20 characters long' }));
       hasErrors = true;
     }
 
@@ -110,7 +114,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     // Get user name for author field
     const getUserDisplayName = () => {
       if (isAnonymous) {
-        return 'Anonymous User';
+        return t('createPost.anonymousUser', { defaultValue: 'Anonymous User' });
       }
       
       if (user?.email) {
@@ -119,7 +123,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
         return emailName.charAt(0).toUpperCase() + emailName.slice(1);
       }
       
-      return 'User'; // Fallback if no user info
+      return t('createPost.defaultUser', { defaultValue: 'User' }); // Fallback if no user info
     };
 
     const postData = {
@@ -159,19 +163,23 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Post' : 'Create New Post'}</Text>
+          <Text style={styles.headerTitle}>
+            {isEditMode ? t('createPost.editPost', { defaultValue: 'Edit Post' }) : t('createPost.title', { defaultValue: 'Create New Post' })}
+          </Text>
           <TouchableOpacity onPress={handleSubmit} style={styles.postButton}>
-            <Text style={styles.postButtonText}>{isEditMode ? 'Update' : 'Post'}</Text>
+            <Text style={styles.postButtonText}>
+              {isEditMode ? t('common.update', { defaultValue: 'Update' }) : t('common.post', { defaultValue: 'Post' })}
+            </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Post Title */}
           <View style={styles.section}>
-            <Text style={styles.label}>Post Title</Text>
+            <Text style={styles.label}>{t('createPost.postTitle', { defaultValue: 'Post Title' })}</Text>
             <TextInput
               style={[styles.titleInput, titleError && styles.inputError]}
-              placeholder="Share your thoughts!"
+              placeholder={t('createPost.titlePlaceholder', { defaultValue: 'Share your thoughts!' })}
               placeholderTextColor="#999999"
               value={title}
               onChangeText={handleTitleChange}
@@ -182,10 +190,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {/* Description */}
           <View style={styles.section}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t('createPost.description', { defaultValue: 'Description' })}</Text>
             <TextInput
               style={[styles.descriptionInput, descriptionError && styles.inputError]}
-              placeholder="Elaborate on your post here..."
+              placeholder={t('createPost.descriptionPlaceholder', { defaultValue: 'Elaborate on your post here...' })}
               placeholderTextColor="#999999"
               value={description}
               onChangeText={handleDescriptionChange}
@@ -197,7 +205,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {/* Legal Categories */}
           <View style={styles.section}>
-            <Text style={styles.label}>Legal Categories</Text>
+            <Text style={styles.label}>{t('createPost.legalCategories', { defaultValue: 'Legal Categories' })}</Text>
             <TouchableOpacity
               style={styles.categoryDropdown}
               onPress={() => setShowCategoryModal(true)}>
@@ -205,7 +213,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 <Text style={styles.selectedCategoryIcon}>
                   {legalCategories.find(cat => cat.name === selectedCategory)?.icon}
                 </Text>
-                <Text style={styles.selectedCategoryText}>{selectedCategory}</Text>
+                <Text style={styles.selectedCategoryText}>
+                  {legalCategories.find(cat => cat.name === selectedCategory)?.translatedName || selectedCategory}
+                </Text>
               </View>
               <Text style={styles.dropdownArrow}>▼</Text>
             </TouchableOpacity>
@@ -221,20 +231,25 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <View style={[styles.checkbox, isAnonymous && styles.checkboxChecked]}>
                 {isAnonymous && <Text style={styles.checkmark}>✓</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>Submit Anonymously</Text>
+              <Text style={styles.checkboxLabel}>{t('createPost.submitAnonymously', { defaultValue: 'Submit Anonymously' })}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Guidelines */}
           <View style={styles.section}>
             <Text style={styles.guidelinesText}>
-              Remember to be respectful and follow our community guidelines. Offensive content will be removed.
+              {t('createPost.guidelines', { defaultValue: 'Remember to be respectful and follow our community guidelines. Offensive content will be removed.' })}
             </Text>
           </View>
 
           {/* Submit Button */}
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>{isEditMode ? 'Update Post' : 'Submit Post'}</Text>
+            <Text style={styles.submitButtonText}>
+              {isEditMode 
+                ? t('createPost.updatePost', { defaultValue: 'Update Post' }) 
+                : t('createPost.submitPost', { defaultValue: 'Submit Post' })
+              }
+            </Text>
           </TouchableOpacity>
 
           {/* Bottom Spacing */}
@@ -253,7 +268,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           activeOpacity={1} 
           onPress={() => setShowCategoryModal(false)}>
           <View style={styles.categoryModalContent}>
-            <Text style={styles.categoryModalTitle}>Select Legal Category</Text>
+            <Text style={styles.categoryModalTitle}>{t('createPost.selectCategory', { defaultValue: 'Select Legal Category' })}</Text>
             {legalCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
@@ -269,7 +284,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 <Text style={[
                   styles.categoryOptionText,
                   selectedCategory === category.name && styles.categoryOptionTextSelected
-                ]}>{category.name}</Text>
+                ]}>{category.translatedName}</Text>
                 {selectedCategory === category.name && (
                   <Text style={styles.categorySelectedIcon}>✓</Text>
                 )}
