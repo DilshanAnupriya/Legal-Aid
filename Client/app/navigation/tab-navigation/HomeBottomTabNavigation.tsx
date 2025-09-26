@@ -24,7 +24,7 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                 tabBarIcon: ({ color }) => {
                     let iconName;
                     if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
-                    else if (route.name === 'Forum') iconName = focused ? 'earth' : 'earth-outline';
+                    else if (route.name === 'Forum') iconName = focused ? 'add' : 'add-outline';
                     else if (route.name === 'Documents') iconName = focused ? 'document' : 'document-outline';
                     else if (route.name === 'Lawyer') iconName = focused ? 'briefcase' : 'briefcase-outline';
                     else if (route.name === 'Menu') iconName = focused ? 'menu' : 'menu-outline';
@@ -162,30 +162,6 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
           ),
         }}
       />
-      <Tab.Screen
-        name={"Forum"}
-        component={ForumScreen}
-        options={{
-          headerStyle: {
-            backgroundColor: colors.white,
-            elevation: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            height: 90,
-            borderBottomWidth: 1,
-            borderBottomColor: theme === "light" ? "#F5F5F7" : colors.darkgray,
-          },
-          headerTintColor: colors.primary,
-          headerTitle: "Legal Forum",
-          headerTitleStyle: {
-            fontSize: 18,
-            fontWeight: "600",
-            color: colors.primary,
-          },
-        }}
-      />
             <Tab.Screen
                 name={'Documents'}
                 component={DocumentScreen}
@@ -210,6 +186,30 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                     },
                 }}
             />
+      <Tab.Screen
+        name={"Forum"}
+        component={ForumScreen}
+        options={{
+          headerStyle: {
+            backgroundColor: colors.white,
+            elevation: 8,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            height: 90,
+            borderBottomWidth: 1,
+            borderBottomColor: theme === "light" ? "#F5F5F7" : colors.darkgray,
+          },
+          headerTintColor: colors.primary,
+          headerTitle: "Legal Forum",
+          headerTitleStyle: {
+            fontSize: 18,
+            fontWeight: "600",
+            color: colors.primary,
+          },
+        }}
+      />
       <Tab.Screen
         name={"Lawyer"}
         component={LawyerScreen}
