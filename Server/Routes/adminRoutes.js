@@ -4,6 +4,7 @@ const {
   adminLogin,
   getAdminProfile,
   getAllUsers,
+  getAllLawyers,
   updateUserStatus,
   deleteUser,
   getDashboardStats
@@ -27,6 +28,11 @@ router.get('/profile', authenticateToken, requireAdmin, getAdminProfile);
 // @access  Admin only
 router.get('/users', authenticateToken, requireAdmin, getAllUsers);
 
+// @desc    Get all lawyers
+// @route   GET /api/admin/lawyers
+// @access  Admin only
+router.get('/lawyers', authenticateToken, requireAdmin, getAllLawyers);
+
 // @desc    Update user status
 // @route   PUT /api/admin/users/:id/status
 // @access  Admin only
@@ -41,20 +47,5 @@ router.delete('/users/:id', authenticateToken, requireAdmin, deleteUser);
 // @route   GET /api/admin/stats
 // @access  Admin only
 router.get('/stats', authenticateToken, requireAdmin, getDashboardStats);
-=======
-const express = require("express");
-const { registerAdmin, loginAdmin, getAdminProfile, getAllLawyers , approveLawyer } = require("../controllers/adminController.js");
-
-const router = express.Router();
-
-router.post("/", registerAdmin);
-router.post("/login", loginAdmin);
-router.get("/profile", getAdminProfile);
-router.get("/lawyers",getAllLawyers);
-
-// Approve or disapprove a lawyer
-router.put("/lawyers/:id/approve", approveLawyer);
-
-
 
 module.exports = router;

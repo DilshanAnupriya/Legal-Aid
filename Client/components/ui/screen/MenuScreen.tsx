@@ -36,7 +36,7 @@ export default function MenuScreen({ navigation }: { navigation?: any }) {
                 navigation.navigate('UserProfile');
                 break;
             case 'lawyer':
-                navigation.navigate('LawyerProfile');
+                navigation.navigate('LawyerOwnProfile');
                 break;
             case 'ngo':
                 navigation.navigate('NgoOwnProfile');

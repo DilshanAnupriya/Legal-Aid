@@ -443,7 +443,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       case 'user':
         return 'UserProfile';
       case 'lawyer':
-        return 'LawyerProfile';
+        return 'LawyerOwnProfile';
       case 'ngo':
         return 'NgoOwnProfile';
       default:

@@ -117,11 +117,9 @@ const ngoRoutes = require('./Routes/ngoRoutes');
 const postRoutes = require("./Routes/postRoutes");
 const pollRoutes = require("./Routes/pollRoutes");
 const userRoutes = require("./Routes/userRoutes");
-const lawyerRoutes = require("./Routes/lawyerRoutes");
-const adminRoutes = require("./Routes/adminRoutes");
+const lawyerRoutes = require('./Routes/lawyerRoutes');
 const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
-
 const adminRoutes = require('./Routes/adminRoutes');
 
 
@@ -129,20 +127,11 @@ const adminRoutes = require('./Routes/adminRoutes');
 // API Routes
 app.use("/api/ngo", ngoRoutes);
 app.use("/api/posts", postRoutes);
-app.use("/api/lawyers", lawyerRoutes);
-app.use("/api/admins",adminRoutes);
-app.use('/api/appointments', appointmentRoutes);
-app.use('/api/ngo', ngoRoutes);
-// Import Routes
-
-
-
-app.use('/api/documents', documentRoutes);
-app.use("/api/posts", postRoutes);
 app.use("/api/polls", pollRoutes);
 app.use("/api/auth", userRoutes);
-
 app.use("/api/lawyers", lawyerRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/documents', documentRoutes);
 app.use("/api/admin", adminRoutes);
 
 

@@ -1,24 +1,18 @@
+import React from "react";
 import { StyleSheet } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
 import HomeBottomTabNavigation from "@/app/navigation/tab-navigation/HomeBottomTabNavigation";
 import { COLOR } from "@/constants/ColorPallet";
 import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
-
-import React from "react";
 import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
 import UserProfileScreen from "@/components/ui/screen/UserProfileScreen";
 import LawyerProfileScreen from "@/components/ui/screen/LawyerProfileScreen";
 import NgoOwnProfileScreen from "@/components/ui/screen/NgoOwnProfileScreen";
 import RoleBasedWelcome from "@/components/ui/screen/RoleBasedWelcome";
-
 import UserProfile from "@/components/ui/screen/UserProfile";
 import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
-import LawyerProfile from "@/components/ui/screen/LawyerDetails"
-import LoginScreen from "@/components/ui/screen/LoginScreen";
-import SignUpScreen from "@/components/ui/screen/SignUpScreen";
-import React from "react";
-import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
+import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
 import LanguageDemo from "@/components/screens/LanguageDemo";
 
@@ -86,7 +80,7 @@ export default function StackNavigator() {
                 }}
             />
             <Stack.Screen
-                name="LawyerProfile"
+                name="LawyerOwnProfile"
                 component={LawyerProfileScreen}
                 options={{
                     title: 'My Profile'
@@ -105,7 +99,9 @@ export default function StackNavigator() {
                 options={{
                     title: 'Welcome',
                     headerLeft: () => null, // Disable back button
-
+                }}
+            />
+            <Stack.Screen
                 name="LanguageSettings"
                 component={LanguageSettingsScreen}
                 options={{
@@ -118,7 +114,6 @@ export default function StackNavigator() {
                 options={{
                     title: 'Language Demo',
                     headerShown: false,
-
                 }}
             />
         </Stack.Navigator>

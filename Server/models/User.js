@@ -129,24 +129,6 @@ const userSchema = new mongoose.Schema({
     }
   },
   
-  // Admin-specific fields
-  adminName: {
-    type: String,
-    required: function() {
-      return this.role === 'admin';
-    },
-    trim: true
-  },
-  permissions: {
-    type: [String],
-    default: function() {
-      if (this.role === 'admin') {
-        return ['manage_users', 'manage_content', 'view_analytics'];
-      }
-      return [];
-    }
-  },
-  
   status: {
     type: String,
     enum: ['active', 'inactive'],
