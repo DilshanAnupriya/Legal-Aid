@@ -3,10 +3,12 @@ import { createStackNavigator } from "@react-navigation/stack";
 import HomeBottomTabNavigation from "@/app/navigation/tab-navigation/HomeBottomTabNavigation";
 import { COLOR } from "@/constants/ColorPallet";
 import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
-import LoginScreen from "@/components/ui/screen/LoginScreen";
-import SignUpScreen from "@/components/ui/screen/SignUpScreen";
 import React from "react";
 import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
+import UserProfileScreen from "@/components/ui/screen/UserProfileScreen";
+import LawyerProfileScreen from "@/components/ui/screen/LawyerProfileScreen";
+import NgoOwnProfileScreen from "@/components/ui/screen/NgoOwnProfileScreen";
+import RoleBasedWelcome from "@/components/ui/screen/RoleBasedWelcome";
 
 const Stack = createStackNavigator();
 
@@ -37,6 +39,35 @@ export default function StackNavigator() {
                     title: 'NGO Profile',
                     // You can add more options here if needed
                 })}
+            />
+            <Stack.Screen
+                name="UserProfile"
+                component={UserProfileScreen}
+                options={{
+                    title: 'My Profile'
+                }}
+            />
+            <Stack.Screen
+                name="LawyerProfile"
+                component={LawyerProfileScreen}
+                options={{
+                    title: 'My Profile'
+                }}
+            />
+            <Stack.Screen
+                name="NgoOwnProfile"
+                component={NgoOwnProfileScreen}
+                options={{
+                    title: 'My Profile'
+                }}
+            />
+            <Stack.Screen
+                name="RoleBasedWelcome"
+                component={RoleBasedWelcome}
+                options={{
+                    title: 'Welcome',
+                    headerLeft: () => null, // Disable back button
+                }}
             />
         </Stack.Navigator>
     );

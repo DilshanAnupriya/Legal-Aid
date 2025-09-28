@@ -7,7 +7,8 @@ import LawyerScreen from "@/components/ui/screen/LawyerScreen";
 import MenuScreen from "@/components/ui/screen/MenuScreen";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from '@/context/ThemeContext';
-import ThemeSwitcher from '../../../components/modals/ThemeSwitcher';
+import { useAuth } from '@/context/AuthContext';
+import ThemeSwitcherComponent from '../../../components/modals/ThemeSwitcher';
 import { COLOR } from "@/constants/ColorPallet";
 
 const DarkLogo = require('../../../assets/images/logo/Law Firm Logo Black and White (1).png');
@@ -16,6 +17,25 @@ const Tab = createBottomTabNavigator();
 
 export default function HomeBottomTabNavigation({ navigation }: any) {
     const { colors, theme } = useTheme();
+    const { user } = useAuth();
+    
+    const navigateToProfile = () => {
+        if (!user) return;
+        
+        switch (user.role) {
+            case 'user':
+                navigation.navigate('UserProfile');
+                break;
+            case 'lawyer':
+                navigation.navigate('LawyerProfile');
+                break;
+            case 'ngo':
+                navigation.navigate('NgoOwnProfile');
+                break;
+            default:
+                console.log('Unknown user role:', user.role);
+        }
+    };
 
     return (
         <Tab.Navigator
@@ -101,7 +121,7 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
 
                             {/* Theme Switcher */}
                             <View style={styles.themeSwitcherContainer}>
-                                <ThemeSwitcher size="small" />
+                                <ThemeSwitcherComponent size="small" />
                             </View>
 
                             {/* Notifications */}
@@ -128,9 +148,7 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                                     backgroundColor: theme === 'light' ? COLOR.light.white: colors.darkgray,
                                     borderColor: COLOR.light.orange || '#FF6B35'
                                 }]}
-                                onPress={() => {
-                                    console.log('Profile menu pressed');
-                                }}
+                                onPress={navigateToProfile}
                             >
                                 <Ionicons
                                     name="person"

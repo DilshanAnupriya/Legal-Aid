@@ -83,6 +83,10 @@ interface AuthContextType {
   isLawyer: () => boolean;
   isNgo: () => boolean;
   hasRole: (role: 'user' | 'lawyer' | 'ngo') => boolean;
+  getUserDisplayName: () => string;
+  getUserTypeLabel: () => string;
+  getProfileRoute: () => string;
+  isProfileComplete: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -176,15 +180,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = React.useCallback(async (): Promise<void> => {
     try {
+      console.log('[AuthContext] Starting logout process...');
+      console.log('[AuthContext] Current auth state - isAuthenticated:', isAuthenticated, 'user:', !!user);
+      
+      // Clear stored token
       await AsyncStorage.removeItem('userToken');
+      console.log('[AuthContext] Token removed from storage');
+      
+      // Clear context state
       setToken(null);
       setUser(null);
       setIsAuthenticated(false);
       setHasCheckedAuth(false); // Reset flag to allow re-checking auth state
+      
+      console.log('[AuthContext] Auth state cleared - isAuthenticated set to false');
+      console.log('[AuthContext] Logout completed successfully');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('[AuthContext] Logout error:', error);
+      // Even if there's an error clearing storage, we should still clear the context state
+      setToken(null);
+      setUser(null);
+      setIsAuthenticated(false);
+      setHasCheckedAuth(false);
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   const getCurrentUser = React.useCallback(async (authToken: string = token || ''): Promise<User> => {
     try {
@@ -386,6 +405,67 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return user?.role === role;
   };
 
+  // Additional helper functions for role-based functionality
+  const getUserDisplayName = (): string => {
+    if (!user) return 'User';
+    
+    switch (user.role) {
+      case 'lawyer':
+        return user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}`
+          : user.email;
+      case 'ngo':
+        return user.organizationName || user.email;
+      case 'user':
+      default:
+        return user.email;
+    }
+  };
+
+  const getUserTypeLabel = (): string => {
+    if (!user) return 'User';
+    switch (user.role) {
+      case 'user':
+        return 'Regular User';
+      case 'lawyer':
+        return 'Legal Professional';
+      case 'ngo':
+        return 'NGO Representative';
+      default:
+        return 'User';
+    }
+  };
+
+  const getProfileRoute = (): string => {
+    if (!user) return 'UserProfile';
+    
+    switch (user.role) {
+      case 'user':
+        return 'UserProfile';
+      case 'lawyer':
+        return 'LawyerProfile';
+      case 'ngo':
+        return 'NgoOwnProfile';
+      default:
+        return 'UserProfile';
+    }
+  };
+
+  const isProfileComplete = (): boolean => {
+    if (!user) return false;
+    
+    switch (user.role) {
+      case 'user':
+        return !!(user.birthday && user.genderSpectrum);
+      case 'lawyer':
+        return !!(user.firstName && user.lastName && user.specialization && user.contactNumber);
+      case 'ngo':
+        return !!(user.organizationName && user.description && user.category && user.contact);
+      default:
+        return false;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -399,7 +479,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isUser,
     isLawyer,
     isNgo,
-    hasRole
+    hasRole,
+    getUserDisplayName,
+    getUserTypeLabel,
+    getProfileRoute,
+    isProfileComplete
   };
 
   return (
