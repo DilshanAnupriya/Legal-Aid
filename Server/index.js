@@ -8,7 +8,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
-// Middleware
 app.use(cors({
   origin: [
     'http://localhost:3000', 'http://127.0.0.1:3000', 
@@ -25,6 +24,7 @@ app.use(cors({
   credentials: true,
   optionsSuccessStatus: 200 // For legacy browser support
 }));
+
 
 // JSON parsing with error handling
 app.use((req, res, next) => {
@@ -58,6 +58,10 @@ app.use((req, res, next) => {
     next();
   });
 });
+
+
+app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware for debugging
@@ -108,16 +112,36 @@ mongoose.connect(DB_URL)
 
 //NGO
 const ngoRoutes = require('./Routes/ngoRoutes');
-app.use('/api/ngo', ngoRoutes);
+
 // Import Routes
 const postRoutes = require("./Routes/postRoutes");
+const pollRoutes = require("./Routes/pollRoutes");
 const userRoutes = require("./Routes/userRoutes");
 const lawyerRoutes = require("./Routes/lawyerRoutes");
+const adminRoutes = require("./Routes/adminRoutes");
+const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
+
 const adminRoutes = require('./Routes/adminRoutes');
+
+
+
+// API Routes
+app.use("/api/ngo", ngoRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/lawyers", lawyerRoutes);
+app.use("/api/admins",adminRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/ngo', ngoRoutes);
+// Import Routes
+
+
+
 app.use('/api/documents', documentRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/polls", pollRoutes);
 app.use("/api/auth", userRoutes);
+
 app.use("/api/lawyers", lawyerRoutes);
 app.use("/api/admin", adminRoutes);
 
@@ -130,6 +154,7 @@ app.get("/", (req, res) => {
     endpoints: {
       auth: "/api/auth",
       posts: "/api/posts",
+      polls: "/api/polls",
       health: "/health"
     }
   });

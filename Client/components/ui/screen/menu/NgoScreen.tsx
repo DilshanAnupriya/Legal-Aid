@@ -7,12 +7,15 @@ import NgoSearchBar from '@/components/ui/screen/widget/NgoScreen/NgoSearchBarWi
 import CategoryFilter from '@/components/ui/screen/widget/NgoScreen/NgoCategoryFilterWidget';
 import NgoList from '@/components/ui/screen/widget/NgoScreen/NgoListWidget';
 import LoadingOverlay from '@/components/ui/screen/widget/NgoScreen/LoadingOverlayWidget';
+import TopNgosSection from '@/components/ui/screen/widget/NgoScreen/TopNgosSection';
 
 // @ts-ignore
 export default function NgoScreen({ navigation }) {
     // State management
     const [ngos, setNgos] = useState([]);
+    const [topNgos, setTopNgos] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [topNgosLoading, setTopNgosLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -42,10 +45,37 @@ export default function NgoScreen({ navigation }) {
 
     // Effects
     useEffect(() => {
+        fetchTopNgos();
+        fetchNgos();
+    }, []);
+
+    useEffect(() => {
         fetchNgos();
     }, [searchText, selectedCategory, page]);
 
     // API Functions
+    const fetchTopNgos = async () => {
+        setTopNgosLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/ngo/top-ratings?limit=5`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.message === 'top' && data.data) {
+                setTopNgos(data.data);
+            }
+        } catch (error) {
+            console.error('Fetch Top NGOs error:', error);
+            // Don't show alert for top NGOs as it's not critical
+        } finally {
+            setTopNgosLoading(false);
+        }
+    };
+
     const fetchNgos = async (isRefresh = false) => {
         if (isRefresh) {
             setRefreshing(true);
@@ -90,6 +120,7 @@ export default function NgoScreen({ navigation }) {
 
     // Event Handlers
     const handleRefresh = () => {
+        fetchTopNgos(); // Also refresh top NGOs
         fetchNgos(true);
     };
 
@@ -99,13 +130,13 @@ export default function NgoScreen({ navigation }) {
         }
     };
 
-    const handleCategorySelect = (category:any) => {
+    const handleCategorySelect = (category: any) => {
         setSelectedCategory(category === 'All' ? '' : category);
         setPage(1);
         setNgos([]);
     };
 
-    const handleSearch = (text:any) => {
+    const handleSearch = (text: any) => {
         setSearchText(text);
         setPage(1);
         setNgos([]);
@@ -117,12 +148,12 @@ export default function NgoScreen({ navigation }) {
         setNgos([]);
     };
 
-    const handleViewChange = (gridView:any) => {
+    const handleViewChange = (gridView: any) => {
         setIsGridView(gridView);
     };
 
     // Updated card press handler to navigate to profile
-    const handleCardPress = (item:any) => {
+    const handleCardPress = (item: any) => {
         console.log('NGO card pressed:', item.name);
 
         // Navigate to NGO Profile screen
@@ -135,6 +166,18 @@ export default function NgoScreen({ navigation }) {
             Alert.alert('Error', 'Unable to view NGO profile. Please try again.');
         }
     };
+
+    const handleTopNgoPress = (item: any) => {
+        handleCardPress(item); // Reuse the same navigation logic
+    };
+
+    const handleViewAllTopNgos = () => {
+        // Optional: Navigate to a dedicated top NGOs screen or filter current list
+        console.log('View all top NGOs pressed');
+    };
+
+    // Determine if we should show top NGOs section
+    const showTopNgos = !searchText && !selectedCategory && topNgos.length > 0;
 
     return (
         <View style={styles.container}>
@@ -159,7 +202,17 @@ export default function NgoScreen({ navigation }) {
                 onCategorySelect={handleCategorySelect}
             />
 
-            {/* NGO List Component */}
+            {/* Top NGOs Section - Show above All NGOs */}
+            {showTopNgos && (
+                <TopNgosSection
+                    data={topNgos}
+                    loading={topNgosLoading}
+                    onNgoPress={handleTopNgoPress}
+                    onViewAll={handleViewAllTopNgos}
+                />
+            )}
+
+            {/* NGO List Component - All NGOs */}
             <NgoList
                 data={ngos}
                 isGridView={isGridView}
@@ -168,6 +221,7 @@ export default function NgoScreen({ navigation }) {
                 onRefresh={handleRefresh}
                 onLoadMore={handleLoadMore}
                 onCardPress={handleCardPress}
+                showTopSection={showTopNgos}
             />
 
             {/* Loading Overlay Component */}

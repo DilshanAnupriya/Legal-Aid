@@ -7,8 +7,11 @@ const lawyerSchema = new mongoose.Schema(
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true },
-    specialization: { type: String },
-    contactNumber: { type: String },
+    specialization: { type: String,required: true },
+    contactNumber: { type: String,required: true },
+    licenseNumber:{type:String,required: true},
+    experience : {type:Number,required: true},
+    isApproved: {type:Boolean,required: true,default: false},
   },
   { timestamps: true }
 );

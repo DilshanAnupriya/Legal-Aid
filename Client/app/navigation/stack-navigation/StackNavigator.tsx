@@ -3,12 +3,25 @@ import { createStackNavigator } from "@react-navigation/stack";
 import HomeBottomTabNavigation from "@/app/navigation/tab-navigation/HomeBottomTabNavigation";
 import { COLOR } from "@/constants/ColorPallet";
 import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
+
 import React from "react";
 import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
 import UserProfileScreen from "@/components/ui/screen/UserProfileScreen";
 import LawyerProfileScreen from "@/components/ui/screen/LawyerProfileScreen";
 import NgoOwnProfileScreen from "@/components/ui/screen/NgoOwnProfileScreen";
 import RoleBasedWelcome from "@/components/ui/screen/RoleBasedWelcome";
+
+import UserProfile from "@/components/ui/screen/UserProfile";
+import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
+import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
+import LawyerProfile from "@/components/ui/screen/LawyerDetails"
+import LoginScreen from "@/components/ui/screen/LoginScreen";
+import SignUpScreen from "@/components/ui/screen/SignUpScreen";
+import React from "react";
+import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
+import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
+import LanguageDemo from "@/components/screens/LanguageDemo";
+
 
 const Stack = createStackNavigator();
 
@@ -32,6 +45,30 @@ export default function StackNavigator() {
                 options={{title:'NGO'}}
                 component={NgoScreen}
             />
+
+            <Stack.Screen
+                name={'Profile'}
+                options={{title:'Profile'}}
+                component={UserProfile}
+            />
+
+            <Stack.Screen
+                name={'LawyerRegistrationForm'}
+                options={{title:'LawyerRegistrationForm'}}
+                component={LawyerRegistrationForm}
+            />
+
+            <Stack.Screen
+                name={'LawyersTableAdmin'}
+                options={{title:'Lawyers Table'}}
+                component={LawyersTableAdmin}
+            />
+
+            <Stack.Screen
+                name={'LawyerProfile'}
+                options={{title:'Lawyers profile'}}
+                component={LawyerProfile}
+            />
             <Stack.Screen
                 name="NgoProfile"
                 component={NgoProfileScreen}
@@ -41,6 +78,7 @@ export default function StackNavigator() {
                 })}
             />
             <Stack.Screen
+
                 name="UserProfile"
                 component={UserProfileScreen}
                 options={{
@@ -67,6 +105,20 @@ export default function StackNavigator() {
                 options={{
                     title: 'Welcome',
                     headerLeft: () => null, // Disable back button
+
+                name="LanguageSettings"
+                component={LanguageSettingsScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="LanguageDemo"
+                component={LanguageDemo}
+                options={{
+                    title: 'Language Demo',
+                    headerShown: false,
+
                 }}
             />
         </Stack.Navigator>

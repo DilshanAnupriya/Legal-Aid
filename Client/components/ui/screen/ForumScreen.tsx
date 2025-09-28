@@ -14,42 +14,141 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
+    FlatList,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import CreatePostModal from '../../modals/CreatePostModal';
+import CreatePollModal from '../../modals/CreatePollModal';
 import PostDetailModal from '../../modals/PostDetailModal';
+import PollCard from '../../cards/PollCard';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
+// Define interfaces for better type safety
+interface ForumPost {
+    id: string;
+    _id?: string;
+    title: string;
+    author: string;
+    replies: number;
+    views: number;
+    lastActivity: string;
+    lastActivityRaw?: string;
+    createdAt: string;
+    category: string;
+    isAnswered: boolean;
+    priority: string;
+    tags: string[];
+    type: 'post' | 'poll';
+    // Poll-specific properties
+    topic?: string;
+    options?: string[];
+    votes?: number[];
+    voters?: string[];
+    totalVotes?: number;
+    isAnonymous?: boolean;
+    description?: string;
+}
+
 const ForumsScreen = () => {
     const { user } = useAuth();
+    const { t } = useTranslation();
+    const { theme, colors } = useTheme();
     const [activeCategory, setActiveCategory] = useState('All');
-    const [searchQuery, setSearchQuery] = useState('');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
     const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false);
     const [isPostDetailModalVisible, setIsPostDetailModalVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState<any>(null);
     const [editingPost, setEditingPost] = useState<any>(null);
-    const [forumPosts, setForumPosts] = useState([]);
+    const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalPosts: 0,
         totalViews: 0,
         answerRate: 0,
     });
-    const [categories, setCategories] = useState([
-        { id: 1, name: 'All', count: 0, icon: '📋' },
-        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
-        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
-        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
-        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
-        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
-    ]);
-    const [trendingTopics, setTrendingTopics] = useState([]);
+    // Create categories with translated names
+    const getTranslatedCategories = () => {
+        const categories = [
+            { id: 1, name: 'All', translatedName: t('forum.all'), count: 0, icon: '📋' },
+            { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), count: 0, icon: '👨‍👩‍👧‍👦' },
+            { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), count: 0, icon: '🏠' },
+            { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), count: 0, icon: '💼' },
+            { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), count: 0, icon: '⚖️' },
+            { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), count: 0, icon: '🚔' },
+        ];
+        
+        // Calculate 'All' count based on available posts
+        const totalLegalCount = forumPosts.length;
+        categories[0].count = totalLegalCount;
+        
+        return categories;
+    };
+
+    const [categories, setCategories] = useState(getTranslatedCategories());
+    const [trendingTopics, setTrendingTopics] = useState<any[]>([]);
     const [sortOrder, setSortOrder] = useState('Newest');
+
+    // Update categories when language changes
+    useEffect(() => {
+        setCategories(prevCategories => {
+            const translatedCategories = getTranslatedCategories();
+            return prevCategories.map((category, index) => {
+                // For 'All' category, recalculate count as sum of all legal categories
+                if (index === 0) {
+                    const totalLegalCount = prevCategories.slice(1).reduce((sum, cat) => sum + cat.count, 0);
+                    return {
+                        ...category,
+                        translatedName: translatedCategories[index].translatedName,
+                        count: totalLegalCount
+                    };
+                }
+                return {
+                    ...category,
+                    translatedName: translatedCategories[index].translatedName
+                };
+            });
+        });
+    }, [t]);
+
+    // Helper functions to get translated dropdown values
+    const getTranslatedContentType = (type: string) => {
+        switch (type) {
+            case 'All':
+                return t('forum.all');
+            case 'Forums':
+                return t('forum.forums');
+            case 'Polls':
+                return t('forum.polls');
+            default:
+                return type;
+        }
+    };
+
+    const getTranslatedSortOrder = (order: string) => {
+        switch (order) {
+            case 'Newest':
+                return t('forum.newest');
+            case 'Oldest':
+                return t('forum.oldest');
+            default:
+                return order;
+        }
+    };
     const [showSortDropdown, setShowSortDropdown] = useState(false);
+    const [contentType, setContentType] = useState('All');
+    const [showContentTypeDropdown, setShowContentTypeDropdown] = useState(false);
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [postToDelete, setPostToDelete] = useState<{id: string, title: string} | null>(null);
+    const [isCreatePollModalVisible, setIsCreatePollModalVisible] = useState(false);
+    const [isEditPollModalVisible, setIsEditPollModalVisible] = useState(false);
+    const [editingPoll, setEditingPoll] = useState<any>(null);
+    const [polls, setPolls] = useState<ForumPost[]>([]);
+    const [isGridView, setIsGridView] = useState(true);
+    const [searchBarText, setSearchBarText] = useState('');
 
     // Multiple URL options for different environments
     const getApiUrls = () => {
@@ -87,18 +186,75 @@ const ForumsScreen = () => {
     };
 
     // API Functions
+    const fetchPolls = async () => {
+        try {
+            console.log('Fetching polls from:', `${BASE_URL}/polls`);
+
+            const response = await fetch(`${BASE_URL}/polls?category=${activeCategory}&search=${searchBarText}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('Polls response status:', response.status);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Polls response data:', data);
+
+            if (data.success && data.data.polls) {
+                // Transform backend poll data to match frontend format
+                const transformedPolls = data.data.polls.map((poll: any) => {
+                    const transformed = {
+                        id: poll._id,
+                        _id: poll._id,
+                        title: poll.topic, // Map topic to title for consistency
+                        topic: poll.topic,
+                        options: poll.options,
+                        votes: poll.votes,
+                        voters: poll.voters,
+                        totalVotes: poll.totalVotes,
+                        author: poll.author,
+                        category: poll.category,
+                        isAnonymous: poll.isAnonymous,
+                        createdAt: poll.createdAt,
+                        lastActivity: formatLastActivity(poll.lastActivity || poll.createdAt),
+                        lastActivityRaw: poll.lastActivity || poll.createdAt,
+                        type: 'poll', // Add type identifier
+                        tags: [], // Empty tags array for consistency
+                        replies: 0, // Polls don't have replies
+                        views: poll.totalVotes || 0, // Use total votes as views
+                        isAnswered: false, // Polls don't have answered state
+                        priority: 'medium', // Default priority
+                    };
+                    console.log('Transformed poll:', transformed);
+                    return transformed;
+                });
+                return transformedPolls;
+            } else {
+                console.warn('No polls found or invalid response');
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching polls:', error);
+            return [];
+        }
+    };
+
     const fetchPosts = async () => {
         try {
             setLoading(true);
             console.log('Fetching posts from:', `${BASE_URL}/posts`);
 
-            const response = await fetch(`${BASE_URL}/posts?category=${activeCategory}&search=${searchQuery}`, {
+            const response = await fetch(`${BASE_URL}/posts?category=${activeCategory}&search=${searchBarText}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000, // 10 second timeout
             });
 
             console.log('Response status:', response.status);
@@ -125,8 +281,21 @@ const ForumsScreen = () => {
                     isAnswered: post.isAnswered,
                     priority: post.priority,
                     tags: post.tags,
+                    type: 'post', // Add type identifier
                 }));
-                setForumPosts(transformedPosts);
+
+                // Fetch polls and combine with posts
+                const polls = await fetchPolls();
+                const combinedContent = [...transformedPosts, ...polls];
+                
+                // Sort combined content by creation date (newest first)
+                combinedContent.sort((a, b) => {
+                    const dateA = new Date(a.createdAt);
+                    const dateB = new Date(b.createdAt);
+                    return dateB.getTime() - dateA.getTime();
+                });
+
+                setForumPosts(combinedContent);
             } else {
                 throw new Error(data.message || 'Failed to fetch posts');
             }
@@ -169,8 +338,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -189,24 +356,34 @@ const ForumsScreen = () => {
 
                 // Update categories with real counts from backend
                 if (data.data.categoryBreakdown) {
-                    const updatedCategories = [
-                        { id: 1, name: 'All', count: data.data.totalPosts || 0, icon: '📋' },
-                        { id: 2, name: 'Family Law', count: 0, icon: '👨‍👩‍👧‍👦' },
-                        { id: 3, name: 'Property Law', count: 0, icon: '🏠' },
-                        { id: 4, name: 'Employment Law', count: 0, icon: '💼' },
-                        { id: 5, name: 'Civil Law', count: 0, icon: '⚖️' },
-                        { id: 6, name: 'Criminal Law', count: 0, icon: '🚔' },
-                    ];
+                    setCategories(prevCategories => {
+                        const updatedCategories = [
+                            { id: 1, name: 'All', translatedName: t('forum.all'), count: 0, icon: '📋' }, // Will be calculated below
+                            { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), count: 0, icon: '👨‍👩‍👧‍👦' },
+                            { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), count: 0, icon: '🏠' },
+                            { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), count: 0, icon: '💼' },
+                            { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), count: 0, icon: '⚖️' },
+                            { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), count: 0, icon: '🚔' },
+                        ];
 
-                    // Map backend category counts to frontend categories
-                    data.data.categoryBreakdown.forEach((cat: any) => {
-                        const categoryIndex = updatedCategories.findIndex(c => c.name === cat._id);
-                        if (categoryIndex !== -1) {
-                            updatedCategories[categoryIndex].count = cat.count;
-                        }
+                        // Map backend category counts to frontend categories
+                        let totalLegalCategoriesCount = 0;
+                        data.data.categoryBreakdown.forEach((cat: any) => {
+                            const categoryIndex = updatedCategories.findIndex(c => c.name === cat._id);
+                            if (categoryIndex !== -1) {
+                                updatedCategories[categoryIndex].count = cat.count;
+                                // Sum up counts for legal categories (excluding 'All')
+                                if (categoryIndex > 0) {
+                                    totalLegalCategoriesCount += cat.count;
+                                }
+                            }
+                        });
+
+                        // Set 'All' category count as the sum of all 5 legal categories
+                        updatedCategories[0].count = totalLegalCategoriesCount;
+
+                        return updatedCategories;
                     });
-
-                    setCategories(updatedCategories);
                 }
             }
         } catch (error) {
@@ -229,8 +406,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -299,6 +474,157 @@ const ForumsScreen = () => {
                 `Failed to create post. Please check your connection and try again.\n\nError: ${errorMessage}`,
                 [
                     { text: 'Retry', onPress: () => createPost(postData) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const createPoll = async (pollData: any) => {
+        try {
+            console.log('Creating poll:', pollData);
+            console.log('POST URL:', `${BASE_URL}/polls`);
+
+            const response = await fetch(`${BASE_URL}/polls`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pollData),
+            });
+
+            console.log('Create poll response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Create poll error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Create poll response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your poll has been created successfully!');
+                // Add a small delay to ensure server has processed the poll
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the posts list (which will include polls)
+                    fetchStats(); // Refresh stats and categories
+                }, 500);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to create poll');
+            }
+        } catch (error) {
+            console.error('Error creating poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Poll Creation Failed',
+                `Failed to create poll. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => createPoll(pollData) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const updatePoll = async (pollData: any) => {
+        try {
+            console.log('Updating poll with data:', pollData);
+            console.log('Editing poll full object:', editingPoll);
+            console.log('Editing poll ID:', editingPoll?._id);
+            
+            if (!editingPoll || !editingPoll._id) {
+                console.error('No editing poll or poll ID found!');
+                Alert.alert('Error', 'No poll selected for editing');
+                return;
+            }
+            
+            console.log('PUT URL:', `${BASE_URL}/polls/${editingPoll._id}`);
+
+            const response = await fetch(`${BASE_URL}/polls/${editingPoll._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pollData),
+            });
+
+            console.log('Update poll response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Update poll error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Update poll response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Your poll has been updated successfully!');
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the posts list
+                    fetchStats(); // Refresh stats and categories
+                }, 500);
+            } else {
+                console.error('Poll update failed:', data);
+                Alert.alert('Error', data.message || 'Failed to update poll');
+            }
+        } catch (error) {
+            console.error('Error updating poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Poll Update Failed',
+                `Failed to update poll. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => updatePoll(pollData) },
+                    { text: 'OK' }
+                ]
+            );
+        }
+    };
+
+    const deletePoll = async (pollId: string) => {
+        try {
+            console.log('Deleting poll:', pollId);
+            console.log('DELETE URL:', `${BASE_URL}/polls/${pollId}`);
+
+            const response = await fetch(`${BASE_URL}/polls/${pollId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('Delete poll response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Delete poll error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Delete poll response data:', data);
+
+            if (data.success) {
+                Alert.alert('Success', 'Poll has been deleted successfully!');
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the posts list
+                    fetchStats(); // Refresh stats and categories
+                }, 500);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to delete poll');
+            }
+        } catch (error) {
+            console.error('Error deleting poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert(
+                'Poll Deletion Failed',
+                `Failed to delete poll. Please check your connection and try again.\n\nError: ${errorMessage}`,
+                [
+                    { text: 'Retry', onPress: () => deletePoll(pollId) },
                     { text: 'OK' }
                 ]
             );
@@ -416,7 +742,13 @@ const ForumsScreen = () => {
 
     const confirmDelete = () => {
         if (postToDelete) {
-            deletePost(postToDelete.id, postToDelete.title);
+            // Check if the item to delete is a poll or post
+            const itemToDelete = forumPosts.find(item => item.id === postToDelete.id);
+            if (itemToDelete && itemToDelete.type === 'poll') {
+                deletePoll(postToDelete.id);
+            } else {
+                deletePost(postToDelete.id, postToDelete.title);
+            }
             setShowDeleteConfirmModal(false);
             setPostToDelete(null);
         }
@@ -437,8 +769,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -466,10 +796,18 @@ const ForumsScreen = () => {
 
     // Helper function to check if current user can edit the post
     const canEditPost = (postAuthor: string) => {
-        if (!user?.email) return false;
+        if (!user?.email) {
+            console.log('No user email found');
+            return false;
+        }
         
         // Get current user's display name (same logic as in CreatePostModal)
         const currentUserDisplayName = user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1);
+        
+        console.log('Checking edit permissions:');
+        console.log('- Post/Poll Author:', postAuthor);
+        console.log('- Current User:', currentUserDisplayName);
+        console.log('- Can Edit:', postAuthor === currentUserDisplayName && postAuthor !== 'Anonymous User');
         
         // Check if the post author matches current user AND post is not by "Anonymous User"
         // Users cannot edit anonymous posts (even their own) for privacy reasons
@@ -515,13 +853,16 @@ const ForumsScreen = () => {
         fetchPosts();
         fetchStats();
         fetchTrendingTopics();
-    }, [activeCategory, searchQuery]);
+    }, [activeCategory, searchBarText]);
 
     // Close dropdown when clicking outside or when component unmounts
     useEffect(() => {
         const handleClickOutside = () => {
             if (showSortDropdown) {
                 setShowSortDropdown(false);
+            }
+            if (showContentTypeDropdown) {
+                setShowContentTypeDropdown(false);
             }
         };
 
@@ -532,14 +873,47 @@ const ForumsScreen = () => {
                 document.removeEventListener('click', handleClickOutside);
             };
         }
-    }, [showSortDropdown]);
+    }, [showSortDropdown, showContentTypeDropdown]);
 
-    const filteredPosts = forumPosts.filter((post: any) => {
-        const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
-        const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            post.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-        return matchesCategory && matchesSearch;
-    }).sort((a: any, b: any) => {
+    const filteredPosts = forumPosts.filter((item: ForumPost) => {
+        const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+        
+        // Content type filter
+        const matchesContentType = contentType === 'All' || 
+            (contentType === 'Forums' && item.type === 'post') ||
+            (contentType === 'Polls' && item.type === 'poll');
+        
+        let matchesSearch = false;
+        if (searchBarText.trim() === '') {
+            matchesSearch = true; // If no search query, include all items
+        } else {
+            const query = searchBarText.toLowerCase();
+            
+            // For posts, check title and tags
+            if (item.type === 'post') {
+                const titleMatch = item.title ? item.title.toLowerCase().includes(query) : false;
+                const tagMatch = item.tags && Array.isArray(item.tags) ? 
+                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query)) : false;
+                matchesSearch = titleMatch || tagMatch;
+            }
+            // For polls, check topic and options
+            else if (item.type === 'poll') {
+                const topicMatch = item.topic ? item.topic.toLowerCase().includes(query) : false;
+                const optionMatch = item.options && Array.isArray(item.options) ? 
+                    item.options.some((option: string) => option && option.toLowerCase().includes(query)) : false;
+                matchesSearch = topicMatch || optionMatch;
+            }
+            // Fallback for items without type
+            else {
+                const titleMatch = (item.title || item.topic || '').toLowerCase().includes(query);
+                const tagMatch = item.tags && Array.isArray(item.tags) ? 
+                    item.tags.some((tag: string) => tag && tag.toLowerCase().includes(query)) : false;
+                matchesSearch = titleMatch || tagMatch;
+            }
+        }
+        
+        return matchesCategory && matchesContentType && matchesSearch;
+    }).sort((a: ForumPost, b: ForumPost) => {
         // Sort by creation date - use createdAt if available, otherwise lastActivityRaw, otherwise fallback to id
         let dateA, dateB;
         
@@ -587,12 +961,80 @@ const ForumsScreen = () => {
         updatePost(postData);
     };
 
+    const handleCreatePoll = async (pollData: any) => {
+        await createPoll(pollData);
+    };
+
+    const handleUpdatePoll = async (pollData: any) => {
+        console.log('handleUpdatePoll called with data:', pollData);
+        console.log('editingPoll state:', editingPoll);
+        await updatePoll(pollData);
+    };
+
+    const handleDeletePoll = (pollId: string, pollTopic: string) => {
+        setPostToDelete({id: pollId, title: pollTopic});
+        setShowDeleteConfirmModal(true);
+    };
+
+    const handleVoteOnPoll = async (pollId: string, optionIndex: number, userId: string) => {
+        try {
+            console.log('Voting on poll:', pollId, optionIndex, userId);
+            const response = await fetch(`${BASE_URL}/polls/${pollId}/vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ optionIndex, userId }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Refresh posts to show updated poll results
+                setTimeout(() => {
+                    fetchPosts();
+                }, 300);
+            } else {
+                Alert.alert('Error', data.message || 'Failed to cast vote');
+            }
+        } catch (error) {
+            console.error('Error voting on poll:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert('Voting Failed', `Failed to cast vote: ${errorMessage}`);
+        }
+    };
+
     const openCreatePostModal = () => {
         setIsCreatePostModalVisible(true);
     };
 
     const closeCreatePostModal = () => {
         setIsCreatePostModalVisible(false);
+    };
+
+    const openCreatePollModal = () => {
+        setIsCreatePollModalVisible(true);
+    };
+
+    const closeCreatePollModal = () => {
+        setIsCreatePollModalVisible(false);
+    };
+
+    const closeEditPollModal = () => {
+        setIsEditPollModalVisible(false);
+        setEditingPoll(null);
+    };
+
+    const handleEditPoll = (poll: any) => {
+        console.log('handleEditPoll called with poll:', poll);
+        setEditingPoll(poll);
+        setIsEditPollModalVisible(true);
+        console.log('Edit poll modal should now be visible');
     };
 
     const closeEditPostModal = () => {
@@ -602,6 +1044,12 @@ const ForumsScreen = () => {
 
     const handlePostPress = async (postId: string) => {
         try {
+            // Don't handle clicks for polls - they're already interactive
+            const item = forumPosts.find(p => p.id === postId);
+            if (item && item.type === 'poll') {
+                return; // Do nothing for polls
+            }
+
             setLoading(true);
             console.log('Fetching post details for ID:', postId);
 
@@ -610,8 +1058,6 @@ const ForumsScreen = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // @ts-ignore - timeout is supported in React Native
-                timeout: 10000,
             });
 
             if (!response.ok) {
@@ -635,6 +1081,9 @@ const ForumsScreen = () => {
         }
     };
 
+    // Create dynamic styles based on theme
+    const styles = createStyles(colors, theme);
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView 
@@ -644,23 +1093,74 @@ const ForumsScreen = () => {
                 {/* Modern Header with Gradient Background */}
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
-                        <Text style={styles.headerTitle}>Legal Community</Text>
-                        <Text style={styles.headerSubtitle}>Connect • Ask • Learn • Grow</Text>
+                        <Text style={styles.headerTitle}>{t('forum.title')}</Text>
+                        <Text style={styles.headerSubtitle}>{t('forum.subtitle', { defaultValue: 'Connect • Ask • Learn • Grow' })}</Text>
                         <View style={styles.statsContainer}>
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>{stats.totalPosts}</Text>
-                                <Text style={styles.statLabel}>Total Posts</Text>
+                                <Text style={styles.statLabel}>{t('common.posts', { defaultValue: 'Total Posts' })}</Text>
                             </View>
                             <View style={styles.statDivider} />
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>{stats.totalViews}</Text>
-                                <Text style={styles.statLabel}>Total Views</Text>
+                                <Text style={styles.statLabel}>{t('common.views', { defaultValue: 'Total Views' })}</Text>
                             </View>
                             <View style={styles.statDivider} />
                             <View style={styles.statItem}>
-                                <Text style={styles.statNumber}>{stats.answerRate}%</Text>
-                                <Text style={styles.statLabel}>Answered</Text>
+                                <Text style={styles.statNumber}>{forumPosts.filter((post: ForumPost) => post.type === 'poll').length}</Text>
+                                <Text style={styles.statLabel}>{t('forum.polls', { defaultValue: 'Polls' })}</Text>
                             </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Search Bar with Grid/List View Toggle */}
+                <View style={styles.searchBarSection}>
+                    <View style={styles.searchBarContainer}>
+                        <Ionicons name="search-outline" size={20} color={theme === 'dark' ? colors.primary : '#666'} style={styles.searchBarIcon} />
+                        <TextInput
+                            style={styles.searchBarInput}
+                            placeholder={t('forum.searchPlaceholder', { defaultValue: 'Search discussions...' })}
+                            value={searchBarText}
+                            onChangeText={setSearchBarText}
+                            placeholderTextColor={theme === 'dark' ? colors.darkgray : '#999'}
+                            selectionColor={colors.primary}
+                        />
+                        {searchBarText.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchBarText('')}>
+                                <Ionicons name="close-circle-outline" size={20} color={theme === 'dark' ? colors.primary : '#666'} />
+                            </TouchableOpacity>
+                        )}
+                        {/* Grid/List View Toggle */}
+                        <View style={styles.viewToggleContainer}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.viewToggleButton,
+                                    { backgroundColor: isGridView ? colors.accent : (theme === 'dark' ? colors.white : '#FFFFFF') }
+                                ]}
+                                onPress={() => setIsGridView(true)}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons
+                                    name="grid-outline"
+                                    size={18}
+                                    color={isGridView ? '#FFFFFF' : (theme === 'dark' ? colors.primary : '#000000')}
+                                />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.viewToggleButton,
+                                    { backgroundColor: !isGridView ? colors.accent : (theme === 'dark' ? colors.white : '#FFFFFF') }
+                                ]}
+                                onPress={() => setIsGridView(false)}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons
+                                    name="list-outline"
+                                    size={18}
+                                    color={!isGridView ? '#FFFFFF' : (theme === 'dark' ? colors.primary : '#000000')}
+                                />
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -676,18 +1176,32 @@ const ForumsScreen = () => {
                             <Text style={styles.askQuestionEmoji}>💭</Text>
                         </View>
                         <View style={styles.askQuestionContent}>
-                            <Text style={styles.askQuestionTitle}>Ask a Question</Text>
-                            <Text style={styles.askQuestionSubtitle}>Get expert legal advice anonymously</Text>
+                            <Text style={styles.askQuestionTitle}>{t('forum.askQuestion')}</Text>
+                            <Text style={styles.askQuestionSubtitle}>{t('forum.askQuestionSubtitle', { defaultValue: 'Get expert legal advice anonymously' })}</Text>
                         </View>
                         <Text style={styles.askQuestionArrow}>→</Text>
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={styles.addPollCard}
+                        onPress={openCreatePollModal}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.addPollIcon}>
+                            <Text style={styles.addPollEmoji}>📊</Text>
+                        </View>
+                        <View style={styles.addPollContent}>
+                            <Text style={styles.addPollTitle}>{t('forum.addPoll')}</Text>
+                            <Text style={styles.addPollSubtitle}>{t('forum.addPollSubtitle', { defaultValue: 'Create polls to gather community opinions' })}</Text>
+                        </View>
+                        <Text style={styles.addPollArrow}>→</Text>
+                    </TouchableOpacity>
 
                 </View>
 
                 {/* Categories with Icons */}
                 <View style={styles.categoriesSection}>
-                    <Text style={styles.sectionTitle}>Legal Categories</Text>
+                    <Text style={styles.sectionTitle}>{t('forum.legalCategories')}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
                         {categories.map((category) => (
                             <TouchableOpacity
@@ -701,11 +1215,11 @@ const ForumsScreen = () => {
                                 <Text style={[
                                     styles.categoryName,
                                     activeCategory === category.name && styles.activeCategoryName,
-                                ]}>{category.name}</Text>
+                                ]}>{category.translatedName}</Text>
                                 <Text style={[
                                     styles.categoryCount,
                                     activeCategory === category.name && styles.activeCategoryCount,
-                                ]}>{category.count} posts</Text>
+                                ]}>{category.count} {t('common.posts', { defaultValue: 'posts' })}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -714,9 +1228,9 @@ const ForumsScreen = () => {
                 {/* Trending Topics */}
                 <View style={styles.trendingSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>🔥 Trending Topics</Text>
+                        <Text style={styles.sectionTitle}>🔥 {t('forum.trendingTopics')}</Text>
                         <TouchableOpacity>
-                            <Text style={styles.seeAllText}>See All</Text>
+                            <Text style={styles.seeAllText}>{t('common.seeAll', { defaultValue: 'See All' })}</Text>
                         </TouchableOpacity>
                     </View>
                     
@@ -801,30 +1315,65 @@ const ForumsScreen = () => {
                     )}
                 </View>
 
-                {/* Enhanced Search Bar */}
-                <View style={styles.searchSection}>
-                    <View style={styles.searchContainer}>
-                        <Text style={styles.searchIcon}>🔍</Text>
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search questions, topics, or keywords..."
-                            placeholderTextColor="#8E8E93"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                        {searchQuery.length > 0 && (
-                            <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <Text style={styles.clearIcon}>✕</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-
                 {/* Forum Posts with Enhanced Design */}
                 <View style={styles.postsSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Recent Discussions</Text>
+                        <Text style={styles.sectionTitle}>{t('forum.recentDiscussions')}</Text>
                         <View style={styles.filterContainer}>
+                            <TouchableOpacity 
+                                style={styles.contentTypeButton}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    setShowContentTypeDropdown(!showContentTypeDropdown);
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.contentTypeText}>{getTranslatedContentType(contentType)}</Text>
+                                <Text style={styles.filterArrow}>▼</Text>
+                            </TouchableOpacity>
+                            {showContentTypeDropdown && (
+                                <View style={styles.contentTypeDropdown}>
+                                    <TouchableOpacity 
+                                        style={[styles.contentTypeOption, contentType === 'All' && styles.activeContentTypeOption]}
+                                        onPress={(e) => {
+                                            e.stopPropagation();
+                                            setContentType('All');
+                                            setShowContentTypeDropdown(false);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.contentTypeOptionText, contentType === 'All' && styles.activeContentTypeOptionText]}>
+                                            {t('forum.all')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        style={[styles.contentTypeOption, contentType === 'Forums' && styles.activeContentTypeOption]}
+                                        onPress={(e) => {
+                                            e.stopPropagation();
+                                            setContentType('Forums');
+                                            setShowContentTypeDropdown(false);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.contentTypeOptionText, contentType === 'Forums' && styles.activeContentTypeOptionText]}>
+                                            {t('forum.forums')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        style={[styles.contentTypeOption, contentType === 'Polls' && styles.activeContentTypeOption]}
+                                        onPress={(e) => {
+                                            e.stopPropagation();
+                                            setContentType('Polls');
+                                            setShowContentTypeDropdown(false);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.contentTypeOptionText, contentType === 'Polls' && styles.activeContentTypeOptionText]}>
+                                            {t('forum.polls')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                             <TouchableOpacity 
                                 style={styles.filterButton}
                                 onPress={(e) => {
@@ -833,7 +1382,7 @@ const ForumsScreen = () => {
                                 }}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.filterText}>{sortOrder}</Text>
+                                <Text style={styles.filterText}>{getTranslatedSortOrder(sortOrder)}</Text>
                                 <Text style={styles.filterArrow}>▼</Text>
                             </TouchableOpacity>
                             {showSortDropdown && (
@@ -848,7 +1397,7 @@ const ForumsScreen = () => {
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.sortOptionText, sortOrder === 'Newest' && styles.activeSortOptionText]}>
-                                            Newest
+                                            {t('forum.newest')}
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity 
@@ -861,7 +1410,7 @@ const ForumsScreen = () => {
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.sortOptionText, sortOrder === 'Oldest' && styles.activeSortOptionText]}>
-                                            Oldest
+                                            {t('forum.oldest', { defaultValue: 'Oldest' })}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -871,103 +1420,192 @@ const ForumsScreen = () => {
 
                     {loading ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#667eea" />
-                            <Text style={styles.loadingText}>Loading posts...</Text>
+                            <ActivityIndicator size="large" color={colors.primary} />
+                            <Text style={styles.loadingText}>{t('common.loading')}</Text>
                         </View>
                     ) : filteredPosts.length === 0 ? (
                         <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>No posts found</Text>
-                            <Text style={styles.emptySubtext}>Be the first to ask a question!</Text>
+                            <Text style={styles.emptyText}>{t('forum.noResults')}</Text>
+                            <Text style={styles.emptySubtext}>{t('forum.noResultsSubtext', { defaultValue: 'Be the first to ask a question or create a poll!' })}</Text>
                         </View>
                     ) : (
-                        filteredPosts.map((post: any) => (
-                            <TouchableOpacity
-                                key={post.id}
-                                style={styles.postCard}
-                                onPress={() => handlePostPress(post.id)}
-                                activeOpacity={0.8}
-                            >
-                                {/* Priority Indicator and Delete Button */}
-                                <View style={styles.topRightContainer}>
-                                    <View style={styles.postPriorityIndicator}>
-                                        <View style={[
-                                            styles.priorityDot,
-                                            post.priority === 'high' && styles.highPriority,
-                                            post.priority === 'medium' && styles.mediumPriority,
-                                            post.priority === 'low' && styles.lowPriority,
-                                        ]} />
-                                    </View>
-                                    
-                                    {/* Edit and Delete Buttons - Only show for posts by current user */}
-                                    {canEditPost(post.author) && (
-                                        <>
+                        <FlatList
+                            data={filteredPosts}
+                            numColumns={isGridView ? 2 : 1}
+                            key={isGridView ? 'grid' : 'list'}
+                            showsVerticalScrollIndicator={false}
+                            renderItem={({ item }: { item: ForumPost }) => {
+                                // Render PollCard for polls
+                                if (item.type === 'poll') {
+                                    return (
+                                        <View style={isGridView ? styles.gridItemContainer : null}>
+                                            <PollCard
+                                                poll={item}
+                                                onVote={handleVoteOnPoll}
+                                                onEdit={handleEditPoll}
+                                                onDelete={handleDeletePoll}
+                                                userId={user?.email || user?.id || `anonymous_${Date.now()}`}
+                                                canEdit={canEditPost(item.author)}
+                                                isGridView={isGridView}
+                                            />
+                                        </View>
+                                    );
+                                }
+                                
+                                // Regular post rendering
+                                return (
+                                    <View style={isGridView ? styles.gridItemContainer : null}>
+                                        {isGridView ? (
+                                            // Grid View Post Card
                                             <TouchableOpacity
-                                                style={styles.editButton}
-                                                onPress={(e) => {
-                                                    e.stopPropagation(); // Prevent card press
-                                                    handleEditPost(post);
-                                                }}
-                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                style={styles.gridPostCard}
+                                                onPress={() => handlePostPress(item.id)}
+                                                activeOpacity={0.9}
                                             >
-                                                <Text style={styles.editIcon}>✏️</Text>
+                                                {/* Status Indicator */}
+                                                <View style={[styles.gridStatusBar, item.isAnswered ? styles.answeredBar : styles.pendingBar]} />
+                                                
+                                                {/* Card Content */}
+                                                <View style={styles.gridPostContent}>
+                                                    <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                    
+                                                    {/* Category Badge */}
+                                                    <View style={styles.gridCategoryBadge}>
+                                                        <Text style={styles.gridCategoryText}>{item.category}</Text>
+                                                    </View>
+                                                    
+                                                    {/* Author Info */}
+                                                    <View style={styles.gridAuthorSection}>
+                                                        <View style={styles.gridAvatarPlaceholder}>
+                                                            <Text style={styles.gridAvatarText}>{item.author.charAt(0)}</Text>
+                                                        </View>
+                                                        <View style={styles.gridAuthorDetails}>
+                                                            <Text style={styles.gridAuthorName} numberOfLines={1}>{item.author}</Text>
+                                                            <Text style={styles.gridPostTime}>{item.lastActivity || 'Just now'}</Text>
+                                                        </View>
+                                                    </View>
+                                                    
+                                                    {/* Stats */}
+                                                    <View style={styles.gridStatsSection}>
+                                                        <View style={styles.gridStatItem}>
+                                                            <Text style={styles.gridStatIcon}>💬</Text>
+                                                            <Text style={styles.gridStatText}>{item.replies || 0}</Text>
+                                                        </View>
+                                                        <View style={styles.gridStatItem}>
+                                                            <Text style={styles.gridStatIcon}>👁</Text>
+                                                            <Text style={styles.gridStatText}>{item.views || 0}</Text>
+                                                        </View>
+                                                        {item.isAnswered && (
+                                                            <View style={styles.gridSolvedBadge}>
+                                                                <Text style={styles.gridSolvedIcon}>✓</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                </View>
                                             </TouchableOpacity>
-                                            <Pressable
-                                                style={({ pressed }) => [
-                                                    styles.deleteButton,
-                                                    { opacity: pressed ? 0.7 : 1 }
-                                                ]}
-                                                onPress={(e) => {
-                                                    e.stopPropagation(); // Prevent card press
-                                                    handleDeletePost(post.id, post.title);
-                                                }}
-                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                            >
-                                                <Text style={styles.deleteIcon}>🗑️</Text>
-                                            </Pressable>
-                                        </>
-                                    )}
-                                </View>
-
-                                {/* Post Header */}
-                                <View style={styles.postHeader}>
-                                    <View style={styles.postTitleRow}>
-                                        <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
-                                        {post.isAnswered && (
-                                            <View style={styles.answeredBadge}>
-                                                <Text style={styles.answeredIcon}>✓</Text>
-                                            </View>
+                                        ) : (
+                                            // List View Post Card (existing design)
+                                            <TouchableOpacity
+                                style={styles.modernPostCard}
+                                onPress={() => handlePostPress(item.id)}
+                                activeOpacity={0.9}
+                            >
+                                {/* Status Indicator Bar */}
+                                <View style={[styles.statusBar, item.isAnswered ? styles.answeredBar : styles.pendingBar]} />
+                                
+                                {/* Card Header with Actions */}
+                                <View style={styles.modernCardHeaderNoTitle}>
+                                    {/* Edit and Delete Buttons */}
+                                    <View style={styles.actionButtons}>
+                                        {canEditPost(item.author) && (
+                                            <>
+                                                <TouchableOpacity
+                                                    style={styles.modernEditButton}
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditPost(item);
+                                                    }}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                >
+                                                    <Text style={styles.modernEditIcon}>✎</Text>
+                                                </TouchableOpacity>
+                                                <Pressable
+                                                    style={({ pressed }) => [
+                                                        styles.modernDeleteButton,
+                                                        { opacity: pressed ? 0.7 : 1 }
+                                                    ]}
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeletePost(item.id, item.title);
+                                                    }}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                >
+                                                    <Text style={styles.modernDeleteIcon}>✕</Text>
+                                                </Pressable>
+                                            </>
                                         )}
                                     </View>
                                 </View>
 
-                                {/* Tags */}
-                                <View style={styles.postTagsContainer}>
-                                    {post.tags.slice(0, 2).map((tag: string, index: number) => (
-                                        <View key={index} style={styles.tagChip}>
-                                            <Text style={styles.tagText}>#{tag}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-
-                                {/* Post Meta */}
-                                <View style={styles.postMeta}>
-                                    <View style={styles.postAuthor}>
-                                        <View style={styles.avatarPlaceholder}>
-                                            <Text style={styles.avatarText}>{post.author.charAt(0)}</Text>
-                                        </View>
-                                        <Text style={styles.authorName}>{post.author}</Text>
+                                {/* Main Content */}
+                                <View style={styles.modernCardContent}>
+                                    <View style={styles.titleSection}>
+                                        <Text style={styles.modernPostTitle} numberOfLines={2}>{item.title}</Text>
+                                        {item.isAnswered && (
+                                            <View style={styles.modernAnsweredBadge}>
+                                                <Text style={styles.modernAnsweredIcon}>✓</Text>
+                                                <Text style={styles.answeredText}>SOLVED</Text>
+                                            </View>
+                                        )}
                                     </View>
 
-                                    <View style={styles.postStats}>
-                                        <Text style={styles.statIcon}>💬</Text>
-                                        <Text style={styles.statText}>{post.replies}</Text>
-                                        <Text style={styles.statIcon}>👁</Text>
-                                        <Text style={styles.statText}>{post.views}</Text>
-                                        <Text style={styles.timeText}>{post.lastActivity}</Text>
+                                    {/* Category and Tags Row */}
+                                    <View style={styles.categoryTagsRow}>
+                                        <View style={styles.categoryBadge}>
+                                            <Text style={styles.categoryText}>{item.category}</Text>
+                                        </View>
+                                        <View style={styles.tagsContainer}>
+                                            {(item.tags || []).slice(0, 2).map((tag: string, index: number) => (
+                                                <View key={index} style={styles.modernTagChip}>
+                                                    <Text style={styles.modernTagText}>{tag}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Card Footer */}
+                                <View style={styles.modernCardFooter}>
+                                    <View style={styles.authorSection}>
+                                        <View style={styles.modernAvatarPlaceholder}>
+                                            <Text style={styles.modernAvatarText}>{item.author.charAt(0)}</Text>
+                                        </View>
+                                        <View style={styles.authorDetails}>
+                                            <Text style={styles.modernAuthorName}>{item.author}</Text>
+                                            <Text style={styles.postTime}>{item.lastActivity || 'Just now'}</Text>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.statsSection}>
+                                        <View style={styles.statGroup}>
+                                            <View style={styles.postStatItem}>
+                                                <Text style={styles.modernStatIcon}>💬</Text>
+                                                <Text style={styles.modernStatText}>{item.replies || 0}</Text>
+                                            </View>
+                                            <View style={styles.postStatItem}>
+                                                <Text style={styles.modernStatIcon}>👁</Text>
+                                                <Text style={styles.modernStatText}>{item.views || 0}</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </View>
                             </TouchableOpacity>
-                        ))
+                                        )}
+                                    </View>
+                                );
+                            }}
+                            keyExtractor={(item: ForumPost) => item.id}
+                        />
                     )}
                 </View>
 
@@ -980,6 +1618,22 @@ const ForumsScreen = () => {
                 visible={isCreatePostModalVisible}
                 onClose={closeCreatePostModal}
                 onSubmit={handleCreatePost}
+            />
+
+            {/* Create Poll Modal */}
+            <CreatePollModal
+                visible={isCreatePollModalVisible}
+                onClose={closeCreatePollModal}
+                onSubmit={handleCreatePoll}
+            />
+
+            {/* Edit Poll Modal */}
+            <CreatePollModal
+                visible={isEditPollModalVisible}
+                onClose={closeEditPollModal}
+                onSubmit={handleUpdatePoll}
+                editingPoll={editingPoll}
+                isEditMode={true}
             />
 
             {/* Edit Post Modal */}
@@ -1013,23 +1667,23 @@ const ForumsScreen = () => {
             >
                 <View style={styles.deleteModalOverlay}>
                     <View style={styles.deleteModalContainer}>
-                        <Text style={styles.deleteModalTitle}>Delete Post</Text>
+                        <Text style={styles.deleteModalTitle}>{t('messages.deletePost', { defaultValue: 'Delete Post' })}</Text>
                         <Text style={styles.deleteModalMessage}>
-                            Are you sure you want to delete "{postToDelete?.title}"?
-                            {'\n\n'}This action cannot be undone.
+                            {t('messages.deleteConfirm')} "{postToDelete?.title}"?
+                            {'\n\n'}{t('messages.deleteWarning', { defaultValue: 'This action cannot be undone.' })}
                         </Text>
                         <View style={styles.deleteModalButtons}>
                             <TouchableOpacity
                                 style={styles.deleteModalCancelButton}
                                 onPress={cancelDelete}
                             >
-                                <Text style={styles.deleteModalCancelText}>Cancel</Text>
+                                <Text style={styles.deleteModalCancelText}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.deleteModalConfirmButton}
                                 onPress={confirmDelete}
                             >
-                                <Text style={styles.deleteModalConfirmText}>Delete</Text>
+                                <Text style={styles.deleteModalConfirmText}>{t('common.delete')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -1039,14 +1693,14 @@ const ForumsScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, theme: string) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
     },
     // Header Styles
     header: {
-        backgroundColor: '#667eea',
+        backgroundColor: theme === 'dark' ? colors.secondary : colors.primary,
         paddingHorizontal: 20,
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 20,
         paddingBottom: 30,
@@ -1059,13 +1713,13 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 28,
         fontWeight: '800',
-        color: '#FFFFFF',
+        color: colors.textcol,
         marginBottom: 8,
         textAlign: 'center',
     },
     headerSubtitle: {
         fontSize: 16,
-        color: '#E8E8E8',
+        color: theme === 'dark' ? '#B0B0B0' : '#E8E8E8',
         marginBottom: 20,
         textAlign: 'center',
         fontWeight: '500',
@@ -1099,53 +1753,72 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
         alignSelf: 'center',
     },
-    // Search Section
-    searchSection: {
+    // Search Bar Section
+    searchBarSection: {
         paddingHorizontal: 20,
-        paddingVertical: 20,
-        backgroundColor: '#FFFFFF',
+        paddingVertical: 15,
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
     },
-    searchContainer: {
+    searchBarContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
-        borderRadius: 25,
-        paddingHorizontal: 15,
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
+        borderRadius: 12,
+        paddingHorizontal: 16,
         paddingVertical: 12,
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: theme === 'dark' ? colors.secondary : '#E5E5E5',
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    searchIcon: {
-        fontSize: 18,
-        marginRight: 10,
-        color: '#666666',
+    searchBarIcon: {
+        marginRight: 12,
     },
-    searchInput: {
+    searchBarInput: {
         flex: 1,
         fontSize: 16,
-        color: '#333333',
-        fontWeight: '500',
+        color: theme === 'dark' ? colors.primary : '#1A1A1A',
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+        ...(Platform.OS === 'web' && {
+            outline: 'none',
+            boxShadow: 'none',
+            border: 'none',
+        }),
     },
-    clearIcon: {
-        fontSize: 16,
-        color: '#999999',
+    viewToggleContainer: {
+        flexDirection: 'row',
         marginLeft: 10,
+        backgroundColor: theme === 'dark' ? colors.secondary : '#F5F5F5',
+        borderRadius: 8,
+        padding: 2,
+    },
+    viewToggleButton: {
+        width: 36,
+        height: 32,
+        borderRadius: 6,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 1,
     },
     // Quick Actions
     quickActionsSection: {
         paddingHorizontal: 20,
         paddingTop: 20,
         paddingBottom: 20,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
     },
     askQuestionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#667eea',
+        backgroundColor: theme === 'dark' ? colors.white : colors.primary,
         borderRadius: 20,
         padding: 20,
         marginBottom: 12,
-        shadowColor: '#667eea',
+        shadowColor: theme === 'dark' ? colors.primary : colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -1155,7 +1828,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: theme === 'dark' ? colors.secondary : 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
@@ -1169,16 +1842,59 @@ const styles = StyleSheet.create({
     askQuestionTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
         marginBottom: 4,
     },
     askQuestionSubtitle: {
         fontSize: 14,
-        color: '#E8E8E8',
+        color: theme === 'dark' ? colors.darkgray : '#E8E8E8',
     },
     askQuestionArrow: {
         fontSize: 20,
-        color: '#FFFFFF',
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
+        fontWeight: '600',
+    },
+    addPollCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme === 'dark' ? colors.white : colors.accent,
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 12,
+        shadowColor: theme === 'dark' ? colors.primary : colors.accent,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    addPollIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: theme === 'dark' ? colors.secondary : 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    addPollEmoji: {
+        fontSize: 24,
+    },
+    addPollContent: {
+        flex: 1,
+    },
+    addPollTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
+        marginBottom: 4,
+    },
+    addPollSubtitle: {
+        fontSize: 14,
+        color: theme === 'dark' ? colors.darkgray : '#E8E8E8',
+    },
+    addPollArrow: {
+        fontSize: 20,
+        color: theme === 'dark' ? colors.primary : '#FFFFFF',
         fontWeight: '600',
     },
 
@@ -1186,12 +1902,12 @@ const styles = StyleSheet.create({
     categoriesSection: {
         paddingTop: 20,
         paddingBottom: 10,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
     },
     sectionTitle: {
         fontSize: 22,
         fontWeight: '700',
-        color: '#2C3E50',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
         marginBottom: 15,
         paddingHorizontal: 20,
     },
@@ -1199,23 +1915,23 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
     },
     categoryCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
         borderRadius: 16,
         padding: 16,
         marginRight: 12,
         alignItems: 'center',
         minWidth: 100,
         borderWidth: 2,
-        borderColor: '#E0E0E0',
-        shadowColor: '#000',
+        borderColor: theme === 'dark' ? colors.secondary : '#E0E0E0',
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
     },
     activeCategoryCard: {
-        backgroundColor: '#667eea',
-        borderColor: '#667eea',
+        backgroundColor: theme === 'dark' ? colors.secondary : colors.primary,
+        borderColor: theme === 'dark' ? colors.secondary : colors.primary,
     },
     categoryIcon: {
         fontSize: 28,
@@ -1224,25 +1940,25 @@ const styles = StyleSheet.create({
     categoryName: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#2C3E50',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
         textAlign: 'center',
         marginBottom: 4,
     },
     activeCategoryName: {
-        color: '#FFFFFF',
+        color: colors.textcol,
     },
     categoryCount: {
         fontSize: 12,
-        color: '#7F8C8D',
+        color: theme === 'dark' ? colors.darkgray : '#7F8C8D',
         textAlign: 'center',
     },
     activeCategoryCount: {
-        color: '#E8E8E8',
+        color: theme === 'dark' ? '#B0B0B0' : '#E8E8E8',
     },
     // Trending Section
     trendingSection: {
         paddingVertical: 30,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -1255,7 +1971,7 @@ const styles = StyleSheet.create({
     },
     seeAllText: {
         fontSize: 14,
-        color: '#667eea',
+        color: colors.primary,
         fontWeight: '600',
     },
 
@@ -1265,25 +1981,25 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     trendingCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
         borderRadius: 12,
         marginRight: 12,
         padding: 0,
         paddingBottom: 0,
         width: 220,
         height: 110,
-        shadowColor: '#000',
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
         shadowRadius: 6,
         elevation: 4,
         borderWidth: 1,
-        borderColor: '#E5E5E5',
+        borderColor: theme === 'dark' ? colors.secondary : '#E5E5E5',
         overflow: 'hidden',
         flexDirection: 'row',
     },
     trendingBadgeContainer: {
-        backgroundColor: '#FF6B6B',
+        backgroundColor: colors.accent,
         paddingVertical: 8,
         paddingHorizontal: 12,
     },
@@ -1317,7 +2033,7 @@ const styles = StyleSheet.create({
     },
     trendingLeftBadge: {
         width: 8,
-        backgroundColor: '#FF7100',
+        backgroundColor: colors.accent,
         borderTopLeftRadius: 12,
         borderBottomLeftRadius: 12,
     },
@@ -1330,13 +2046,13 @@ const styles = StyleSheet.create({
     trendingTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#2C3E50',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
         marginBottom: 6,
         lineHeight: 18,
     },
     trendingDescription: {
         fontSize: 12,
-        color: '#5D6D7E',
+        color: theme === 'dark' ? colors.darkgray : '#5D6D7E',
         lineHeight: 16,
         marginBottom: 8,
         overflow: 'hidden',
@@ -1348,7 +2064,7 @@ const styles = StyleSheet.create({
         marginBottom: 0,
         paddingVertical: 6,
         paddingHorizontal: 8,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.secondary : '#F8F9FA',
         borderRadius: 8,
     },
     trendingStatItem: {
@@ -1362,7 +2078,7 @@ const styles = StyleSheet.create({
     },
     trendingStatText: {
         fontSize: 10,
-        color: '#34495E',
+        color: theme === 'dark' ? colors.primary : '#34495E',
         fontWeight: '600',
     },
     trendingFooter: {
@@ -1397,7 +2113,7 @@ const styles = StyleSheet.create({
         paddingTop: 30,
         paddingHorizontal: 20,
         paddingBottom: 20,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
         position: 'relative',
         zIndex: 1,
     },
@@ -1413,7 +2129,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         paddingHorizontal: 12,
         paddingVertical: 8,
-        borderRadius: 20,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: '#E0E0E0',
     },
@@ -1463,182 +2179,435 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     activeSortOptionText: {
-        color: '#667eea',
+        color: colors.primary,
         fontWeight: '600',
     },
-    // Post Cards - Compact Design
-    postCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        marginBottom: 12,
-        padding: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    postHeader: {
-        marginBottom: 8,
-    },
-    topRightContainer: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
+    // Content Type Filter Dropdown
+    contentTypeButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        zIndex: 10,
-        elevation: 3,
-        // Allow touch events to pass through to children
-        pointerEvents: 'box-none',
-    },
-    postPriorityIndicator: {
-        marginRight: 8,
-    },
-    editButton: {
-        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-        padding: 6,
-        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
         borderWidth: 1,
-        borderColor: 'rgba(102, 126, 234, 0.3)',
-        marginRight: 8,
+        borderColor: '#E0E0E0',
+        marginRight: 10,
     },
-    editIcon: {
-        fontSize: 12,
-        color: '#667eea',
+    contentTypeText: {
+        fontSize: 14,
+        color: '#2C3E50',
+        fontWeight: '500',
+        marginRight: 5,
     },
-    deleteButton: {
-        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    contentTypeDropdown: {
+        position: 'absolute',
+        top: 42,
+        left: 0,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 8,
+        minWidth: 120,
+        maxWidth: 150,
+        zIndex: 9999,
+        // Web-specific styles for better shadow
+        ...(Platform.OS === 'web' && {
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        }),
+    },
+    contentTypeOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    activeContentTypeOption: {
+        backgroundColor: '#F8F9FA',
+    },
+    contentTypeOptionText: {
+        fontSize: 14,
+        color: '#2C3E50',
+        fontWeight: '500',
+    },
+    activeContentTypeOptionText: {
+        color: colors.accent,
+        fontWeight: '600',
+    },
+    // Modern Post Cards Design
+    modernPostCard: {
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
+        borderRadius: 16,
+        marginBottom: 16,
+        overflow: 'hidden',
+        shadowColor: theme === 'dark' ? colors.primary : colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+        elevation: 6,
+        borderWidth: 1,
+        borderColor: theme === 'dark' ? colors.secondary : '#F0F2FF',
+        position: 'relative',
+    },
+    
+    // Status Indicator
+    statusBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: 4,
+        height: '100%',
+        zIndex: 1,
+    },
+    answeredBar: {
+        backgroundColor: '#10B981',
+    },
+    pendingBar: {
+        backgroundColor: '#F59E0B',
+    },
+    
+    // Card Header
+    modernCardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+        marginLeft: 4, // Account for status bar
+    },
+    modernCardHeaderNoTitle: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+        marginLeft: 4, // Account for status bar
+    },
+    actionButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    modernEditButton: {
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         padding: 8,
-        borderRadius: 12,
+        borderRadius: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255, 107, 107, 0.3)',
-        zIndex: 20,
-        elevation: 5,
-        marginLeft: 8,
-        // Ensure it receives touch events
+        borderColor: 'rgba(59, 130, 246, 0.2)',
+    },
+    modernEditIcon: {
+        fontSize: 14,
+        color: '#3B82F6',
+    },
+    modernDeleteButton: {
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        padding: 8,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.2)',
         pointerEvents: 'auto',
-        // Ensure it's clickable on web
         ...(Platform.OS === 'web' && {
             cursor: 'pointer',
             userSelect: 'none',
         }),
     },
-    deleteIcon: {
-        fontSize: 12,
-        color: '#FF6B6B',
-    },
-    priorityDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    highPriority: {
-        backgroundColor: '#FF6B6B',
-    },
-    mediumPriority: {
-        backgroundColor: '#FFD93D',
-    },
-    lowPriority: {
-        backgroundColor: '#6BCF7F',
-    },
-    postContent: {
-        flex: 1,
-    },
-    postTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginBottom: 8,
-        paddingRight: 20,
-    },
-    postTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#2C3E50',
-        flex: 1,
-        lineHeight: 20,
-    },
-    answeredBadge: {
-        backgroundColor: '#6BCF7F',
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 8,
-    },
-    answeredIcon: {
-        fontSize: 10,
-        color: '#FFFFFF',
+    modernDeleteIcon: {
+        fontSize: 14,
+        color: '#EF4444',
         fontWeight: 'bold',
     },
-    postTagsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+    
+    // Card Content
+    modernCardContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        marginLeft: 4, // Account for status bar
+    },
+    titleSection: {
+        marginBottom: 12,
+    },
+    modernPostTitle: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#1F2937',
+        lineHeight: 24,
         marginBottom: 8,
     },
-    tagChip: {
-        backgroundColor: '#F0F0F0',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
+    modernAnsweredBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+        alignSelf: 'flex-start',
+    },
+    modernAnsweredIcon: {
+        fontSize: 12,
+        color: '#10B981',
+        fontWeight: 'bold',
         marginRight: 4,
-        marginBottom: 2,
     },
-    tagText: {
+    answeredText: {
         fontSize: 10,
-        color: '#667eea',
-        fontWeight: '500',
+        color: '#059669',
+        fontWeight: '700',
+        letterSpacing: 0.3,
     },
-    postMeta: {
+    
+    // Category and Tags
+    categoryTagsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+    },
+    categoryBadge: {
+        backgroundColor: '#EEF2FF',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#C7D2FE',
+    },
+    categoryText: {
+        fontSize: 11,
+        color: '#4F46E5',
+        fontWeight: '600',
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    modernTagChip: {
+        backgroundColor: '#FFF7ED',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        marginLeft: 6,
+        borderWidth: 1,
+        borderColor: '#FED7AA',
+    },
+    modernTagText: {
+        fontSize: 10,
+        color: '#EA580C',
+        fontWeight: '600',
+    },
+    
+    // Card Footer
+    modernCardFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: theme === 'dark' ? colors.secondary : '#F9FAFB',
+        marginLeft: 4, // Account for status bar
+        borderTopWidth: 1,
+        borderTopColor: theme === 'dark' ? colors.darkgray : '#F3F4F6',
     },
-    postAuthor: {
+    authorSection: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
     },
-    avatarPlaceholder: {
+    modernAvatarPlaceholder: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    modernAvatarText: {
+        fontSize: 14,
+        color: '#FFFFFF',
+        fontWeight: '700',
+    },
+    authorDetails: {
+        flex: 1,
+    },
+    modernAuthorName: {
+        fontSize: 13,
+        color: theme === 'dark' ? colors.primary : '#1F2937',
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    postTime: {
+        fontSize: 11,
+        color: theme === 'dark' ? colors.darkgray : '#9CA3AF',
+        fontWeight: '500',
+    },
+    statsSection: {
+        alignItems: 'flex-end',
+    },
+    statGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    postStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        shadowColor: theme === 'dark' ? colors.primary : '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    modernStatIcon: {
+        fontSize: 14,
+        marginRight: 4,
+    },
+    modernStatText: {
+        fontSize: 12,
+        color: theme === 'dark' ? colors.primary : '#374151',
+        fontWeight: '600',
+    },
+    bottomSpacing: {
+        height: 100,
+    },
+    // Grid View Styles
+    gridItemContainer: {
+        flex: 1,
+        maxWidth: '50%',
+        paddingHorizontal: 6,
+    },
+    gridPostCard: {
+        backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
+        borderRadius: 12,
+        marginBottom: 12,
+        overflow: 'hidden',
+        shadowColor: theme === 'dark' ? colors.primary : colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: theme === 'dark' ? colors.secondary : '#F0F2FF',
+        position: 'relative',
+        minHeight: 180,
+    },
+    gridStatusBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: 3,
+        height: '100%',
+        zIndex: 1,
+    },
+    gridPostContent: {
+        padding: 12,
+        marginLeft: 3, // Account for status bar
+    },
+    gridPostTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#1F2937',
+        lineHeight: 18,
+        marginBottom: 8,
+        minHeight: 36, // Ensure consistent height
+    },
+    gridCategoryBadge: {
+        backgroundColor: '#EEF2FF',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+    },
+    gridCategoryText: {
+        fontSize: 10,
+        color: '#4F46E5',
+        fontWeight: '600',
+    },
+    gridAuthorSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    gridAvatarPlaceholder: {
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#667eea',
+        backgroundColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 6,
     },
-    avatarText: {
+    gridAvatarText: {
         fontSize: 10,
         color: '#FFFFFF',
+        fontWeight: '700',
+    },
+    gridAuthorDetails: {
+        flex: 1,
+    },
+    gridAuthorName: {
+        fontSize: 11,
+        color: theme === 'dark' ? colors.primary : '#1F2937',
         fontWeight: '600',
     },
-    authorName: {
-        fontSize: 12,
-        color: '#2C3E50',
+    gridPostTime: {
+        fontSize: 9,
+        color: theme === 'dark' ? colors.darkgray : '#9CA3AF',
         fontWeight: '500',
     },
-    postStats: {
+    gridStatsSection: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
-    statIcon: {
+    gridStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme === 'dark' ? colors.light : '#F8F9FA',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    gridStatIcon: {
         fontSize: 12,
-        marginRight: 2,
+        marginRight: 3,
     },
-    statText: {
+    gridStatText: {
         fontSize: 10,
-        color: '#7F8C8D',
-        fontWeight: '500',
-        marginRight: 8,
+        color: theme === 'dark' ? colors.primary : '#374151',
+        fontWeight: '600',
     },
-    timeText: {
+    gridSolvedBadge: {
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+    gridSolvedIcon: {
         fontSize: 10,
-        color: '#BDC3C7',
-    },
-    bottomSpacing: {
-        height: 100,
+        color: '#10B981',
+        fontWeight: 'bold',
     },
     // Loading and Empty States
     loadingContainer: {
@@ -1725,7 +2694,7 @@ const styles = StyleSheet.create({
     },
     deleteModalConfirmButton: {
         flex: 1,
-        backgroundColor: '#FF6B6B',
+        backgroundColor: colors.accent,
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 8,

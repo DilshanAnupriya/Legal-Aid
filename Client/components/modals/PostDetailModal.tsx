@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 
 interface PostDetailModalProps {
@@ -25,6 +26,7 @@ interface PostDetailModalProps {
 
 const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClose, onPostUpdated }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -88,33 +90,30 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
     const diffInDays = Math.floor(diffInHours / 24);
     
     if (diffInDays > 0) {
-      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+      if (diffInDays === 1) {
+        return t('postDetail.timeAgo.oneDay', { defaultValue: '1 day ago' });
+      }
+      return t('postDetail.timeAgo.days', { 
+        count: diffInDays, 
+        defaultValue: `${diffInDays} days ago`
+      });
     } else if (diffInHours > 0) {
-      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+      if (diffInHours === 1) {
+        return t('postDetail.timeAgo.oneHour', { defaultValue: '1 hour ago' });
+      }
+      return t('postDetail.timeAgo.hours', { 
+        count: diffInHours, 
+        defaultValue: `${diffInHours} hours ago`
+      });
     } else {
-      return 'Just now';
+      return t('postDetail.timeAgo.justNow', { defaultValue: 'Just now' });
     }
   };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return '#FF6B6B';
-      case 'medium': return '#FFD93D';
-      case 'low': return '#6BCF7F';
-      default: return '#FFD93D';
-    }
-  };
-
-  const getPriorityText = (priority: string) => {
-    return priority.charAt(0).toUpperCase() + priority.slice(1);
-  };
-
-
 
   // Helper function to get user display name
   const getUserDisplayName = () => {
     if (isAnonymousComment) {
-      return 'Anonymous User';
+      return t('postDetail.anonymousUser', { defaultValue: 'Anonymous User' });
     }
     
     if (user?.email) {
@@ -123,7 +122,25 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
       return emailName.charAt(0).toUpperCase() + emailName.slice(1);
     }
     
-    return 'User'; // Fallback if no user info
+    return t('postDetail.defaultUser', { defaultValue: 'User' }); // Fallback if no user info
+  };
+
+  // Helper function to translate category names
+  const translateCategory = (category: string) => {
+    switch (category) {
+      case 'Family Law':
+        return t('categories.familyLaw', { defaultValue: 'Family Law' });
+      case 'Property Law':
+        return t('categories.propertyLaw', { defaultValue: 'Property Law' });
+      case 'Employment Law':
+        return t('categories.employmentLaw', { defaultValue: 'Employment Law' });
+      case 'Civil Law':
+        return t('categories.civilLaw', { defaultValue: 'Civil Law' });
+      case 'Criminal Law':
+        return t('categories.criminalLaw', { defaultValue: 'Criminal Law' });
+      default:
+        return category; // Return original if no translation found
+    }
   };
 
   // Helper function to check if current user can delete the comment
@@ -394,7 +411,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Post Details</Text>
+          <Text style={styles.headerTitle}>{t('postDetail.title', { defaultValue: 'Post Details' })}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -403,14 +420,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
           <View style={styles.titleSection}>
             <Text style={styles.postTitle}>{post.title}</Text>
             <View style={styles.titleMeta}>
-              <View style={styles.priorityBadge}>
-                <View style={[styles.priorityDot, { backgroundColor: getPriorityColor(post.priority) }]} />
-                <Text style={styles.priorityText}>{getPriorityText(post.priority)} Priority</Text>
-              </View>
               {post.isAnswered && (
                 <View style={styles.answeredBadge}>
                   <Text style={styles.answeredIcon}>✓</Text>
-                  <Text style={styles.answeredText}>Answered</Text>
+                  <Text style={styles.answeredText}>{t('postDetail.answered', { defaultValue: 'Answered' })}</Text>
                 </View>
               )}
             </View>
@@ -432,33 +445,33 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
               <View style={styles.statItem}>
                 <Text style={styles.statIcon}>👁</Text>
                 <Text style={styles.statNumber}>{post.views}</Text>
-                <Text style={styles.statLabel}>Views</Text>
+                <Text style={styles.statLabel}>{t('postDetail.stats.views', { defaultValue: 'Views' })}</Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statIcon}>💬</Text>
                 <Text style={styles.statNumber}>{post.replies}</Text>
-                <Text style={styles.statLabel}>Replies</Text>
+                <Text style={styles.statLabel}>{t('postDetail.stats.replies', { defaultValue: 'Replies' })}</Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statIcon}>🕒</Text>
                 <Text style={styles.statNumber}>{formatLastActivity(post.lastActivity)}</Text>
-                <Text style={styles.statLabel}>Last Activity</Text>
+                <Text style={styles.statLabel}>{t('postDetail.stats.lastActivity', { defaultValue: 'Last Activity' })}</Text>
               </View>
             </View>
           </View>
 
           {/* Category */}
           <View style={styles.categorySection}>
-            <Text style={styles.sectionLabel}>Category</Text>
+            <Text style={styles.sectionLabel}>{t('postDetail.category', { defaultValue: 'Category' })}</Text>
             <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{post.category}</Text>
+              <Text style={styles.categoryText}>{translateCategory(post.category)}</Text>
             </View>
           </View>
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
             <View style={styles.tagsSection}>
-              <Text style={styles.sectionLabel}>Tags</Text>
+              <Text style={styles.sectionLabel}>{t('postDetail.tags', { defaultValue: 'Tags' })}</Text>
               <View style={styles.tagsContainer}>
                 {post.tags.map((tag: string, index: number) => (
                   <View key={index} style={styles.tagChip}>
@@ -471,58 +484,60 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
 
           {/* Description */}
           <View style={styles.descriptionSection}>
-            <Text style={styles.sectionLabel}>Description</Text>
+            <Text style={styles.sectionLabel}>{t('postDetail.description', { defaultValue: 'Description' })}</Text>
             <Text style={styles.descriptionText}>{post.description}</Text>
           </View>
 
           {/* Status Information */}
           <View style={styles.statusSection}>
-            <Text style={styles.sectionLabel}>Status</Text>
+            <Text style={styles.sectionLabel}>{t('postDetail.status.label', { defaultValue: 'Status' })}</Text>
             <View style={styles.statusRow}>
               <View style={styles.statusItem}>
-                <Text style={styles.statusLabel}>Status:</Text>
+                <Text style={styles.statusLabel}>{t('postDetail.status.status', { defaultValue: 'Status' })}:</Text>
                 <Text style={[styles.statusValue, { color: post.status === 'active' ? '#6BCF7F' : '#FF6B6B' }]}>
                   {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
                 </Text>
               </View>
               <View style={styles.statusItem}>
-                <Text style={styles.statusLabel}>Anonymous:</Text>
-                <Text style={styles.statusValue}>{post.isAnonymous ? 'Yes' : 'No'}</Text>
+                <Text style={styles.statusLabel}>{t('postDetail.status.anonymous', { defaultValue: 'Anonymous' })}:</Text>
+                <Text style={styles.statusValue}>
+                  {post.isAnonymous ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' })}
+                </Text>
               </View>
             </View>
           </View>
 
           {/* Timestamps */}
           <View style={styles.timestampsSection}>
-            <Text style={styles.sectionLabel}>Timeline</Text>
+            <Text style={styles.sectionLabel}>{t('postDetail.timeline', { defaultValue: 'Timeline' })}</Text>
             <View style={styles.timestampItem}>
-              <Text style={styles.timestampLabel}>Created:</Text>
+              <Text style={styles.timestampLabel}>{t('postDetail.created', { defaultValue: 'Created' })}:</Text>
               <Text style={styles.timestampValue}>{formatDate(post.createdAt)}</Text>
             </View>
             <View style={styles.timestampItem}>
-              <Text style={styles.timestampLabel}>Last Updated:</Text>
+              <Text style={styles.timestampLabel}>{t('postDetail.lastUpdated', { defaultValue: 'Last Updated' })}:</Text>
               <Text style={styles.timestampValue}>{formatDate(post.updatedAt)}</Text>
             </View>
             <View style={styles.timestampItem}>
-              <Text style={styles.timestampLabel}>Last Activity:</Text>
+              <Text style={styles.timestampLabel}>{t('postDetail.lastActivity', { defaultValue: 'Last Activity' })}:</Text>
               <Text style={styles.timestampValue}>{formatDate(post.lastActivity)}</Text>
             </View>
           </View>
 
           {/* Comments Section */}
           <View style={styles.commentsSection}>
-            <Text style={styles.sectionLabel}>Comments ({comments.length})</Text>
+            <Text style={styles.sectionLabel}>{t('postDetail.comments.title', { count: comments.length, defaultValue: `Comments (${comments.length})` })}</Text>
             
             {/* Existing Comments */}
             {commentsLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#667eea" />
-                <Text style={styles.loadingText}>Loading comments...</Text>
+                <ActivityIndicator size="large" color="colors.primary" />
+                <Text style={styles.loadingText}>{t('postDetail.comments.loading', { defaultValue: 'Loading comments...' })}</Text>
               </View>
             ) : comments.length === 0 ? (
               <View style={styles.noCommentsContainer}>
-                <Text style={styles.noCommentsText}>No comments yet</Text>
-                <Text style={styles.noCommentsSubtext}>Be the first to share your thoughts!</Text>
+                <Text style={styles.noCommentsText}>{t('postDetail.comments.noComments', { defaultValue: 'No comments yet' })}</Text>
+                <Text style={styles.noCommentsSubtext}>{t('postDetail.comments.beFirst', { defaultValue: 'Be the first to share your thoughts!' })}</Text>
               </View>
             ) : (
               comments.map((comment) => (
@@ -545,7 +560,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                   <View style={styles.commentActions}>
                     {comment.isAnonymous && (
                       <View style={styles.anonymousBadge}>
-                        <Text style={styles.anonymousText}>Anonymous</Text>
+                        <Text style={styles.anonymousText}>{t('postDetail.anonymous', { defaultValue: 'Anonymous' })}</Text>
                       </View>
                     )}
                     
@@ -591,13 +606,13 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                         style={styles.cancelEditButton}
                         onPress={handleCancelEditComment}
                       >
-                        <Text style={styles.cancelEditText}>Cancel</Text>
+                        <Text style={styles.cancelEditText}>{t('common.cancel', { defaultValue: 'Cancel' })}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.saveEditButton}
                         onPress={() => handleSaveEditComment(comment.id)}
                       >
-                        <Text style={styles.saveEditText}>Save</Text>
+                        <Text style={styles.saveEditText}>{t('common.save', { defaultValue: 'Save' })}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -610,13 +625,13 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
 
             {/* Add Comment Form */}
             <View style={styles.addCommentSection}>
-              <Text style={styles.addCommentLabel}>Add a Comment</Text>
+              <Text style={styles.addCommentLabel}>{t('postDetail.comments.addComment', { defaultValue: 'Add a Comment' })}</Text>
               
               {/* Show current user info */}
               {user?.email && (
                 <View style={styles.currentUserInfo}>
                   <Text style={styles.currentUserLabel}>
-                    Commenting as: <Text style={styles.currentUserName}>{getUserDisplayName()}</Text>
+                    {t('postDetail.comments.commentingAs', { defaultValue: 'Commenting as' })}: <Text style={styles.currentUserName}>{getUserDisplayName()}</Text>
                   </Text>
                 </View>
               )}
@@ -624,7 +639,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
               {/* Comment Input */}
               <TextInput
                 style={styles.commentInput}
-                placeholder="Share your thoughts, advice, or experience..."
+                placeholder={t('postDetail.comments.placeholder', { defaultValue: 'Share your thoughts, advice, or experience...' })}
                 placeholderTextColor="#999999"
                 value={newComment}
                 onChangeText={setNewComment}
@@ -643,7 +658,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                 <View style={[styles.checkbox, isAnonymousComment && styles.checkboxChecked]}>
                   {isAnonymousComment && <Text style={styles.checkmark}>✓</Text>}
                 </View>
-                <Text style={styles.anonymousOptionLabel}>Comment anonymously</Text>
+                <Text style={styles.anonymousOptionLabel}>{t('postDetail.comments.commentAnonymously', { defaultValue: 'Comment anonymously' })}</Text>
               </TouchableOpacity>
 
               {/* Submit Button */}
@@ -654,7 +669,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                 {addingComment ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.submitCommentButtonText}>Add Comment</Text>
+                  <Text style={styles.submitCommentButtonText}>{t('postDetail.comments.submitButton', { defaultValue: 'Add Comment' })}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -675,9 +690,9 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
     >
       <View style={styles.deleteCommentModalOverlay}>
         <View style={styles.deleteCommentModalContainer}>
-          <Text style={styles.deleteCommentModalTitle}>Delete Comment</Text>
+          <Text style={styles.deleteCommentModalTitle}>{t('postDetail.deleteModal.title', { defaultValue: 'Delete Comment' })}</Text>
           <Text style={styles.deleteCommentModalMessage}>
-            Are you sure you want to delete this comment?
+            {t('postDetail.deleteModal.message', { defaultValue: 'Are you sure you want to delete this comment?' })}
             {commentToDelete && commentToDelete.content && (
               <>
                 {'\n\n"'}
@@ -688,20 +703,20 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                 {'"'}
               </>
             )}
-            {'\n\n'}This action cannot be undone.
+            {'\n\n'}{t('postDetail.deleteModal.warning', { defaultValue: 'This action cannot be undone.' })}
           </Text>
           <View style={styles.deleteCommentModalButtons}>
             <TouchableOpacity
               style={styles.deleteCommentModalCancelButton}
               onPress={cancelDeleteComment}
             >
-              <Text style={styles.deleteCommentModalCancelText}>Cancel</Text>
+              <Text style={styles.deleteCommentModalCancelText}>{t('common.cancel', { defaultValue: 'Cancel' })}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteCommentModalConfirmButton}
               onPress={confirmDeleteComment}
             >
-              <Text style={styles.deleteCommentModalConfirmText}>Delete</Text>
+              <Text style={styles.deleteCommentModalConfirmText}>{t('common.delete', { defaultValue: 'Delete' })}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -731,7 +746,7 @@ const styles = StyleSheet.create({
   },
   closeIcon: {
     fontSize: 24,
-    color: '#667eea',
+    color: 'colors.primary',
     fontWeight: '600',
   },
   headerTitle: {
@@ -762,25 +777,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 10,
-  },
-  priorityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  priorityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  priorityText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2C3E50',
   },
   answeredBadge: {
     flexDirection: 'row',
@@ -815,7 +811,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -874,7 +870,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   categoryBadge: {
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -903,7 +899,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
-    color: '#667eea',
+    color: 'colors.primary',
     fontWeight: '500',
   },
   descriptionSection: {
@@ -976,7 +972,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 12,
     borderLeftWidth: 3,
-    borderLeftColor: '#667eea',
+    borderLeftColor: 'colors.primary',
   },
   commentHeader: {
     flexDirection: 'row',
@@ -1000,7 +996,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -1046,7 +1042,7 @@ const styles = StyleSheet.create({
   },
   editCommentIcon: {
     fontSize: 12,
-    color: '#667eea',
+    color: 'colors.primary',
   },
   deleteCommentButton: {
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
@@ -1077,7 +1073,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2C3E50',
     borderWidth: 1,
-    borderColor: '#667eea',
+    borderColor: 'colors.primary',
     minHeight: 80,
     maxHeight: 120,
     textAlignVertical: 'top',
@@ -1106,7 +1102,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveEditButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -1122,7 +1118,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#667eea',
+    borderColor: 'colors.primary',
   },
   currentUserLabel: {
     fontSize: 14,
@@ -1130,7 +1126,7 @@ const styles = StyleSheet.create({
   },
   currentUserName: {
     fontWeight: '600',
-    color: '#667eea',
+    color: 'colors.primary',
   },
   noCommentsContainer: {
     padding: 20,
@@ -1219,8 +1215,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: 'colors.primary',
+    borderColor: 'colors.primary',
   },
   checkmark: {
     fontSize: 12,
@@ -1233,11 +1229,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   submitCommentButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: 'colors.primary',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-    shadowColor: '#667eea',
+    shadowColor: 'colors.primary',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

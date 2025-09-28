@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^1.41.3",

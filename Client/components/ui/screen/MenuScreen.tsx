@@ -169,6 +169,7 @@ export default function MenuScreen({ navigation }: { navigation?: any }) {
             <View style={styles.menuSection}>
                 <Text style={styles.menuSectionTitle}>Quick Actions</Text>
                 <View style={styles.menuContainer}>
+
                     <Menu.Item 
                         leadingIcon="account-outline" 
                         onPress={navigateToProfile} 
@@ -209,6 +210,15 @@ export default function MenuScreen({ navigation }: { navigation?: any }) {
                         onPress={() => {}} 
                         title="Contact Us"  
                     />
+
+                    <Menu.Item leadingIcon="file-multiple-outline" onPress={() => {}} title="Document Organizer" />
+                    <Menu.Item leadingIcon="robot-outline" onPress={() => {}} title="AI ChatBot Assist" />
+                    <Menu.Item leadingIcon="translate" onPress={() => {navigation.navigate('LanguageSettings')}} title="Languages"  />
+                    <Menu.Item leadingIcon="charity" onPress={() => {navigation.navigate('Ngo')}} title="NGO"  />
+                    <Menu.Item leadingIcon="cog-outline" onPress={() => {}} title="Settings" />
+                    <Menu.Item leadingIcon="shield-account-outline" onPress={() => {}} title="About Us"  />
+                    <Menu.Item leadingIcon="account-voice" onPress={() => {}} title="Contact Us"  />
+
                 </View>
             </View>
 

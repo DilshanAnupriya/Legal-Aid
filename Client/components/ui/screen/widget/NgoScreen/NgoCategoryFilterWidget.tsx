@@ -1,24 +1,36 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, FlatList } from 'react-native';
+import { useTheme } from "../../../../../context/ThemeContext";
+
+
 
 // @ts-ignore
 const CategoryFilterWidget = ({ categories, selectedCategory, onCategorySelect }) => {
+    const { colors, theme } = useTheme();
     // @ts-ignore
     const renderCategoryButton = ({ item }) => (
-        <TouchableOpacity
-            style={[
-                styles.categoryButton,
-                (item === selectedCategory || (item === 'All' && !selectedCategory)) && styles.selectedCategory
-            ]}
-            onPress={() => onCategorySelect(item)}
-        >
-            <Text style={[
-                styles.categoryButtonText,
-                (item === selectedCategory || (item === 'All' && !selectedCategory)) && styles.selectedCategoryText
-            ]}>
-                {item}
-            </Text>
-        </TouchableOpacity>
+       <TouchableOpacity
+  style={[
+    styles.categoryButton,
+    (item === selectedCategory || (item === 'All' && !selectedCategory)) && {
+      backgroundColor: colors.accent,
+      borderColor: colors.primary,
+    },
+  ]}
+  onPress={() => onCategorySelect(item)}
+>
+  <Text
+    style={[
+      styles.categoryButtonText,
+      (item === selectedCategory || (item === 'All' && !selectedCategory)) && {
+        color: colors.white || '#fff',
+      },
+    ]}
+  >
+    {item}
+  </Text>
+</TouchableOpacity>
+
     );
 
     return (

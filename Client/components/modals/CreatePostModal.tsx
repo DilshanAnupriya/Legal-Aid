@@ -9,10 +9,10 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Platform,
-  Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface CreatePostModalProps {
   visible: boolean;
@@ -30,65 +30,93 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isEditMode = false,
 }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
+  const { colors, theme } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Family Law');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  // Legal categories from ForumScreen (excluding 'All' as it's not a specific category)
-  const legalCategories = [
-    { id: 2, name: 'Family Law', icon: '👨‍👩‍👧‍👦' },
-    { id: 3, name: 'Property Law', icon: '🏠' },
-    { id: 4, name: 'Employment Law', icon: '💼' },
-    { id: 5, name: 'Civil Law', icon: '⚖️' },
-    { id: 6, name: 'Criminal Law', icon: '🚔' },
+  // Validation error states
+  const [titleError, setTitleError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
+
+  // Legal categories with translations
+  const getLegalCategories = () => [
+    { id: 2, name: 'Family Law', translatedName: t('categories.familyLaw'), icon: '👨‍👩‍👧‍👦' },
+    { id: 3, name: 'Property Law', translatedName: t('categories.propertyLaw'), icon: '🏠' },
+    { id: 4, name: 'Employment Law', translatedName: t('categories.employmentLaw'), icon: '💼' },
+    { id: 5, name: 'Civil Law', translatedName: t('categories.civilLaw'), icon: '⚖️' },
+    { id: 6, name: 'Criminal Law', translatedName: t('categories.criminalLaw'), icon: '🚔' },
   ];
+  
+  const legalCategories = getLegalCategories();
 
   // Populate form when editing
   useEffect(() => {
     if (isEditMode && editingPost) {
       setTitle(editingPost.title || '');
       setDescription(editingPost.description || '');
-
       setSelectedCategory(editingPost.category || 'Family Law');
       setIsAnonymous(editingPost.isAnonymous || false);
     } else {
       // Reset form when not editing
       setTitle('');
       setDescription('');
-
       setSelectedCategory('Family Law');
       setIsAnonymous(false);
     }
+    // Clear validation errors when modal opens/closes
+    setTitleError('');
+    setDescriptionError('');
   }, [isEditMode, editingPost, visible]);
+
+  // Clear errors when user starts typing
+  const handleTitleChange = (text: string) => {
+    setTitle(text);
+    if (titleError) setTitleError('');
+  };
+
+  const handleDescriptionChange = (text: string) => {
+    setDescription(text);
+    if (descriptionError) setDescriptionError('');
+  };
 
 
 
   const handleSubmit = () => {
+    // Clear previous errors
+    setTitleError('');
+    setDescriptionError('');
+
+    let hasErrors = false;
+
     // Basic validation
     if (!title.trim()) {
-      Alert.alert('Validation Error', 'Please enter a title');
-      return;
+      setTitleError(t('createPost.validation.titleRequired', { defaultValue: 'Please enter a title' }));
+      hasErrors = true;
+    } else if (title.trim().length < 10) {
+      setTitleError(t('createPost.validation.titleTooShort', { defaultValue: 'Title must be at least 10 characters long' }));
+      hasErrors = true;
     }
+
     if (!description.trim()) {
-      Alert.alert('Validation Error', 'Please enter a description');
-      return;
+      setDescriptionError(t('createPost.validation.descriptionRequired', { defaultValue: 'Please enter a description' }));
+      hasErrors = true;
+    } else if (description.trim().length < 20) {
+      setDescriptionError(t('createPost.validation.descriptionTooShort', { defaultValue: 'Description must be at least 20 characters long' }));
+      hasErrors = true;
     }
-    if (title.trim().length < 10) {
-      Alert.alert('Validation Error', 'Title must be at least 10 characters long');
-      return;
-    }
-    if (description.trim().length < 20) {
-      Alert.alert('Validation Error', 'Description must be at least 20 characters long');
+
+    if (hasErrors) {
       return;
     }
 
     // Get user name for author field
     const getUserDisplayName = () => {
       if (isAnonymous) {
-        return 'Anonymous User';
+        return t('createPost.anonymousUser', { defaultValue: 'Anonymous User' });
       }
       
       if (user?.email) {
@@ -97,7 +125,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
         return emailName.charAt(0).toUpperCase() + emailName.slice(1);
       }
       
-      return 'User'; // Fallback if no user info
+      return t('createPost.defaultUser', { defaultValue: 'User' }); // Fallback if no user info
     };
 
     const postData = {
@@ -123,6 +151,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     onClose();
   };
 
+  // Create dynamic styles based on theme
+  const styles = createStyles(colors, theme);
+
   return (
     <Modal
       visible={visible}
@@ -137,43 +168,49 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Post' : 'Create New Post'}</Text>
+          <Text style={styles.headerTitle}>
+            {isEditMode ? t('createPost.editPost', { defaultValue: 'Edit Post' }) : t('createPost.title', { defaultValue: 'Create New Post' })}
+          </Text>
           <TouchableOpacity onPress={handleSubmit} style={styles.postButton}>
-            <Text style={styles.postButtonText}>{isEditMode ? 'Update' : 'Post'}</Text>
+            <Text style={styles.postButtonText}>
+              {isEditMode ? t('common.update', { defaultValue: 'Update' }) : t('common.post', { defaultValue: 'Post' })}
+            </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Post Title */}
           <View style={styles.section}>
-            <Text style={styles.label}>Post Title</Text>
+            <Text style={styles.label}>{t('createPost.postTitle', { defaultValue: 'Post Title' })}</Text>
             <TextInput
-              style={styles.titleInput}
-              placeholder="Share your thoughts!"
+              style={[styles.titleInput, titleError && styles.inputError]}
+              placeholder={t('createPost.titlePlaceholder', { defaultValue: 'Share your thoughts!' })}
               placeholderTextColor="#999999"
               value={title}
-              onChangeText={setTitle}
+              onChangeText={handleTitleChange}
               multiline={false}
             />
+            {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
           </View>
 
           {/* Description */}
           <View style={styles.section}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t('createPost.description', { defaultValue: 'Description' })}</Text>
             <TextInput
-              style={styles.descriptionInput}
-              placeholder="Elaborate on your post here..."
+              style={[styles.descriptionInput, descriptionError && styles.inputError]}
+              placeholder={t('createPost.descriptionPlaceholder', { defaultValue: 'Elaborate on your post here...' })}
               placeholderTextColor="#999999"
               value={description}
-              onChangeText={setDescription}
+              onChangeText={handleDescriptionChange}
               multiline={true}
               textAlignVertical="top"
             />
+            {descriptionError ? <Text style={styles.errorText}>{descriptionError}</Text> : null}
           </View>
 
           {/* Legal Categories */}
           <View style={styles.section}>
-            <Text style={styles.label}>Legal Categories</Text>
+            <Text style={styles.label}>{t('createPost.legalCategories', { defaultValue: 'Legal Categories' })}</Text>
             <TouchableOpacity
               style={styles.categoryDropdown}
               onPress={() => setShowCategoryModal(true)}>
@@ -181,7 +218,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 <Text style={styles.selectedCategoryIcon}>
                   {legalCategories.find(cat => cat.name === selectedCategory)?.icon}
                 </Text>
-                <Text style={styles.selectedCategoryText}>{selectedCategory}</Text>
+                <Text style={styles.selectedCategoryText}>
+                  {legalCategories.find(cat => cat.name === selectedCategory)?.translatedName || selectedCategory}
+                </Text>
               </View>
               <Text style={styles.dropdownArrow}>▼</Text>
             </TouchableOpacity>
@@ -197,20 +236,25 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <View style={[styles.checkbox, isAnonymous && styles.checkboxChecked]}>
                 {isAnonymous && <Text style={styles.checkmark}>✓</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>Submit Anonymously</Text>
+              <Text style={styles.checkboxLabel}>{t('createPost.submitAnonymously', { defaultValue: 'Submit Anonymously' })}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Guidelines */}
           <View style={styles.section}>
             <Text style={styles.guidelinesText}>
-              Remember to be respectful and follow our community guidelines. Offensive content will be removed.
+              {t('createPost.guidelines', { defaultValue: 'Remember to be respectful and follow our community guidelines. Offensive content will be removed.' })}
             </Text>
           </View>
 
           {/* Submit Button */}
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>{isEditMode ? 'Update Post' : 'Submit Post'}</Text>
+            <Text style={styles.submitButtonText}>
+              {isEditMode 
+                ? t('createPost.updatePost', { defaultValue: 'Update Post' }) 
+                : t('createPost.submitPost', { defaultValue: 'Submit Post' })
+              }
+            </Text>
           </TouchableOpacity>
 
           {/* Bottom Spacing */}
@@ -229,7 +273,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           activeOpacity={1} 
           onPress={() => setShowCategoryModal(false)}>
           <View style={styles.categoryModalContent}>
-            <Text style={styles.categoryModalTitle}>Select Legal Category</Text>
+            <Text style={styles.categoryModalTitle}>{t('createPost.selectCategory', { defaultValue: 'Select Legal Category' })}</Text>
             {legalCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
@@ -245,7 +289,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 <Text style={[
                   styles.categoryOptionText,
                   selectedCategory === category.name && styles.categoryOptionTextSelected
-                ]}>{category.name}</Text>
+                ]}>{category.translatedName}</Text>
                 {selectedCategory === category.name && (
                   <Text style={styles.categorySelectedIcon}>✓</Text>
                 )}
@@ -258,7 +302,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, theme: string) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -287,7 +331,7 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
   },
   postButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -333,6 +377,17 @@ const styles = StyleSheet.create({
     minHeight: 120,
     maxHeight: 200,
   },
+  inputError: {
+    borderColor: '#FF6B6B',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    marginTop: 5,
+    marginLeft: 5,
+    fontWeight: '500',
+  },
 
   checkboxContainer: {
     flexDirection: 'row',
@@ -351,8 +406,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: 'colors.primary',
+    borderColor: 'colors.primary',
   },
   checkmark: {
     fontSize: 12,
@@ -371,12 +426,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   submitButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     marginHorizontal: 20,
     marginTop: 20,
-    shadowColor: '#667eea',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -458,8 +513,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   categoryOptionSelected: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: 'colors.primary',
+    borderColor: 'colors.primary',
   },
   categoryOptionIcon: {
     fontSize: 20,
