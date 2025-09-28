@@ -8,23 +8,155 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+   
   },
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters long']
   },
+  role: {
+    type: String,
+    required: [true, 'Role is required'],
+    enum: ['user', 'lawyer', 'ngo', 'admin'],
+    default: 'user',
+    trim: true
+  },
+  // Common profile fields
   birthday: {
     type: String,
-    required: [true, 'Birthday is required'],
+    required: function() {
+      return this.role === 'user';
+    },
     trim: true
   },
   genderSpectrum: {
     type: String,
-    required: [true, 'Gender spectrum is required'],
+    required: function() {
+      return this.role === 'user';
+    },
     enum: ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other'],
     trim: true
+  },
+  
+  // Lawyer-specific fields
+  firstName: {
+    type: String,
+    required: function() {
+      return this.role === 'lawyer';
+    },
+    trim: true
+  },
+  lastName: {
+    type: String,
+    required: function() {
+      return this.role === 'lawyer';
+    },
+    trim: true
+  },
+  specialization: {
+    type: String,
+    required: function() {
+      return this.role === 'lawyer';
+    },
+    trim: true
+  },
+  contactNumber: {
+    type: String,
+    required: function() {
+      return this.role === 'lawyer';
+    },
+    trim: true
+  },
+  
+  // NGO-specific fields
+  organizationName: {
+    type: String,
+    required: function() {
+      return this.role === 'ngo';
+    },
+    trim: true
+  },
+  description: {
+    type: String,
+    required: function() {
+      return this.role === 'ngo';
+    }
+  },
+  category: {
+    type: String,
+    required: function() {
+      return this.role === 'ngo';
+    },
+    enum: [
+      'Human Rights & Civil Liberties',
+      'Women\'s Rights & Gender Justice',
+      'Child Protection',
+      'Labor & Employment Rights',
+      'Refugee & Migrant Rights',
+      'LGBTQ+ Rights'
+    ]
+  },
+  logo: {
+    type: String,
+    default: null
+  },
+  contact: {
+    type: String,
+    required: function() {
+      return this.role === 'ngo';
+    }
+  },
+  images: {
+    type: Array,
+    default: []
+  },
+  
+  // Admin-specific fields
+  adminName: {
+    type: String,
+    required: function() {
+      return this.role === 'admin';
+    },
+    trim: true
+  },
+  permissions: {
+    type: [String],
+    default: function() {
+      if (this.role === 'admin') {
+        return ['manage_users', 'manage_content', 'view_analytics'];
+      }
+      return [];
+    }
+  },
+  
+  // Admin-specific fields
+  adminName: {
+    type: String,
+    required: function() {
+      return this.role === 'admin';
+    },
+    trim: true
+  },
+  permissions: {
+    type: [String],
+    default: function() {
+      if (this.role === 'admin') {
+        return ['manage_users', 'manage_content', 'view_analytics'];
+      }
+      return [];
+    }
+  },
+  
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
+  },
+  rating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0
   }
 }, {
   timestamps: true
@@ -48,11 +180,60 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove password from JSON output
+// Remove password from JSON output and format role-based data
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;
-  return userObject;
+  
+  // Return role-specific data structure
+  const baseData = {
+    id: userObject._id,
+    email: userObject.email,
+    role: userObject.role,
+    status: userObject.status,
+    createdAt: userObject.createdAt,
+    updatedAt: userObject.updatedAt
+  };
+
+  switch (userObject.role) {
+    case 'user':
+      return {
+        ...baseData,
+        birthday: userObject.birthday,
+        genderSpectrum: userObject.genderSpectrum
+      };
+    
+    case 'lawyer':
+      return {
+        ...baseData,
+        firstName: userObject.firstName,
+        lastName: userObject.lastName,
+        specialization: userObject.specialization,
+        contactNumber: userObject.contactNumber
+      };
+    
+    case 'ngo':
+      return {
+        ...baseData,
+        organizationName: userObject.organizationName,
+        description: userObject.description,
+        category: userObject.category,
+        logo: userObject.logo,
+        contact: userObject.contact,
+        images: userObject.images,
+        rating: userObject.rating
+      };
+    
+    case 'admin':
+      return {
+        ...baseData,
+        adminName: userObject.adminName,
+        permissions: userObject.permissions
+      };
+    
+    default:
+      return baseData;
+  }
 };
 
 module.exports = mongoose.model('User', userSchema);

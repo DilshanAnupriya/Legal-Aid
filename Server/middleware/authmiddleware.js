@@ -27,7 +27,15 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    req.user = decoded;
+    // Verify role consistency (optional security check)
+    if (decoded.role && decoded.role !== user.role) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token role mismatch'
+      });
+    }
+
+    req.user = { ...decoded, role: user.role }; // Ensure role is up to date
     req.userDetails = user;
     next();
 
@@ -68,12 +76,31 @@ const authorizeRoles = (...roles) => {
     if (req.userDetails.role && !roles.includes(req.userDetails.role)) {
       return res.status(403).json({
         success: false,
-        message: `Access denied. Required roles: ${roles.join(', ')}`
+        message: `Access denied. Required roles: ${roles.join(', ')}. Your role: ${req.userDetails.role}`
       });
     }
 
     next();
   };
+};
+
+// Admin authorization middleware
+const requireAdmin = (req, res, next) => {
+  if (!req.userDetails) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  if (req.userDetails.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin privileges required'
+    });
+  }
+
+  next();
 };
 
 // Optional authentication middleware - doesn't fail if no token
@@ -95,7 +122,7 @@ const optionalAuth = async (req, res, next) => {
     const user = await User.findById(decoded.userId).select('-password');
     
     if (user) {
-      req.user = decoded;
+      req.user = { ...decoded, role: user.role };
       req.userDetails = user;
     } else {
       req.user = null;
@@ -114,6 +141,8 @@ const optionalAuth = async (req, res, next) => {
 
 module.exports = {
   authenticateToken,
+  protect: authenticateToken, // Alias for compatibility
   authorizeRoles,
+  requireAdmin,
   optionalAuth
 };

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { router } from 'expo-router';
 import { 
   StyleSheet, 
   Text, 
@@ -8,51 +7,83 @@ import {
   Alert, 
   ActivityIndicator,
   ScrollView,
-  RefreshControl
+  RefreshControl,
+  TouchableOpacity
 } from "react-native";
 import { Menu } from 'react-native-paper';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import {COLOR} from "@/constants/ColorPallet";
 
-export default function ProfileScreen({ navigation }: { navigation?: any }) {
+export default function MenuScreen({ navigation }: { navigation?: any }) {
     const { user, logout, getCurrentUser, isLoading, isAuthenticated } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
 
     const handleLogout = async () => {
         try {
             await logout();
-            // @ts-ignore
             navigation.navigate('Login');
         } catch (err) {
             Alert.alert('Error', (err && typeof err === 'object' && 'message' in err) ? (err as any).message : 'Failed to logout');
         }
     };
 
+    const navigateToProfile = () => {
+        if (!user) return;
+        
+        switch (user.role) {
+            case 'user':
+                navigation.navigate('UserProfile');
+                break;
+            case 'lawyer':
+                navigation.navigate('LawyerProfile');
+                break;
+            case 'ngo':
+                navigation.navigate('NgoOwnProfile');
+                break;
+            default:
+                console.log('Unknown user role:', user.role);
+        }
+    };
+
     const onRefresh = async () => {
         setRefreshing(true);
         try {
-            console.log('[ProfileScreen] Attempting to refresh user data...');
             await getCurrentUser();
-            console.log('[ProfileScreen] User data refreshed successfully');
-        } catch (error) {
-            console.error('[ProfileScreen] Error refreshing profile:', error);
+        } catch {
             Alert.alert('Error', 'Failed to refresh profile data');
         } finally {
             setRefreshing(false);
         }
     };
 
-    const formatDate = (dateString?: string): string => {
-        if (!dateString) return 'Not specified';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-            });
-        } catch {
-            return 'Invalid date';
+    const getUserTypeLabel = () => {
+        if (!user) return 'User';
+        switch (user.role) {
+            case 'user':
+                return 'Regular User';
+            case 'lawyer':
+                return 'Legal Professional';
+            case 'ngo':
+                return 'NGO Representative';
+            default:
+                return 'User';
+        }
+    };
+
+    const getUserDisplayName = () => {
+        if (!user) return 'User';
+        
+        switch (user.role) {
+            case 'lawyer':
+                return user.firstName && user.lastName 
+                    ? `${user.firstName} ${user.lastName}`
+                    : user.email;
+            case 'ngo':
+                return user.organizationName || user.email;
+            case 'user':
+            default:
+                return user.email;
         }
     };
 
@@ -73,7 +104,7 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#ff6b35" />
-                <Text style={styles.loadingText}>Loading profile...</Text>
+                <Text style={styles.loadingText}>Loading menu...</Text>
             </View>
         );
     }
@@ -81,9 +112,9 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
     if (!user) {
         return (
             <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Unable to load profile</Text>
+                <Text style={styles.errorText}>Unable to load user data</Text>
                 <Text style={styles.errorSubText}>
-                    {isAuthenticated ? 'Profile data is missing' : 'Please log in to view your profile'}
+                    {isAuthenticated ? 'User data is missing' : 'Please log in to view menu'}
                 </Text>
                 <Pressable style={styles.retryButton} onPress={onRefresh}>
                     <Text style={styles.retryButtonText}>Retry</Text>
@@ -108,50 +139,78 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
             }
         >
             <View style={styles.header}>
-                <Text style={styles.title}>Profile</Text>
+                <Text style={styles.title}>Menu</Text>
             </View>
 
-            <View style={styles.profileCard}>
+            {/* Profile Summary Card */}
+            <TouchableOpacity style={styles.profileCard} onPress={navigateToProfile}>
                 <View style={styles.avatarContainer}>
                     <View style={styles.avatarPlaceholder}>
                         <Text style={styles.avatarText}>
-                            {user.email.charAt(0).toUpperCase()}
+                            {getUserDisplayName().charAt(0).toUpperCase()}
                         </Text>
                     </View>
                 </View>
                 
-                <Text style={styles.email}>{user.email}</Text>
-                <Text style={styles.memberSince}>
-                    Member since {formatJoinDate(user.createdAt)}
-                </Text>
-                
-                <View style={styles.infoSection}>
-                    <View style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>Email:</Text>
-                        <Text style={styles.infoValue}>{user.email}</Text>
-                    </View>
-                    
-                    <View style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>Birthday:</Text>
-                        <Text style={styles.infoValue}>{formatDate(user.birthday)}</Text>
-                    </View>
-                    
-                    <View style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>Gender:</Text>
-                        <Text style={styles.infoValue}>{user.genderSpectrum}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>Account ID:</Text>
-                        <Text style={styles.infoValue}>{user.id.slice(-8)}</Text>
-                    </View>
+                <View style={styles.profileInfo}>
+                    <Text style={styles.displayName}>{getUserDisplayName()}</Text>
+                    <Text style={styles.userType}>{getUserTypeLabel()}</Text>
+                    <Text style={styles.memberSince}>
+                        Member since {formatJoinDate(user.createdAt)}
+                    </Text>
                 </View>
-            </View>
+                
+                <View style={styles.profileArrow}>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </View>
+            </TouchableOpacity>
 
             {/* Menu Items Section */}
             <View style={styles.menuSection}>
                 <Text style={styles.menuSectionTitle}>Quick Actions</Text>
                 <View style={styles.menuContainer}>
+
+                    <Menu.Item 
+                        leadingIcon="account-outline" 
+                        onPress={navigateToProfile} 
+                        title="My Profile" 
+                    />
+                    <Menu.Item 
+                        leadingIcon="file-multiple-outline" 
+                        onPress={() => {}} 
+                        title="Document Organizer" 
+                    />
+                    <Menu.Item 
+                        leadingIcon="robot-outline" 
+                        onPress={() => {}} 
+                        title="AI ChatBot Assist" 
+                    />
+                    <Menu.Item 
+                        leadingIcon="translate" 
+                        onPress={() => {}} 
+                        title="Languages"  
+                    />
+                    <Menu.Item 
+                        leadingIcon="charity" 
+                        onPress={() => {navigation.navigate('Ngo')}} 
+                        title="NGO Directory"  
+                    />
+                    <Menu.Item 
+                        leadingIcon="cog-outline" 
+                        onPress={() => {}} 
+                        title="Settings" 
+                    />
+                    <Menu.Item 
+                        leadingIcon="shield-account-outline" 
+                        onPress={() => {}} 
+                        title="About Us"  
+                    />
+                    <Menu.Item 
+                        leadingIcon="account-voice" 
+                        onPress={() => {}} 
+                        title="Contact Us"  
+                    />
+
                     <Menu.Item leadingIcon="file-multiple-outline" onPress={() => {}} title="Document Organizer" />
                     <Menu.Item leadingIcon="robot-outline" onPress={() => {}} title="AI ChatBot Assist" />
                     <Menu.Item leadingIcon="translate" onPress={() => {navigation.navigate('LanguageSettings')}} title="Languages"  />
@@ -159,6 +218,7 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
                     <Menu.Item leadingIcon="cog-outline" onPress={() => {}} title="Settings" />
                     <Menu.Item leadingIcon="shield-account-outline" onPress={() => {}} title="About Us"  />
                     <Menu.Item leadingIcon="account-voice" onPress={() => {}} title="Contact Us"  />
+
                 </View>
             </View>
 
@@ -230,6 +290,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderRadius: 12,
         padding: 20,
+        flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 30,
         elevation: 2,
@@ -239,31 +300,42 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     avatarContainer: {
-        marginBottom: 15,
+        marginRight: 15,
     },
     avatarPlaceholder: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         backgroundColor: '#ff6b35',
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatarText: {
-        fontSize: 32,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#fff',
     },
-    email: {
+    profileInfo: {
+        flex: 1,
+    },
+    displayName: {
         fontSize: 18,
         color: '#333',
         fontWeight: '600',
-        marginBottom: 5,
+        marginBottom: 4,
+    },
+    userType: {
+        fontSize: 14,
+        color: '#ff6b35',
+        fontWeight: '500',
+        marginBottom: 4,
     },
     memberSince: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#666',
-        marginBottom: 20,
+    },
+    profileArrow: {
+        marginLeft: 10,
     },
     infoSection: {
         width: '100%',

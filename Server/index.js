@@ -26,7 +26,42 @@ app.use(cors({
 }));
 
 
+// JSON parsing with error handling
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    return next();
+  }
+  
+  let body = '';
+  req.setEncoding('utf8');
+  
+  req.on('data', (chunk) => {
+    body += chunk;
+  });
+  
+  req.on('end', () => {
+    if (body && req.headers['content-type']?.includes('application/json')) {
+      try {
+        req.body = JSON.parse(body);
+      } catch (error) {
+        console.error('JSON parse error:', error.message, 'Body received:', body);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid JSON in request body'
+        });
+      }
+    } else if (body) {
+      req.body = body;
+    } else {
+      req.body = {};
+    }
+    next();
+  });
+});
+
+
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware for debugging
@@ -87,6 +122,9 @@ const adminRoutes = require("./Routes/adminRoutes");
 const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
 
+const adminRoutes = require('./Routes/adminRoutes');
+
+
 
 // API Routes
 app.use("/api/ngo", ngoRoutes);
@@ -98,11 +136,14 @@ app.use('/api/ngo', ngoRoutes);
 // Import Routes
 
 
+
 app.use('/api/documents', documentRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/polls", pollRoutes);
 app.use("/api/auth", userRoutes);
 
+app.use("/api/lawyers", lawyerRoutes);
+app.use("/api/admin", adminRoutes);
 
 
 // Root route
@@ -130,6 +171,19 @@ app.get("/health", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  console.error('Error occurred:', err);
+  
+  // Handle JSON parsing errors
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('JSON parsing error:', err.message);
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid JSON format in request body',
+      error: 'Malformed JSON'
+    });
+  }
+  
+  // Handle other errors
   console.error(err.stack);
   res.status(500).json({
     success: false,

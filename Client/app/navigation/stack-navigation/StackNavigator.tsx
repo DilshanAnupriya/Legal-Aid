@@ -3,6 +3,14 @@ import { createStackNavigator } from "@react-navigation/stack";
 import HomeBottomTabNavigation from "@/app/navigation/tab-navigation/HomeBottomTabNavigation";
 import { COLOR } from "@/constants/ColorPallet";
 import NgoScreen from "@/components/ui/screen/menu/NgoScreen";
+
+import React from "react";
+import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
+import UserProfileScreen from "@/components/ui/screen/UserProfileScreen";
+import LawyerProfileScreen from "@/components/ui/screen/LawyerProfileScreen";
+import NgoOwnProfileScreen from "@/components/ui/screen/NgoOwnProfileScreen";
+import RoleBasedWelcome from "@/components/ui/screen/RoleBasedWelcome";
+
 import UserProfile from "@/components/ui/screen/UserProfile";
 import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
@@ -13,6 +21,7 @@ import React from "react";
 import NgoProfileScreen from "@/components/ui/screen/NgoProfileScreen";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
 import LanguageDemo from "@/components/screens/LanguageDemo";
+
 
 const Stack = createStackNavigator();
 
@@ -69,6 +78,34 @@ export default function StackNavigator() {
                 })}
             />
             <Stack.Screen
+
+                name="UserProfile"
+                component={UserProfileScreen}
+                options={{
+                    title: 'My Profile'
+                }}
+            />
+            <Stack.Screen
+                name="LawyerProfile"
+                component={LawyerProfileScreen}
+                options={{
+                    title: 'My Profile'
+                }}
+            />
+            <Stack.Screen
+                name="NgoOwnProfile"
+                component={NgoOwnProfileScreen}
+                options={{
+                    title: 'My Profile'
+                }}
+            />
+            <Stack.Screen
+                name="RoleBasedWelcome"
+                component={RoleBasedWelcome}
+                options={{
+                    title: 'Welcome',
+                    headerLeft: () => null, // Disable back button
+
                 name="LanguageSettings"
                 component={LanguageSettingsScreen}
                 options={{
@@ -81,6 +118,7 @@ export default function StackNavigator() {
                 options={{
                     title: 'Language Demo',
                     headerShown: false,
+
                 }}
             />
         </Stack.Navigator>

@@ -6,22 +6,66 @@ import { Platform } from 'react-native';
 interface User {
   id: string;
   email: string;
-  birthday: string;
-  genderSpectrum: string;
+  role: 'user' | 'lawyer' | 'ngo';
+  status: string;
   createdAt: string;
   updatedAt?: string;
+  // User-specific fields
+  birthday?: string;
+  genderSpectrum?: string;
+  // Lawyer-specific fields
+  firstName?: string;
+  lastName?: string;
+  specialization?: string;
+  contactNumber?: string;
+  // NGO-specific fields
+  organizationName?: string;
+  description?: string;
+  category?: string;
+  logo?: string;
+  contact?: string;
+  images?: string[];
+  rating?: number;
 }
 
 interface RegisterData {
   email: string;
   password: string;
-  birthday: string;
-  genderSpectrum: string;
+  role: 'user' | 'lawyer' | 'ngo';
+  // User-specific fields
+  birthday?: string;
+  genderSpectrum?: string;
+  // Lawyer-specific fields
+  firstName?: string;
+  lastName?: string;
+  specialization?: string;
+  contactNumber?: string;
+  // NGO-specific fields
+  organizationName?: string;
+  description?: string;
+  category?: string;
+  logo?: string;
+  contact?: string;
+  images?: string[];
 }
 
 interface ProfileData {
+  // User-specific fields
   birthday?: string;
   genderSpectrum?: string;
+  // Lawyer-specific fields
+  firstName?: string;
+  lastName?: string;
+  specialization?: string;
+  contactNumber?: string;
+  // NGO-specific fields
+  organizationName?: string;
+  description?: string;
+  category?: string;
+  logo?: string;
+  contact?: string;
+  images?: string[];
+  status?: string;
 }
 
 interface AuthContextType {
@@ -34,6 +78,15 @@ interface AuthContextType {
   logout: () => Promise<void>;
   getCurrentUser: (authToken?: string) => Promise<User>;
   updateProfile: (profileData: ProfileData) => Promise<{ success: boolean; user: User }>;
+  // Role-based helper functions
+  isUser: () => boolean;
+  isLawyer: () => boolean;
+  isNgo: () => boolean;
+  hasRole: (role: 'user' | 'lawyer' | 'ngo') => boolean;
+  getUserDisplayName: () => string;
+  getUserTypeLabel: () => string;
+  getProfileRoute: () => string;
+  isProfileComplete: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,13 +151,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const API_URLS = getApiUrls();
   const API_BASE_URL = API_URLS[currentApiIndex];
 
-  // Try next API URL if current one fails
-  const tryNextApiUrl = () => {
-    const nextIndex = (currentApiIndex + 1) % API_URLS.length;
-    console.log(`[AuthContext] Trying next API URL: ${API_URLS[nextIndex]}`);
-    setCurrentApiIndex(nextIndex);
-    return nextIndex !== currentApiIndex; // Return false if we've tried all URLs
-  };
+  // Try next API URL if current one fails (currently unused but kept for future extensibility)
+  // const tryNextApiUrl = () => {
+  //   const nextIndex = (currentApiIndex + 1) % API_URLS.length;
+  //   console.log(`[AuthContext] Trying next API URL: ${API_URLS[nextIndex]}`);
+  //   setCurrentApiIndex(nextIndex);
+  //   return nextIndex !== currentApiIndex; // Return false if we've tried all URLs
+  // };
 
   // Configure axios interceptor
   useEffect(() => {
@@ -127,15 +180,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = React.useCallback(async (): Promise<void> => {
     try {
+      console.log('[AuthContext] Starting logout process...');
+      console.log('[AuthContext] Current auth state - isAuthenticated:', isAuthenticated, 'user:', !!user);
+      
+      // Clear stored token
       await AsyncStorage.removeItem('userToken');
+      console.log('[AuthContext] Token removed from storage');
+      
+      // Clear context state
       setToken(null);
       setUser(null);
       setIsAuthenticated(false);
       setHasCheckedAuth(false); // Reset flag to allow re-checking auth state
+      
+      console.log('[AuthContext] Auth state cleared - isAuthenticated set to false');
+      console.log('[AuthContext] Logout completed successfully');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('[AuthContext] Logout error:', error);
+      // Even if there's an error clearing storage, we should still clear the context state
+      setToken(null);
+      setUser(null);
+      setIsAuthenticated(false);
+      setHasCheckedAuth(false);
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   const getCurrentUser = React.useCallback(async (authToken: string = token || ''): Promise<User> => {
     try {
@@ -150,13 +218,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return response.data.user;
       }
       throw new Error('Failed to get user profile');
-    } catch (error) {
-      const err = error as any;
-      console.error('Error getting current user:', err?.response?.data || err?.message || err);
+    } catch (err) {
+      const error = err as any;
+      console.error('Error getting current user:', error?.response?.data || error?.message || error);
       logout();
-      throw error;
+      throw err;
     }
-  }, [token, logout]);
+  }, [token, logout, API_BASE_URL]);
 
   const checkAuthState = React.useCallback(async () => {
     // Prevent multiple executions
@@ -174,7 +242,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           await getCurrentUser(storedToken);
           console.log('[AuthContext] checkAuthState: User authenticated successfully');
-        } catch (error) {
+        } catch {
           console.log('[AuthContext] checkAuthState: Token validation failed, logging out');
           // If token is invalid, logout will be called from getCurrentUser
         }
@@ -320,6 +388,84 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  // Role-based helper functions
+  const isUser = (): boolean => {
+    return user?.role === 'user';
+  };
+
+  const isLawyer = (): boolean => {
+    return user?.role === 'lawyer';
+  };
+
+  const isNgo = (): boolean => {
+    return user?.role === 'ngo';
+  };
+
+  const hasRole = (role: 'user' | 'lawyer' | 'ngo'): boolean => {
+    return user?.role === role;
+  };
+
+  // Additional helper functions for role-based functionality
+  const getUserDisplayName = (): string => {
+    if (!user) return 'User';
+    
+    switch (user.role) {
+      case 'lawyer':
+        return user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}`
+          : user.email;
+      case 'ngo':
+        return user.organizationName || user.email;
+      case 'user':
+      default:
+        return user.email;
+    }
+  };
+
+  const getUserTypeLabel = (): string => {
+    if (!user) return 'User';
+    switch (user.role) {
+      case 'user':
+        return 'Regular User';
+      case 'lawyer':
+        return 'Legal Professional';
+      case 'ngo':
+        return 'NGO Representative';
+      default:
+        return 'User';
+    }
+  };
+
+  const getProfileRoute = (): string => {
+    if (!user) return 'UserProfile';
+    
+    switch (user.role) {
+      case 'user':
+        return 'UserProfile';
+      case 'lawyer':
+        return 'LawyerProfile';
+      case 'ngo':
+        return 'NgoOwnProfile';
+      default:
+        return 'UserProfile';
+    }
+  };
+
+  const isProfileComplete = (): boolean => {
+    if (!user) return false;
+    
+    switch (user.role) {
+      case 'user':
+        return !!(user.birthday && user.genderSpectrum);
+      case 'lawyer':
+        return !!(user.firstName && user.lastName && user.specialization && user.contactNumber);
+      case 'ngo':
+        return !!(user.organizationName && user.description && user.category && user.contact);
+      default:
+        return false;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -329,7 +475,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     login,
     logout,
     getCurrentUser,
-    updateProfile
+    updateProfile,
+    isUser,
+    isLawyer,
+    isNgo,
+    hasRole,
+    getUserDisplayName,
+    getUserTypeLabel,
+    getProfileRoute,
+    isProfileComplete
   };
 
   return (

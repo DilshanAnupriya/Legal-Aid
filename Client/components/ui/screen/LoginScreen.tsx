@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
 import { COLOR } from '../../../constants/ColorPallet';
+import adminService from '../../../services/adminService';
 
 interface LoginScreenProps {
   navigation?: any;
@@ -23,46 +24,35 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
 
   const { login } = useAuth();
 
-  const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleLogin = async () => {
     console.log('handleLogin called');
-    if (!validateForm()) {
-      console.log('Form validation failed', errors);
-      return;
-    }
-
+    
     setIsLoading(true);
     try {
-      console.log('Calling login with', formData.email, formData.password);
-      const result = await login(formData.email, formData.password);
-      console.log('Login result:', result);
-
-      // No need to navigate manually - AuthNavigator will handle this automatically
-      // when isAuthenticated becomes true
+      if (isAdminLogin) {
+        // Admin login
+        console.log('Attempting admin login with', formData.email, formData.password);
+        const result = await adminService.adminLogin(formData.email, formData.password);
+        console.log('Admin login result:', result);
+        
+        if (result.success) {
+          // Navigate to admin dashboard immediately
+          navigation.navigate('AdminDashboard');
+          // Optional: Show a brief success message without blocking navigation
+          Alert.alert('Success', 'Welcome to Admin Dashboard!');
+        }
+      } else {
+        // Regular user login
+        console.log('Calling login with', formData.email, formData.password);
+        const result = await login(formData.email, formData.password);
+        console.log('Login result:', result);
+        // No need to navigate manually - AuthNavigator will handle this automatically
+        // when isAuthenticated becomes true
+      }
 
     } catch (error: any) {
       console.log('Login error:', error);
@@ -74,10 +64,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
   };
 
   const handleSignUpPress = () => {
@@ -98,33 +84,44 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.formContainer}>
-            {/* Email Input */}
+            {/* Admin Login Toggle */}
+            <TouchableOpacity
+              style={styles.adminToggle}
+              onPress={() => setIsAdminLogin(!isAdminLogin)}
+            >
+              <View style={[styles.checkbox, isAdminLogin && styles.checkboxActive]}>
+                {isAdminLogin && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.adminToggleText}>Admin Login</Text>
+            </TouchableOpacity>
+
+            {/* Email/Username Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>
+                {isAdminLogin ? 'Username' : 'Email'}
+              </Text>
               <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
-                  placeholder="Enter your email"
+                  style={styles.input}
+                  placeholder={isAdminLogin ? 'Enter username' : 'Enter your email'}
                   value={formData.email}
                   onChangeText={(value) => updateFormData('email', value)}
-                  keyboardType="email-address"
+                  keyboardType={isAdminLogin ? 'default' : 'email-address'}
                   autoCapitalize="none"
                   autoCorrect={false}
               />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Password</Text>
               <TextInput
-                  style={[styles.input, errors.password && styles.inputError]}
+                  style={styles.input}
                   placeholder="Enter your password"
                   value={formData.password}
                   onChangeText={(value) => updateFormData('password', value)}
                   secureTextEntry
                   autoCapitalize="none"
               />
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
 
             {/* Login Button */}
@@ -142,7 +139,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             {/* Sign Up Link */}
             <View style={styles.signUpContainer}>
-              <Text style={styles.signUpText}>Don't have an account? </Text>
+              <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
               <TouchableOpacity onPress={handleSignUpPress}>
                 <Text style={styles.signUpLink}>Create Account</Text>
               </TouchableOpacity>
@@ -198,14 +195,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fff',
   },
-  inputError: {
-    borderColor: '#ff4444',
-  },
-  errorText: {
-    color: '#ff4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
   loginButton: {
     backgroundColor: COLOR.light.orange || '#ff6b35',
     padding: 16,
@@ -235,6 +224,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLOR.light.orange || '#ff6b35',
     fontWeight: '600',
+  },
+  adminToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 5,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderRadius: 3,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: COLOR.light.orange || '#ff6b35',
+    borderColor: COLOR.light.orange || '#ff6b35',
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  adminToggleText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
   },
 });
 
