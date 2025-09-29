@@ -176,43 +176,6 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
 
             />
             <Tab.Screen
-                name={'Forum'}
-                component={ForumScreen}
-                options={{
-                    headerStyle: {
-                        backgroundColor: colors.white,
-                        elevation: 8,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.05,
-                        shadowRadius: 8,
-                        height: 90,
-                        borderBottomWidth: 1,
-                        borderBottomColor: theme === 'light' ? '#F5F5F7' : colors.darkgray,
-                    },
-                    headerTintColor: colors.primary,
-                    headerTitle: 'Legal Forum',
-                    headerTitleStyle: {
-                        fontSize: 18,
-                        fontWeight: '600',
-                        color: colors.primary,
-                    },
-                }}
-            />
-
-              >
-                <Ionicons
-                  name="person"
-                  size={18}
-                  color={COLOR.light.orange || "#FF6B35"}
-                />
-              </TouchableOpacity>
-            </View>
-          ),
-        }}
-      />
-
-            <Tab.Screen
                 name={'Documents'}
                 component={DocumentScreen}
                 options={{
@@ -229,6 +192,31 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                     },
                     headerTintColor: colors.primary,
                     headerTitle: 'Documents',
+                    headerTitleStyle: {
+                        fontSize: 18,
+                        fontWeight: '600',
+                        color: colors.primary,
+                    },
+                }}
+            />
+
+            <Tab.Screen
+                name={'Forum'}
+                component={ForumScreen}
+                options={{
+                    headerStyle: {
+                        backgroundColor: colors.white,
+                        elevation: 8,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 8,
+                        height: 90,
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme === 'light' ? '#F5F5F7' : colors.darkgray,
+                    },
+                    headerTintColor: colors.primary,
+                    headerTitle: 'Legal Forum',
                     headerTitleStyle: {
                         fontSize: 18,
                         fontWeight: '600',
@@ -285,82 +273,8 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                     },
                 }}
             />
-
-      <Tab.Screen
-        name={"Forum"}
-        component={ForumScreen}
-        options={{
-          headerStyle: {
-            backgroundColor: colors.white,
-            elevation: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            height: 90,
-            borderBottomWidth: 1,
-            borderBottomColor: theme === "light" ? "#F5F5F7" : colors.darkgray,
-          },
-          headerTintColor: colors.primary,
-          headerTitle: "Legal Forum",
-          headerTitleStyle: {
-            fontSize: 18,
-            fontWeight: "600",
-            color: colors.primary,
-          },
-        }}
-      />
-      <Tab.Screen
-        name={"Lawyer"}
-        component={LawyerScreen}
-        options={{
-          headerStyle: {
-            backgroundColor: colors.white,
-            elevation: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            height: 90,
-            borderBottomWidth: 1,
-            borderBottomColor: theme === "light" ? "#F5F5F7" : colors.darkgray,
-          },
-          headerTintColor: colors.primary,
-          headerTitle: "Find Lawyers",
-          headerTitleStyle: {
-            fontSize: 18,
-            fontWeight: "600",
-            color: colors.primary,
-          },
-        }}
-      />
-      <Tab.Screen
-        name={"Menu"}
-        component={MenuScreen}
-        options={{
-          headerStyle: {
-            backgroundColor: colors.white,
-            elevation: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            height: 90,
-            borderBottomWidth: 1,
-            borderBottomColor: theme === "light" ? "#F5F5F7" : colors.darkgray,
-          },
-          headerTintColor: colors.primary,
-          headerTitle: "Menu",
-          headerTitleStyle: {
-            fontSize: 18,
-            fontWeight: "600",
-            color: colors.primary,
-          },
-        }}
-      />
-
-    </Tab.Navigator>
-  );
+        </Tab.Navigator>
+    );
 }
 
 const styles = StyleSheet.create({
