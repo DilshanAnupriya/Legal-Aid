@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useAuth } from '../../context/AuthContext';
 
 interface BookingModalProps {
     visible: boolean;
@@ -28,20 +29,22 @@ interface BookingData {
     contactName: string;
     contactEmail: string;
     contactPhone: string;
-    preferredMeetingType: 'in-person' | 'video' | 'phone';
+    meetingType: 'in-person' | 'video' | 'phone';
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({ visible, lawyer, onClose, onSubmit }) => {
+    const { user } = useAuth();
     const [date, setDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [time, setTime] = useState('09:00 AM');
     const [caseType, setCaseType] = useState('');
     const [description, setDescription] = useState('');
-    const [contactName, setContactName] = useState('');
-    const [contactEmail, setContactEmail] = useState('');
-    const [contactPhone, setContactPhone] = useState('');
+    const [contactName, setContactName] = useState(user?.firstName ? `${user.firstName} ${user.lastName}` : '');
+    const [contactEmail, setContactEmail] = useState(user?.email || '');
+    const [contactPhone, setContactPhone] = useState(user?.contactNumber || '');
     const [meetingType, setMeetingType] = useState<'in-person' | 'video' | 'phone'>('video');
+    
 
     const caseTypes = [
         'Criminal Defense',
@@ -74,6 +77,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ visible, lawyer, onClose, o
         }
 
         const bookingData: BookingData = {
+            userId: user.id, 
             lawyerId: lawyer?.id,
             date,
             time,
@@ -82,7 +86,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ visible, lawyer, onClose, o
             contactName,
             contactEmail,
             contactPhone,
-            preferredMeetingType: meetingType,
+            meetingType: meetingType,
         };
 
         onSubmit(bookingData);
