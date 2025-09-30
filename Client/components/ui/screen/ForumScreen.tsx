@@ -1842,16 +1842,16 @@ const ForumsScreen = () => {
                             style={styles.createMenuOption}
                             onPress={() => {
                                 setIsViewMenuVisible(false);
-                                setCurrentViewMode('all');
+                                setCurrentViewMode('viewAll');
                             }}
                             activeOpacity={0.8}
                         >
                             <View style={styles.createMenuOptionIcon}>
-                                <Text style={styles.createMenuOptionEmoji}>📋</Text>
+                                <Text style={styles.createMenuOptionEmoji}>🌐</Text>
                             </View>
                             <View style={styles.createMenuOptionText}>
-                                <Text style={styles.createMenuOptionTitle}>{t('forum.viewAll', { defaultValue: 'View Your Forums and Polls' })}</Text>
-                                <Text style={styles.createMenuOptionSubtitle}>{t('forum.viewAllSubtitle', { defaultValue: 'Show all your posts and polls' })}</Text>
+                                <Text style={styles.createMenuOptionTitle}>{t('forum.viewEveryone', { defaultValue: 'View All' })}</Text>
+                                <Text style={styles.createMenuOptionSubtitle}>{t('forum.viewEveryoneSubtitle', { defaultValue: 'Show all posts and polls from everyone' })}</Text>
                             </View>
                             <Ionicons name="chevron-forward" size={20} color="#7F8C8D" />
                         </TouchableOpacity>
@@ -1896,16 +1896,16 @@ const ForumsScreen = () => {
                             style={styles.createMenuOption}
                             onPress={() => {
                                 setIsViewMenuVisible(false);
-                                setCurrentViewMode('viewAll');
+                                setCurrentViewMode('all');
                             }}
                             activeOpacity={0.8}
                         >
                             <View style={styles.createMenuOptionIcon}>
-                                <Text style={styles.createMenuOptionEmoji}>🌐</Text>
+                                <Text style={styles.createMenuOptionEmoji}>📋</Text>
                             </View>
                             <View style={styles.createMenuOptionText}>
-                                <Text style={styles.createMenuOptionTitle}>{t('forum.viewEveryone', { defaultValue: 'View All' })}</Text>
-                                <Text style={styles.createMenuOptionSubtitle}>{t('forum.viewEveryoneSubtitle', { defaultValue: 'Show all posts and polls from everyone' })}</Text>
+                                <Text style={styles.createMenuOptionTitle}>{t('forum.viewAll', { defaultValue: 'View Your Forums and Polls' })}</Text>
+                                <Text style={styles.createMenuOptionSubtitle}>{t('forum.viewAllSubtitle', { defaultValue: 'Show all your posts and polls' })}</Text>
                             </View>
                             <Ionicons name="chevron-forward" size={20} color="#7F8C8D" />
                         </TouchableOpacity>
@@ -2058,7 +2058,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         elevation: 3,
     },
     viewButtonText: {
-        color: '#FFFFFF',
+        color: theme === 'dark' ? '#2C3E50' : '#FFFFFF',
         fontSize: 14,
         fontWeight: '600',
     },
