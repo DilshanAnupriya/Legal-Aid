@@ -2099,7 +2099,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     searchBarRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
     },
     searchBarContainer: {
         flex: 1,
