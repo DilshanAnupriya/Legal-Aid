@@ -153,6 +153,14 @@ const ForumsScreen = () => {
     const [polls, setPolls] = useState<ForumPost[]>([]);
     const [isGridView, setIsGridView] = useState(false);
     const [searchBarText, setSearchBarText] = useState('');
+    const [isHeaderSticky, setIsHeaderSticky] = useState(false);
+
+    // Handle scroll to show/hide sticky header
+    const handleScroll = (event: any) => {
+        const scrollY = event.nativeEvent.contentOffset.y;
+        // Show sticky header when scrolled past the main header (approximately 300px)
+        setIsHeaderSticky(scrollY > 300);
+    };
 
     // Multiple URL options for different environments
     const getApiUrls = () => {
@@ -1122,6 +1130,8 @@ const ForumsScreen = () => {
                 ref={scrollViewRef}
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled={true}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
             >
                 {/* Modern Header with Gradient Background */}
                 <View style={styles.header}>
@@ -1944,6 +1954,69 @@ const ForumsScreen = () => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Sticky Header */}
+            {isHeaderSticky && (
+                <View style={styles.stickyHeader}>
+                    {/* Sticky Search Bar */}
+                    <View style={styles.stickySearchBarSection}>
+                        <View style={styles.searchBarRow}>
+                            <View style={styles.searchBarContainer}>
+                                <Ionicons name="search-outline" size={20} color={theme === 'dark' ? colors.primary : '#666'} style={styles.searchBarIcon} />
+                                <TextInput
+                                    style={styles.searchBarInput}
+                                    placeholder={t('forum.searchPlaceholder', { defaultValue: 'Search discussions...' })}
+                                    value={searchBarText}
+                                    onChangeText={setSearchBarText}
+                                    placeholderTextColor={theme === 'dark' ? colors.darkgray : '#999'}
+                                    selectionColor={colors.primary}
+                                />
+                                {searchBarText.length > 0 && (
+                                    <TouchableOpacity onPress={() => setSearchBarText('')}>
+                                        <Ionicons name="close-circle-outline" size={20} color={theme === 'dark' ? colors.primary : '#666'} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                            
+                            {/* View Button */}
+                            <TouchableOpacity
+                                style={styles.viewButton}
+                                onPress={() => setIsViewMenuVisible(true)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.viewButtonText}>{t('forum.view', { defaultValue: 'View' })}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Sticky Categories Filter */}
+                    <View style={styles.stickyCategoriesFilter}>
+                        <FlatList
+                            data={categories}
+                            renderItem={({ item: category }) => (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.categoryFilterButton,
+                                        activeCategory === category.name && styles.activeCategoryFilterButton,
+                                    ]}
+                                    onPress={() => setActiveCategory(category.name)}
+                                >
+                                    <Text style={[
+                                        styles.categoryFilterText,
+                                        activeCategory === category.name && styles.activeCategoryFilterText,
+                                    ]}>
+                                        {category.translatedName}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            keyExtractor={(category) => category.id.toString()}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.categoriesFilterContainer}
+                        />
+                    </View>
+                </View>
+            )}
 
             {/* Floating Action Button */}
             <TouchableOpacity 
@@ -2977,6 +3050,35 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     createMenuOptionSubtitle: {
         fontSize: 13,
         color: theme === 'dark' ? colors.darkgray : '#7F8C8D',
+    },
+    // Sticky Header Styles
+    stickyHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
+        zIndex: 1000,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+        paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+    },
+    stickySearchBarSection: {
+        paddingHorizontal: 20,
+        paddingVertical: 15,
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: theme === 'dark' ? colors.darkgray : '#E5E5E5',
+    },
+    stickyCategoriesFilter: {
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: theme === 'dark' ? colors.darkgray : '#E5E5E5',
     },
 });
 
