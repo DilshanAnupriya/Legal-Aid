@@ -34,10 +34,11 @@
   "forum": {
     "title": "Legal Forum",
     "subtitle": "Connect • Ask • Learn • Grow",
+    "createNew": "Create New",
     "askQuestion": "Ask a Question",
-    "askQuestionSubtitle": "Get expert legal advice anonymously",
+    "askQuestionSubtitle": "Get help from the community",
     "addPoll": "Add a Poll",
-    "addPollSubtitle": "Create polls to gather community opinions",
+    "addPollSubtitle": "Gather community opinions",
     "recentDiscussions": "Recent Discussions",
     "newest": "Newest",
     "oldest": "Oldest",
@@ -55,7 +56,17 @@
     "searchPlaceholder": "Search questions, topics, or keywords...",
     "noResults": "No discussions found",
     "noResultsSubtext": "Be the first to ask a question or create a poll!",
-    "trendingTopics": "Trending Topics"
+    "trendingTopics": "Trending Topics",
+    "view": "View",
+    "viewOptions": "View Options",
+    "viewEveryone": "View All",
+    "viewEveryoneSubtitle": "Show all posts and polls from everyone",
+    "viewYourForums": "View Your Forums",
+    "viewYourForumsSubtitle": "Show only your forum posts",
+    "viewYourPolls": "View Your Polls",
+    "viewYourPollsSubtitle": "Show only your polls",
+    "viewAll": "View Your Forums and Polls",
+    "viewAllSubtitle": "Show all your posts and polls"
   },
   "createPost": {
     "title": "Create New Post",

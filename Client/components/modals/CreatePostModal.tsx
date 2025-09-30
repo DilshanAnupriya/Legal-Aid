@@ -406,8 +406,8 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: 'colors.primary',
-    borderColor: 'colors.primary',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   checkmark: {
     fontSize: 12,
@@ -513,8 +513,8 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   categoryOptionSelected: {
-    backgroundColor: 'colors.primary',
-    borderColor: 'colors.primary',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   categoryOptionIcon: {
     fontSize: 20,

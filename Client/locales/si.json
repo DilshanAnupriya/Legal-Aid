@@ -34,10 +34,11 @@
   "forum": {
     "title": "නීති සභාව",
     "subtitle": "සම්බන්ධ වන්න • අසන්න • ඉගෙන ගන්න • වර්ධනය වන්න",
+    "createNew": "අළුත් නිර්මාණය කරන්න",
     "askQuestion": "ප්‍රශ්නයක් අසන්න",
-    "askQuestionSubtitle": "නිර්නාමිකව විශේෂඥ නීති උපදේශන ලබා ගන්න",
+    "askQuestionSubtitle": "ප්‍රජාව කේ සහායතාවය ලබා ගන්න",
     "addPoll": "මත විමසීමක් එක් කරන්න",
-    "addPollSubtitle": "ප්‍රජා මතයන් රැස් කිරීමට මත විමසීම් නිර්මාණය කරන්න",
+    "addPollSubtitle": "ප්‍රජා මතයන් සැකසීම",
     "recentDiscussions": "මෑත සාකච්ඡා",
     "newest": "අළුත්ම",
     "oldest": "පැරණිතම",
@@ -55,7 +56,17 @@
     "searchPlaceholder": "ප්‍රශ්න, මාතෘකා හෝ මූල පද සොයන්න...",
     "noResults": "සාකච්ඡා හමු නොවීය",
     "noResultsSubtext": "ප්‍රශ්නයක් ඇසීමට හෝ මත විමසීමක් නිර්මාණය කිරීමට පළමුවන වන්න!",
-    "trendingTopics": "ප්‍රචලිත මාතෘකා"
+    "trendingTopics": "ප්‍රචලිත මාතෘකා",
+    "view": "බලන්න",
+    "viewOptions": "දර්ශන විකල්ප",
+    "viewEveryone": "සියල්ල බලන්න",
+    "viewEveryoneSubtitle": "සියලු දෙනාගේ පළ කිරීම් සහ මත විමසීම් පෙන්වන්න",
+    "viewYourForums": "ඔබේ සභා බලන්න",
+    "viewYourForumsSubtitle": "ඔබේ සභා පළ කිරීම් පමණක් පෙන්වන්න",
+    "viewYourPolls": "ඔබේ මත විමසීම් බලන්න",
+    "viewYourPollsSubtitle": "ඔබේ මත විමසීම් පමණක් පෙන්වන්න",
+    "viewAll": "ඔබේ සභා සහ මත විමසීම් බලන්න",
+    "viewAllSubtitle": "ඔබේ සියලුම පළ කිරීම් සහ මත විමසීම් පෙන්වන්න"
   },
   "createPost": {
     "title": "නව පළකිරීමක් නිර්මාණය කරන්න",
