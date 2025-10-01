@@ -22,7 +22,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   meetingType: {
     type: String,
-    enum: ['Call', 'Physical', 'Video Call'], // restrict values
+    enum: ["video", "in-person", "phone"],
     required: true,
   },
   status: {
@@ -31,6 +31,9 @@ const appointmentSchema = new mongoose.Schema({
     default: 'Pending',
   },
   description:{type:String,required: false},
+  contactName:{type:String,required: false},
+  contactEmail: {type:String,required: false},
+  contactPhone: {type:String,required: false},
   createdAt: {
     type: Date,
     default: Date.now,

@@ -5,7 +5,7 @@ const Lawyer = require('../models/Lawyer');
 // Create an appointment
 exports.createAppointment = async (req, res) => {
   try {
-    const { userId, lawyerId, date, time,meetingType,description } = req.body;
+    const { userId, lawyerId, date, time,meetingType,description ,contactName,contactEmail,contactPhone} = req.body;
 
     // Optional: check if lawyer exists
     const lawyer = await Lawyer.findById(lawyerId);
@@ -21,7 +21,10 @@ exports.createAppointment = async (req, res) => {
       date,
       time,
       meetingType,
-      description
+      description,
+      contactName,
+      contactEmail,
+      contactPhone
     });
 
     res.status(201).json({ message: 'Appointment created', appointment });

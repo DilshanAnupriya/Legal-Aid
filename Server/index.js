@@ -144,7 +144,8 @@ app.get("/", (req, res) => {
       auth: "/api/auth",
       posts: "/api/posts",
       polls: "/api/polls",
-      health: "/health"
+      health: "/health",
+      apointments:"/api/appointments"
     }
   });
 });
