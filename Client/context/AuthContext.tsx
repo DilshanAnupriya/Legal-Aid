@@ -185,6 +185,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       // Clear stored token
       await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userRole');
       console.log('[AuthContext] Token removed from storage');
       
       // Clear context state
@@ -227,6 +228,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [token, logout, API_BASE_URL]);
 
   const checkAuthState = React.useCallback(async () => {
+
+    const storedToken = await AsyncStorage.getItem('userToken');
+const storedRole = await AsyncStorage.getItem('userRole');
+if (storedToken && storedRole) {
+  setToken(storedToken);
+  setUser(prev => prev ? { ...prev, role: storedRole as User['role'] } : null);
+}
     // Prevent multiple executions
     if (hasCheckedAuth) {
       return;
@@ -259,8 +267,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Check for existing token on app start
   useEffect(() => {
-    checkAuthState();
-  }, [checkAuthState]);
+  checkAuthState();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // ✅ only run once when app starts
 
   const register = async (userData: RegisterData): Promise<{ success: boolean; user: User }> => {
     console.log(`[AuthContext] register: attempting with ${API_BASE_URL}`);
@@ -286,6 +295,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           const { token: newToken, user: newUser } = response.data;
           await AsyncStorage.setItem('userToken', newToken);
+          await AsyncStorage.setItem('userRole', newUser.role);
           setToken(newToken);
           setUser(newUser);
           setIsAuthenticated(true);
@@ -316,7 +326,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const login = async (email: string, password: string): Promise<{ success: boolean; user: User }> => {
-    console.log(`[AuthContext] login: attempting with ${API_BASE_URL}`);
+    
     
     const attemptLogin = async (url: string) => {
       const response = await axios.post(`${url}/login`, {
@@ -332,7 +342,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     for (let i = 0; i < API_URLS.length; i++) {
       try {
         const currentUrl = API_URLS[(currentApiIndex + i) % API_URLS.length];
-        console.log(`[AuthContext] login: trying ${currentUrl}`);
+       
         
         const response = await attemptLogin(currentUrl);
         
@@ -342,12 +352,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           const { token: newToken, user: newUser } = response.data;
           await AsyncStorage.setItem('userToken', newToken);
+          await AsyncStorage.setItem('userRole', newUser.role);
+
           setToken(newToken);
           setUser(newUser);
+          
           setIsAuthenticated(true);
           setHasCheckedAuth(true);
           
-          console.log('[AuthContext] login: success with', currentUrl);
+          
           return { success: true, user: newUser };
         }
         throw new Error('Login failed');
