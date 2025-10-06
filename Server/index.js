@@ -70,10 +70,40 @@ app.use((error, req, res, next) => {
   next(error);
 });
 
-// Connect to MongoDB
-mongoose.connect(DB_URL)
-    .then(() => console.log("✅ Connected to MongoDB"))
-    .catch((err) => console.error("❌ MongoDB connection error:", err));
+// Connect to MongoDB with retry logic
+const connectDB = async () => {
+  const maxRetries = 5;
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      await mongoose.connect(DB_URL, {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      console.log("✅ Connected to MongoDB Atlas");
+      return;
+    } catch (err) {
+      retries++;
+      console.error(`❌ MongoDB connection attempt ${retries}/${maxRetries} failed:`, err.message);
+      
+      if (retries === maxRetries) {
+        console.error("❌ Could not connect to MongoDB after multiple attempts");
+        console.error("Please check:");
+        console.error("  1. Internet connection");
+        console.error("  2. MongoDB Atlas cluster is running");
+        console.error("  3. IP address is whitelisted in MongoDB Atlas");
+        console.error("  4. DB_URL in .env is correct");
+        console.error("\n⚠️  Server will start but database operations will fail!");
+      } else {
+        console.log(`⏳ Retrying in 3 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
+  }
+};
+
+connectDB();
 
 
 //NGO

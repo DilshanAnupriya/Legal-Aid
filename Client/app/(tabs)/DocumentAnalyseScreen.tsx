@@ -15,6 +15,8 @@ import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { DocumentService } from '../../services/documentService';
 import { Document } from '@/types/document';
+import { UnicodeText } from '@/components/ui/UnicodeText';
+import { useAuth } from '@/context/AuthContext';
 
 type Step = 'select' | 'configure' | 'results' | 'history';
 
@@ -30,6 +32,7 @@ const LANGUAGES: LanguageOption[] = [
 ];
 
 export default function DocumentAnalyseScreen() {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>('select');
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -60,7 +63,7 @@ export default function DocumentAnalyseScreen() {
     }
 
     try {
-      const response = await DocumentService.getDocuments(page, 10);
+      const response = await DocumentService.getDocuments(page, 10, undefined, user?.id);
       
       if (response.success) {
         if (append) {
@@ -82,7 +85,7 @@ export default function DocumentAnalyseScreen() {
       setLoadingHistory(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.id]);
 
   // Load document history on mount
   useEffect(() => {
@@ -197,6 +200,7 @@ export default function DocumentAnalyseScreen() {
       const response = await DocumentService.explainDocument(
         selectedFile,
         analysisLanguage,
+        user?.id,
         (progress) => {
           setUploadProgress(progress.percentage);
         }
@@ -413,7 +417,7 @@ export default function DocumentAnalyseScreen() {
               <Ionicons name="document-text-outline" size={24} color="#007AFF" />
               <Text style={styles.sectionTitle}>AI Explanation</Text>
             </View>
-            <Text style={styles.explanationText}>{analysisResults.explanation}</Text>
+            <UnicodeText style={styles.explanationText}>{analysisResults.explanation}</UnicodeText>
           </View>
         )}
 
@@ -851,6 +855,8 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     color: '#333',
     textAlign: 'justify',
+    fontFamily: 'System', // Use system font for Unicode support
+    includeFontPadding: false, // Android: better Unicode rendering
   },
   statsContainer: {
     flexDirection: 'row',

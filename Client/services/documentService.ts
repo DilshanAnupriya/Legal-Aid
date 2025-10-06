@@ -120,6 +120,7 @@ export class DocumentService {
    */
   static async uploadDocument(
     file: any,
+    userId?: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<DocumentUploadResponse> {
     try {
@@ -169,6 +170,11 @@ export class DocumentService {
       }
       
       formData.append('document', fileToUpload);
+      
+      // Add userId if provided
+      if (userId) {
+        formData.append('userId', userId);
+      }
       
       // Add optional metadata
       if (file.category) {
@@ -271,10 +277,16 @@ export class DocumentService {
   static async getDocuments(
     page: number = 1,
     limit: number = 20,
-    filter?: DocumentFilter
+    filter?: DocumentFilter,
+    userId?: string
   ): Promise<DocumentListResponse> {
     try {
       const params: any = { page, limit };
+      
+      // Add userId to query params if provided
+      if (userId) {
+        params.userId = userId;
+      }
       
       if (filter) {
         if (filter.category) params.category = filter.category;
@@ -376,11 +388,13 @@ export class DocumentService {
    * Explain PDF document using AI (Gemini)
    * @param file - PDF file to explain
    * @param language - Language for explanation (english, sinhala, tamil)
+   * @param userId - User ID to associate the document with
    * @param onProgress - Progress callback
    */
   static async explainDocument(
     file: any,
     language: 'english' | 'sinhala' | 'tamil' = 'english',
+    userId?: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<AIExplanationResponse> {
     try {
@@ -438,6 +452,11 @@ export class DocumentService {
       
       formData.append('document', fileToUpload);
       formData.append('language', language);
+      
+      // Add userId if provided
+      if (userId) {
+        formData.append('userId', userId);
+      }
 
       const uploadUrl = API_BASE_URL + '/documents/explain';
       console.log('🔗 Making API request to:', uploadUrl);

@@ -75,7 +75,7 @@ class DocumentController {
       const documentType = categoryMap[req.body.category] || 'legal_document';
 
       const documentData = {
-        userId: null, // No authentication required
+        userId: req.body.userId || null, // Get userId from request body if provided
         originalFilename: req.file.originalname,
         filename: req.file.filename,
         filepath: req.file.path,
@@ -160,9 +160,15 @@ class DocumentController {
    */
   async getAllDocuments(req, res) {
     try {
-      const { page = 1, limit = 10, category } = req.query;
+      const { page = 1, limit = 10, category, userId } = req.query;
       
       const filter = {};
+      
+      // Filter by userId if provided
+      if (userId) {
+        filter.userId = userId;
+      }
+      
       if (category && category !== 'All') {
         filter.category = category;
       }
@@ -291,7 +297,7 @@ class DocumentController {
       } catch (aiError) {
         // Save document with error status
         const documentData = {
-          userId: null,
+          userId: req.body.userId || null, // Get userId from request body if provided
           originalFilename: req.file.originalname,
           filename: req.file.filename,
           filepath: req.file.path,
@@ -316,7 +322,7 @@ class DocumentController {
 
       // Save document with AI explanation
       const documentData = {
-        userId: null,
+        userId: req.body.userId || null, // Get userId from request body if provided
         originalFilename: req.file.originalname,
         filename: req.file.filename,
         filepath: req.file.path,
