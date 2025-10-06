@@ -26,43 +26,9 @@ app.use(cors({
 }));
 
 
-// JSON parsing with error handling
-app.use((req, res, next) => {
-  if (req.method === 'GET') {
-    return next();
-  }
-  
-  let body = '';
-  req.setEncoding('utf8');
-  
-  req.on('data', (chunk) => {
-    body += chunk;
-  });
-  
-  req.on('end', () => {
-    if (body && req.headers['content-type']?.includes('application/json')) {
-      try {
-        req.body = JSON.parse(body);
-      } catch (error) {
-        console.error('JSON parse error:', error.message, 'Body received:', body);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid JSON in request body'
-        });
-      }
-    } else if (body) {
-      req.body = body;
-    } else {
-      req.body = {};
-    }
-    next();
-  });
-});
-
-
-app.use(express.json());
-
-app.use(express.urlencoded({ extended: true }));
+// Body parsing middleware - increased limits for file uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging middleware for debugging
 app.use((req, res, next) => {

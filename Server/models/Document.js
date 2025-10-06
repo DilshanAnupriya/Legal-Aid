@@ -36,33 +36,28 @@ const documentSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'File size is required']
   },
-  extractedText: {
+  aiExplanation: {
     type: String,
     default: ''
   },
-  ocrStatus: {
+  explanationLanguage: {
+    type: String,
+    enum: ['english', 'sinhala', 'tamil'],
+    default: 'english'
+  },
+  aiStatus: {
     type: String,
     enum: ['pending', 'processing', 'completed', 'failed'],
     default: 'pending'
   },
-  ocrErrorMessage: {
+  aiErrorMessage: {
     type: String,
     default: null
-  },
-  confidence: {
-    type: Number,
-    min: 0,
-    max: 100,
-    default: 0
   },
   documentType: {
     type: String,
     enum: ['legal_document', 'contract', 'certificate', 'identification', 'other'],
     default: 'legal_document'
-  },
-  language: {
-    type: String,
-    default: 'eng' // Tesseract language code
   },
   isProcessed: {
     type: Boolean,
@@ -78,7 +73,7 @@ const documentSchema = new mongoose.Schema({
 
 // Index for faster queries
 documentSchema.index({ userId: 1, createdAt: -1 });
-documentSchema.index({ ocrStatus: 1 });
+documentSchema.index({ aiStatus: 1 });
 documentSchema.index({ isProcessed: 1 });
 
 // Virtual for document URL
