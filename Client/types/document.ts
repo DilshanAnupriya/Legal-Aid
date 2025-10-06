@@ -9,7 +9,9 @@ export interface Document {
   userId?: string;
   category?: DocumentCategory;
   tags?: string[];
-  ocrText?: string;
+  aiExplanation?: string;
+  explanationLanguage?: 'english' | 'sinhala' | 'tamil';
+  aiStatus?: 'pending' | 'processing' | 'completed' | 'failed';
   isProcessed: boolean;
   thumbnailPath?: string;
 }
@@ -36,11 +38,25 @@ export interface DocumentListResponse {
   error?: string;
 }
 
-export interface OCRResponse {
+export interface AIExplanationResponse {
   success: boolean;
-  text: string;
+  explanation: string;
+  language: 'english' | 'sinhala' | 'tamil';
   confidence: number;
+  wordCount: number;
+  characterCount: number;
   error?: string;
+}
+
+export interface ExplainDocumentRequest {
+  file: File | FormData;
+  language?: 'english' | 'sinhala' | 'tamil';
+}
+
+export interface SupportedLanguage {
+  code: 'english' | 'sinhala' | 'tamil';
+  name: string;
+  nativeName: string;
 }
 
 export enum DocumentCategory {
@@ -117,7 +133,7 @@ export interface FileValidationRules {
 }
 
 export const DEFAULT_FILE_VALIDATION: FileValidationRules = {
-  maxSize: 5 * 1024 * 1024, // 5MB
-  allowedTypes: ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'],
-  allowedExtensions: ['.jpg', '.jpeg', '.png', '.pdf']
+  maxSize: 10 * 1024 * 1024, // 10MB for PDFs
+  allowedTypes: ['application/pdf'],
+  allowedExtensions: ['.pdf']
 };

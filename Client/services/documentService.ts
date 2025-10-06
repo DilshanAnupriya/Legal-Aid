@@ -3,9 +3,10 @@ import {
   Document,
   DocumentUploadResponse,
   DocumentListResponse,
-  OCRResponse,
+  AIExplanationResponse,
   DocumentFilter,
-  UploadProgress
+  UploadProgress,
+  SupportedLanguage
 } from '@/types/document';
 
 // Configure base URL - automatically detect the best server URL
@@ -331,7 +332,9 @@ export class DocumentService {
       mimeType: serverDoc.mimeType,
       uploadDate: new Date(serverDoc.createdAt),
       category: serverDoc.documentType,
-      ocrText: serverDoc.extractedText,
+      aiExplanation: serverDoc.aiExplanation,
+      explanationLanguage: serverDoc.explanationLanguage,
+      aiStatus: serverDoc.aiStatus,
       isProcessed: serverDoc.isProcessed || false,
       thumbnailPath: undefined
     };
@@ -370,9 +373,191 @@ export class DocumentService {
   }
 
   /**
-   * Extract OCR text from document
+   * Explain PDF document using AI (Gemini)
+   * @param file - PDF file to explain
+   * @param language - Language for explanation (english, sinhala, tamil)
+   * @param onProgress - Progress callback
    */
-  static async extractOCRText(documentId: string): Promise<OCRResponse> {
+  static async explainDocument(
+    file: any,
+    language: 'english' | 'sinhala' | 'tamil' = 'english',
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<AIExplanationResponse> {
+    try {
+      console.log('🚀 Starting document explanation:', file.name);
+      console.log('📍 Server URL:', API_BASE_URL);
+      console.log('🌐 Language:', language);
+
+      // Validate file is PDF
+      if (file.type !== 'application/pdf') {
+        return {
+          success: false,
+          explanation: '',
+          language: language,
+          confidence: 0,
+          wordCount: 0,
+          characterCount: 0,
+          error: 'Only PDF files are supported for AI explanation'
+        };
+      }
+
+      const formData = new FormData();
+      
+      // Handle file differently for web vs mobile
+      let fileToUpload: any;
+      
+      if (typeof window !== 'undefined' && file.uri) {
+        // Web platform - convert URI to Blob
+        console.log('🌐 Web platform detected, converting URI to Blob');
+        try {
+          const response = await fetch(file.uri);
+          const blob = await response.blob();
+          
+          fileToUpload = new File([blob], file.name, {
+            type: 'application/pdf'
+          });
+          
+          console.log('📎 Web file prepared:', {
+            name: fileToUpload.name,
+            type: fileToUpload.type,
+            size: fileToUpload.size
+          });
+        } catch (blobError) {
+          console.error('Failed to convert URI to blob:', blobError);
+          throw new Error('Failed to prepare file for upload');
+        }
+      } else {
+        // Mobile platform - use original format
+        console.log('📱 Mobile platform detected, using original file format');
+        fileToUpload = {
+          uri: file.uri,
+          type: 'application/pdf',
+          name: file.name,
+        };
+      }
+      
+      formData.append('document', fileToUpload);
+      formData.append('language', language);
+
+      const uploadUrl = API_BASE_URL + '/documents/explain';
+      console.log('🔗 Making API request to:', uploadUrl);
+      
+      const response = await api.post('/documents/explain', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
+        },
+        onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress: UploadProgress = {
+              loaded: progressEvent.loaded,
+              total: progressEvent.total,
+              percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            };
+            console.log('📈 Upload progress:', progress.percentage + '%');
+            onProgress(progress);
+          }
+        },
+        timeout: 120000 // 2 minutes for AI processing
+      });
+
+      console.log('✅ API response received:', response.status, response.data);
+
+      if (response.data.success) {
+        return {
+          success: true,
+          explanation: response.data.data.explanation,
+          language: response.data.data.language,
+          confidence: response.data.data.confidence,
+          wordCount: response.data.data.wordCount,
+          characterCount: response.data.data.characterCount
+        };
+      } else {
+        console.error('AI explanation failed with server error:', response.data);
+        return {
+          success: false,
+          explanation: '',
+          language: language,
+          confidence: 0,
+          wordCount: 0,
+          characterCount: 0,
+          error: response.data.message || 'AI explanation failed'
+        };
+      }
+    } catch (error: any) {
+      console.error('Document explanation error:', error);
+      
+      if (error.code === 'ECONNABORTED') {
+        return {
+          success: false,
+          explanation: '',
+          language: language,
+          confidence: 0,
+          wordCount: 0,
+          characterCount: 0,
+          error: 'Request timed out. The document may be too large or the server is busy.'
+        };
+      }
+      
+      if (error.response) {
+        console.error('Server response error:', error.response.data);
+        return {
+          success: false,
+          explanation: '',
+          language: language,
+          confidence: 0,
+          wordCount: 0,
+          characterCount: 0,
+          error: error.response.data?.message || error.response.statusText
+        };
+      }
+      
+      return {
+        success: false,
+        explanation: '',
+        language: language,
+        confidence: 0,
+        wordCount: 0,
+        characterCount: 0,
+        error: error.message || 'Network error - unable to connect to server'
+      };
+    }
+  }
+
+  /**
+   * Get supported languages for AI explanation
+   */
+  static async getSupportedLanguages(): Promise<{ success: boolean; languages: SupportedLanguage[]; error?: string }> {
+    try {
+      const response = await api.get('/documents/languages');
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          languages: response.data.data.languages
+        };
+      } else {
+        return {
+          success: false,
+          languages: [],
+          error: response.data.message || 'Failed to load supported languages'
+        };
+      }
+    } catch (error: any) {
+      console.error('Get supported languages error:', error);
+      return {
+        success: false,
+        languages: [],
+        error: error.response?.data?.message || error.message || 'Failed to load supported languages'
+      };
+    }
+  }
+
+  /**
+   * Extract OCR text from document (DEPRECATED - Use explainDocument instead)
+   */
+  static async extractOCRText(documentId: string): Promise<AIExplanationResponse> {
+    console.warn('⚠️ extractOCRText is deprecated. Use explainDocument instead.');
     try {
       const response = await api.post(`/documents/${documentId}/ocr`);
       return response.data;
@@ -380,8 +565,11 @@ export class DocumentService {
       console.error('OCR extraction error:', error);
       return {
         success: false,
-        text: '',
+        explanation: '',
+        language: 'english',
         confidence: 0,
+        wordCount: 0,
+        characterCount: 0,
         error: error.response?.data?.message || error.message || 'OCR extraction failed'
       };
     }
@@ -443,5 +631,116 @@ export class DocumentService {
     }
   }
 }
+
+// Export standalone functions for convenience
+export const uploadDocument = async (formData: FormData) => {
+  try {
+    console.log('🚀 Starting document upload');
+    console.log('📍 Server URL:', API_BASE_URL);
+
+    const uploadUrl = API_BASE_URL + '/documents/upload';
+    console.log('🔗 Making API request to:', uploadUrl);
+    
+    const response = await api.post('/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Accept': 'application/json',
+      },
+      timeout: 60000 // 60 seconds
+    });
+
+    console.log('✅ API response received:', response.status, response.data);
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message,
+        document: {
+          _id: response.data.data.documentId,
+          fileName: response.data.data.filename,
+          originalName: response.data.data.originalFilename,
+          filePath: response.data.data.fileUrl || response.data.data.filepath,
+          uploadDate: new Date(response.data.data.uploadedAt),
+        }
+      };
+    } else {
+      console.error('Upload failed with server error:', response.data);
+      return {
+        success: false,
+        message: response.data.message || 'Upload failed'
+      };
+    }
+  } catch (error: any) {
+    console.error('Document upload error:', error);
+    
+    if (error.response) {
+      console.error('Server response error:', error.response.data);
+      return {
+        success: false,
+        message: 'Server rejected the upload',
+        error: error.response.data?.message || error.response.statusText
+      };
+    }
+    
+    return {
+      success: false,
+      message: 'Upload failed',
+      error: error.message || 'Network error - unable to connect to server'
+    };
+  }
+};
+
+export const analyzeDocument = async (
+  documentId: string, 
+  options: { summaryLanguage: string; translationLanguage: string }
+) => {
+  try {
+    console.log('🔍 Starting document analysis for:', documentId);
+    console.log('📋 Options:', options);
+
+    // For now, we'll use the /explain endpoint with the summary language
+    // In the future, you might want to add a separate analysis endpoint that supports both languages
+    const response = await api.post(`/documents/${documentId}/analyze`, {
+      summaryLanguage: options.summaryLanguage,
+      translationLanguage: options.translationLanguage
+    });
+
+    console.log('✅ Analysis response received:', response.status, response.data);
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message || 'Analysis completed',
+        analysis: {
+          summary: response.data.data?.explanation || response.data.data?.summary,
+          translation: response.data.data?.translation,
+          extractedText: response.data.data?.extractedText
+        }
+      };
+    } else {
+      return {
+        success: false,
+        message: response.data.message || 'Analysis failed'
+      };
+    }
+  } catch (error: any) {
+    console.error('Document analysis error:', error);
+    
+    if (error.response) {
+      console.error('Server response error:', error.response.data);
+      return {
+        success: false,
+        message: error.response.data?.message || 'Analysis failed',
+        error: error.response.statusText
+      };
+    }
+    
+    return {
+      success: false,
+      message: 'Analysis failed',
+      error: error.message || 'Network error'
+    };
+  }
+};
 
 export default DocumentService;

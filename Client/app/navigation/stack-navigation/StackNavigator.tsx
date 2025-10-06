@@ -14,7 +14,6 @@ import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
 import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
-import LanguageDemo from "@/components/screens/LanguageDemo";
 
 
 const Stack = createStackNavigator();
@@ -105,14 +104,6 @@ export default function StackNavigator() {
                 name="LanguageSettings"
                 component={LanguageSettingsScreen}
                 options={{
-                    headerShown: false,
-                }}
-            />
-            <Stack.Screen
-                name="LanguageDemo"
-                component={LanguageDemo}
-                options={{
-                    title: 'Language Demo',
                     headerShown: false,
                 }}
             />

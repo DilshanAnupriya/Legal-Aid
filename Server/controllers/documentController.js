@@ -1,5 +1,5 @@
 const Document = require('../models/Document');
-const Tesseract = require('tesseract.js');
+const geminiService = require('../Services/geminiService');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -82,7 +82,7 @@ class DocumentController {
         mimeType: req.file.mimetype,
         fileSize: req.file.size || 0,
         documentType: documentType,
-        language: req.body.language || 'eng'
+        explanationLanguage: req.body.language || 'english'
       };
 
       // Create document record
@@ -201,15 +201,30 @@ class DocumentController {
   }
 
   /**
-   * Scan document using OCR
-   * POST /api/documents/scan
+   * Explain document using AI (Gemini)
+   * POST /api/documents/explain
    */
-  async scanDocument(req, res) {
+  async explainDocument(req, res) {
     try {
       if (!req.file) {
         return res.status(400).json({
           success: false,
-          message: 'Document file is required for scanning'
+          message: 'Document file is required for AI explanation'
+        });
+      }
+
+      // Validate file is PDF
+      if (req.file.mimetype !== 'application/pdf') {
+        // Clean up uploaded file
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          // Silent cleanup error
+        }
+        
+        return res.status(400).json({
+          success: false,
+          message: 'Only PDF files are supported for AI explanation'
         });
       }
 
@@ -221,15 +236,85 @@ class DocumentController {
         });
       }
 
-      const language = req.body.language || 'eng';
+      const language = req.body.language || 'english';
       
-      // Perform OCR using Tesseract.js
-      const { data: { text, confidence } } = await Tesseract.recognize(
-        req.file.path,
-        language
-      );
+      // Validate language
+      const supportedLanguages = ['english', 'sinhala', 'tamil'];
+      if (!supportedLanguages.includes(language)) {
+        return res.status(400).json({
+          success: false,
+          message: `Unsupported language. Supported languages: ${supportedLanguages.join(', ')}`
+        });
+      }
 
-      // Save scanned document to database
+      // Check if Gemini AI is configured
+      if (!geminiService.isConfigured()) {
+        // Clean up uploaded file
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          // Silent cleanup error
+        }
+        
+        return res.status(503).json({
+          success: false,
+          message: 'AI service is not configured. Please contact administrator.'
+        });
+      }
+
+      // Extract text from PDF
+      let documentText;
+      try {
+        documentText = await geminiService.extractTextFromPDF(req.file.path);
+        
+        if (!documentText || documentText.trim().length === 0) {
+          throw new Error('No text could be extracted from the PDF');
+        }
+      } catch (extractError) {
+        // Clean up uploaded file
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          // Silent cleanup error
+        }
+        
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to extract text from PDF: ' + extractError.message
+        });
+      }
+
+      // Generate AI explanation
+      let aiResult;
+      try {
+        aiResult = await geminiService.explainLegalDocument(documentText, language);
+      } catch (aiError) {
+        // Save document with error status
+        const documentData = {
+          userId: null,
+          originalFilename: req.file.originalname,
+          filename: req.file.filename,
+          filepath: req.file.path,
+          mimeType: req.file.mimetype,
+          fileSize: req.file.size || 0,
+          documentType: 'legal_document',
+          explanationLanguage: language,
+          aiStatus: 'failed',
+          aiErrorMessage: aiError.message,
+          isProcessed: false
+        };
+
+        const document = new Document(documentData);
+        await document.save();
+
+        return res.status(500).json({
+          success: false,
+          message: 'AI explanation failed',
+          error: aiError.message
+        });
+      }
+
+      // Save document with AI explanation
       const documentData = {
         userId: null,
         originalFilename: req.file.originalname,
@@ -237,13 +322,12 @@ class DocumentController {
         filepath: req.file.path,
         mimeType: req.file.mimetype,
         fileSize: req.file.size || 0,
-        extractedText: text,
-        confidence: Math.round(confidence),
+        aiExplanation: aiResult.explanation,
+        explanationLanguage: language,
         documentType: 'legal_document',
-        language: language,
         isProcessed: true,
         processedAt: new Date(),
-        ocrStatus: 'completed'
+        aiStatus: 'completed'
       };
 
       const document = new Document(documentData);
@@ -251,20 +335,23 @@ class DocumentController {
 
       res.status(200).json({
         success: true,
-        message: 'Document scanned successfully',
+        message: 'Document explained successfully',
         data: {
           document: {
             id: savedDocument._id,
             originalFilename: savedDocument.originalFilename,
             filename: savedDocument.filename,
             isProcessed: savedDocument.isProcessed,
-            ocrStatus: savedDocument.ocrStatus,
+            aiStatus: savedDocument.aiStatus,
             createdAt: savedDocument.createdAt
           },
-          extractedText: text,
-          confidence: Math.round(confidence),
-          wordCount: text.split(/\s+/).filter(word => word.length > 0).length,
-          characterCount: text.length
+          explanation: aiResult.explanation,
+          language: aiResult.language,
+          confidence: aiResult.confidence,
+          wordCount: aiResult.wordCount,
+          characterCount: aiResult.characterCount,
+          documentLength: aiResult.documentLength,
+          truncated: aiResult.truncated
         }
       });
 
@@ -280,7 +367,7 @@ class DocumentController {
 
       res.status(500).json({
         success: false,
-        message: 'Error scanning document',
+        message: 'Error explaining document',
         error: error.message
       });
     }
@@ -329,29 +416,18 @@ class DocumentController {
   }
 
   /**
-   * Get supported languages
+   * Get supported languages for AI explanation
    * GET /api/documents/languages
    */
   async getSupportedLanguages(req, res) {
     try {
-      const languages = [
-        { code: 'eng', name: 'English' },
-        { code: 'spa', name: 'Spanish' },
-        { code: 'fra', name: 'French' },
-        { code: 'deu', name: 'German' },
-        { code: 'por', name: 'Portuguese' },
-        { code: 'ita', name: 'Italian' },
-        { code: 'rus', name: 'Russian' },
-        { code: 'chi_sim', name: 'Chinese (Simplified)' },
-        { code: 'jpn', name: 'Japanese' },
-        { code: 'ara', name: 'Arabic' }
-      ];
+      const languages = geminiService.getSupportedLanguages();
       
       res.json({
         success: true,
         data: {
           languages,
-          default: 'eng'
+          default: 'english'
         }
       });
 
