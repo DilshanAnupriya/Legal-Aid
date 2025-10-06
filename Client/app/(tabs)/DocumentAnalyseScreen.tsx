@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,16 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  FlatList,
+  RefreshControl,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { DocumentService } from '../../services/documentService';
+import { Document } from '@/types/document';
 
-type Step = 'select' | 'configure' | 'results';
+type Step = 'select' | 'configure' | 'results' | 'history';
 
 interface LanguageOption {
   label: string;
@@ -43,6 +46,107 @@ export default function DocumentAnalyseScreen() {
     characterCount?: number;
   } | null>(null);
 
+  // History
+  const [documentHistory, setDocumentHistory] = useState<Document[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+
+  // Load document history
+  const loadDocumentHistory = useCallback(async (page: number = 1, append: boolean = false) => {
+    if (!append) {
+      setLoadingHistory(true);
+    }
+
+    try {
+      const response = await DocumentService.getDocuments(page, 10);
+      
+      if (response.success) {
+        if (append) {
+          setDocumentHistory(prev => [...prev, ...response.documents]);
+        } else {
+          setDocumentHistory(response.documents);
+        }
+        
+        setHasMoreHistory(response.documents.length === 10);
+        setHistoryPage(page);
+      } else {
+        if (!append) {
+          console.error('Failed to load history:', response.error);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error loading history:', error);
+    } finally {
+      setLoadingHistory(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Load document history on mount
+  useEffect(() => {
+    loadDocumentHistory();
+  }, [loadDocumentHistory]);
+
+  // Refresh history
+  const handleRefreshHistory = () => {
+    setRefreshing(true);
+    loadDocumentHistory(1, false);
+  };
+
+  // Load more history
+  const handleLoadMoreHistory = () => {
+    if (!loadingHistory && hasMoreHistory) {
+      loadDocumentHistory(historyPage + 1, true);
+    }
+  };
+
+  // View document from history
+  const handleViewDocument = (document: Document) => {
+    if (document.aiExplanation) {
+      setAnalysisResults({
+        explanation: document.aiExplanation,
+        confidence: 0.95,
+        wordCount: document.aiExplanation.split(' ').length,
+        characterCount: document.aiExplanation.length,
+      });
+      setAnalysisLanguage((document.explanationLanguage as 'english' | 'sinhala' | 'tamil') || 'english');
+      setCurrentStep('results');
+    } else {
+      Alert.alert('No Analysis', 'This document has not been analyzed yet.');
+    }
+  };
+
+  // Delete document from history
+  const handleDeleteDocument = async (documentId: string) => {
+    Alert.alert(
+      'Delete Document',
+      'Are you sure you want to delete this document?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await DocumentService.deleteDocument(documentId);
+              if (response.success) {
+                Alert.alert('Success', 'Document deleted successfully');
+                loadDocumentHistory(1, false);
+              } else {
+                Alert.alert('Error', response.message || 'Failed to delete document');
+              }
+            } catch (error: any) {
+              console.error('Error deleting document:', error);
+              Alert.alert('Error', 'Failed to delete document');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Reset to start over
   const handleReset = () => {
     setCurrentStep('select');
@@ -51,6 +155,7 @@ export default function DocumentAnalyseScreen() {
     setUploadProgress(0);
     setAnalysisResults(null);
     setAnalysisLanguage('english');
+    loadDocumentHistory(1, false);
   };
 
   // Handle file selection
@@ -70,8 +175,6 @@ export default function DocumentAnalyseScreen() {
           size: file.size,
           mimeType: file.mimeType || 'application/pdf',
         });
-        
-        // Move to configuration step
         setCurrentStep('configure');
       }
     } catch (error) {
@@ -91,7 +194,6 @@ export default function DocumentAnalyseScreen() {
     setUploadProgress(0);
 
     try {
-      // Use the explainDocument method which handles upload and analysis
       const response = await DocumentService.explainDocument(
         selectedFile,
         analysisLanguage,
@@ -109,6 +211,7 @@ export default function DocumentAnalyseScreen() {
         });
         setCurrentStep('results');
         Alert.alert('Success', 'Document analyzed successfully!');
+        loadDocumentHistory(1, false);
       } else {
         Alert.alert('Error', response.error || 'Failed to analyze document. Please try again.');
       }
@@ -122,46 +225,69 @@ export default function DocumentAnalyseScreen() {
   };
 
   // Render Step Indicator
-  const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
-      <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, currentStep === 'select' && styles.stepCircleActive]}>
-          <Ionicons 
-            name={currentStep !== 'select' ? "checkmark" : "document"} 
-            size={20} 
-            color={currentStep !== 'select' ? "#4CAF50" : "#007AFF"} 
-          />
+  const renderStepIndicator = () => {
+    if (currentStep === 'history') {
+      return (
+        <View style={styles.historyHeader}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => setCurrentStep('select')}
+          >
+            <Ionicons name="arrow-back" size={24} color="#007AFF" />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.historyTitle}>Document History</Text>
+          <TouchableOpacity 
+            style={styles.refreshButton} 
+            onPress={handleRefreshHistory}
+          >
+            <Ionicons name="refresh" size={24} color="#007AFF" />
+          </TouchableOpacity>
         </View>
-        <Text style={styles.stepText}>Select PDF</Text>
-      </View>
+      );
+    }
 
-      <View style={styles.stepLine} />
-
-      <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, currentStep === 'configure' && styles.stepCircleActive]}>
-          <Ionicons 
-            name={currentStep === 'results' ? "checkmark" : "settings"} 
-            size={20} 
-            color={currentStep === 'results' ? "#4CAF50" : currentStep === 'configure' ? "#007AFF" : "#ccc"} 
-          />
+    return (
+      <View style={styles.stepIndicator}>
+        <View style={styles.stepItem}>
+          <View style={[styles.stepCircle, currentStep === 'select' && styles.stepCircleActive]}>
+            <Ionicons 
+              name={currentStep !== 'select' ? "checkmark" : "document"} 
+              size={20} 
+              color={currentStep !== 'select' ? "#4CAF50" : "#007AFF"} 
+            />
+          </View>
+          <Text style={styles.stepText}>Select PDF</Text>
         </View>
-        <Text style={styles.stepText}>Configure</Text>
-      </View>
 
-      <View style={styles.stepLine} />
+        <View style={styles.stepLine} />
 
-      <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, currentStep === 'results' && styles.stepCircleActive]}>
-          <Ionicons 
-            name="eye" 
-            size={20} 
-            color={currentStep === 'results' ? "#007AFF" : "#ccc"} 
-          />
+        <View style={styles.stepItem}>
+          <View style={[styles.stepCircle, currentStep === 'configure' && styles.stepCircleActive]}>
+            <Ionicons 
+              name={currentStep === 'results' ? "checkmark" : "settings"} 
+              size={20} 
+              color={currentStep === 'results' ? "#4CAF50" : currentStep === 'configure' ? "#007AFF" : "#ccc"} 
+            />
+          </View>
+          <Text style={styles.stepText}>Configure</Text>
         </View>
-        <Text style={styles.stepText}>Results</Text>
+
+        <View style={styles.stepLine} />
+
+        <View style={styles.stepItem}>
+          <View style={[styles.stepCircle, currentStep === 'results' && styles.stepCircleActive]}>
+            <Ionicons 
+              name="eye" 
+              size={20} 
+              color={currentStep === 'results' ? "#007AFF" : "#ccc"} 
+            />
+          </View>
+          <Text style={styles.stepText}>Results</Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   // Render Step 1: Select Document
   const renderSelectStep = () => (
@@ -174,6 +300,14 @@ export default function DocumentAnalyseScreen() {
         <TouchableOpacity style={styles.selectButton} onPress={handleSelectFile}>
           <Ionicons name="folder-open-outline" size={24} color="#fff" />
           <Text style={styles.selectButtonText}>Select PDF Document</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.historyButton} 
+          onPress={() => setCurrentStep('history')}
+        >
+          <Ionicons name="time-outline" size={24} color="#007AFF" />
+          <Text style={styles.historyButtonText}>View Document History</Text>
         </TouchableOpacity>
 
         <View style={styles.infoBox}>
@@ -259,6 +393,11 @@ export default function DocumentAnalyseScreen() {
   // Render Step 3: Results
   const renderResultsStep = () => (
     <ScrollView style={styles.stepContent}>
+      <TouchableOpacity style={styles.resultsBackButton} onPress={() => setCurrentStep('select')}>
+        <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        <Text style={styles.resultsBackButtonText}>Back to Upload</Text>
+      </TouchableOpacity>
+      
       <View style={styles.resultsCard}>
         <View style={styles.resultsHeader}>
           <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
@@ -314,6 +453,144 @@ export default function DocumentAnalyseScreen() {
     </ScrollView>
   );
 
+  // Render History List Item
+  const renderHistoryItem = ({ item }: { item: Document }) => {
+    const uploadDate = new Date(item.uploadDate);
+    const formattedDate = uploadDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+    const formattedTime = uploadDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const getStatusColor = () => {
+      switch (item.aiStatus) {
+        case 'completed':
+          return '#4CAF50';
+        case 'processing':
+          return '#FF9800';
+        case 'failed':
+          return '#F44336';
+        default:
+          return '#9E9E9E';
+      }
+    };
+
+    const getStatusIcon = () => {
+      switch (item.aiStatus) {
+        case 'completed':
+          return 'checkmark-circle';
+        case 'processing':
+          return 'sync-circle';
+        case 'failed':
+          return 'close-circle';
+        default:
+          return 'time';
+      }
+    };
+
+    return (
+      <View style={styles.historyItem}>
+        <View style={styles.historyItemIcon}>
+          <Ionicons name="document-text" size={32} color="#007AFF" />
+        </View>
+        
+        <View style={styles.historyItemContent}>
+          <Text style={styles.historyItemTitle} numberOfLines={1}>
+            {item.originalName || item.fileName}
+          </Text>
+          
+          <View style={styles.historyItemMeta}>
+            <Text style={styles.historyItemDate}>{formattedDate} • {formattedTime}</Text>
+            {item.explanationLanguage && (
+              <Text style={styles.historyItemLanguage}>
+                {item.explanationLanguage.charAt(0).toUpperCase() + item.explanationLanguage.slice(1)}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.historyItemStatus}>
+            <Ionicons name={getStatusIcon()} size={16} color={getStatusColor()} />
+            <Text style={[styles.historyItemStatusText, { color: getStatusColor() }]}>
+              {item.aiStatus ? item.aiStatus.charAt(0).toUpperCase() + item.aiStatus.slice(1) : 'Pending'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.historyItemActions}>
+          {item.isProcessed && item.aiExplanation && (
+            <TouchableOpacity
+              style={styles.historyItemButton}
+              onPress={() => handleViewDocument(item)}
+            >
+              <Ionicons name="eye" size={20} color="#007AFF" />
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            style={styles.historyItemButton}
+            onPress={() => handleDeleteDocument(item._id)}
+          >
+            <Ionicons name="trash" size={20} color="#F44336" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  // Render History Step
+  const renderHistoryStep = () => (
+    <View style={styles.historyContainer}>
+      {loadingHistory && documentHistory.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading document history...</Text>
+        </View>
+      ) : documentHistory.length === 0 ? (
+        <View style={styles.emptyHistoryContainer}>
+          <Ionicons name="document-text-outline" size={80} color="#ccc" />
+          <Text style={styles.emptyHistoryTitle}>No Documents Yet</Text>
+          <Text style={styles.emptyHistorySubtitle}>
+            Start by uploading and analyzing a PDF document
+          </Text>
+          <TouchableOpacity 
+            style={styles.emptyHistoryButton} 
+            onPress={() => setCurrentStep('select')}
+          >
+            <Ionicons name="add-circle" size={24} color="#fff" />
+            <Text style={styles.emptyHistoryButtonText}>Upload Document</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={documentHistory}
+          renderItem={renderHistoryItem}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.historyList}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefreshHistory}
+              colors={['#007AFF']}
+            />
+          }
+          onEndReached={handleLoadMoreHistory}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() =>
+            loadingHistory && documentHistory.length > 0 ? (
+              <View style={styles.historyFooter}>
+                <ActivityIndicator size="small" color="#007AFF" />
+              </View>
+            ) : null
+          }
+        />
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {renderStepIndicator()}
@@ -322,6 +599,7 @@ export default function DocumentAnalyseScreen() {
         {currentStep === 'select' && renderSelectStep()}
         {currentStep === 'configure' && renderConfigureStep()}
         {currentStep === 'results' && renderResultsStep()}
+        {currentStep === 'history' && renderHistoryStep()}
       </View>
     </View>
   );
@@ -405,6 +683,23 @@ const styles = StyleSheet.create({
   },
   selectButtonText: {
     color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    gap: 12,
+    marginTop: 16,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  historyButtonText: {
+    color: '#007AFF',
     fontSize: 18,
     fontWeight: '600',
   },
@@ -594,5 +889,173 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#007AFF',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  refreshButton: {
+    padding: 4,
+  },
+  historyContainer: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyHistoryContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyHistoryTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptyHistorySubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  emptyHistoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    gap: 12,
+  },
+  emptyHistoryButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  historyList: {
+    padding: 16,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  historyItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  historyItemContent: {
+    flex: 1,
+  },
+  historyItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  historyItemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  historyItemDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  historyItemLanguage: {
+    fontSize: 12,
+    color: '#007AFF',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  historyItemStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  historyItemStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  historyItemActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  historyItemButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyFooter: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  resultsBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
+  resultsBackButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '500',
   },
 });
