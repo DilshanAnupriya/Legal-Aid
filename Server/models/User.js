@@ -74,13 +74,52 @@ const userSchema = new mongoose.Schema(
         return this.role === "lawyer" ? "pending" : undefined;
       },
     },
-    tier: {
-      type: String,
-      enum: ["standard", "premium", "elite"],
+    totalPoints: {
+      type: Number,
+      default: 0,
       required: function () {
         return this.role === "lawyer";
       },
-      default: "standard",
+    },
+    tier: {
+      type: String,
+      enum: [
+        "Community Ally",
+        "Legal Helper",
+        "Justice Advocate",
+        "Legal Mentor",
+        "Champion of Justice",
+      ],
+      default: function () {
+        return this.role === "lawyer" ? "Community Ally" : undefined;
+      },
+      required: function () {
+        return this.role === "lawyer";
+      },
+    },
+    reviews: {
+      type: [{ rating: Number, comment: String }],
+      required: function () {
+        return this.role === "lawyer";
+      },
+      default: function () {
+        return this.role === "lawyer" ? [] : undefined;
+      },
+    },
+    contributions: {
+      type: [
+        {
+          type: { type: String }, // e.g., 'forum', 'case', 'appointment'
+          date: Date,
+          points: Number,
+        },
+      ],
+      required: function () {
+        return this.role === "lawyer";
+      },
+      default: function () {
+        return this.role === "lawyer" ? [] : undefined;
+      },
     },
     // NGO-specific fields
     organizationName: {
@@ -210,6 +249,10 @@ userSchema.methods.toJSON = function () {
         contactNumber: userObject.contactNumber,
         lawyerStatus: userObject.lawyerStatus,
         tier: userObject.tier,
+        totalPoints: userObject.totalPoints,
+        reviews: userObject.reviews,
+        contributions:userObject.contributions
+
       };
 
     case "ngo":
