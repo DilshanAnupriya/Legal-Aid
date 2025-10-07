@@ -2,6 +2,8 @@ import axios from "axios";
 
 // Change this to your backend URL (localhost or LAN IP)
 const API_URL = "http://localhost:3000/api/auth/lawyers"; // Web
+const API_URL_LAWYER_PROFILE = "http://localhost:3000/api/lawyers";
+
 
 
 // Get all lawyers with category and pagination
@@ -39,6 +41,33 @@ export const searchLawyers = async (query) => {
     return response.data;
   } catch (error) {
     console.error("Error searching lawyers:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Save or update a lawyer's profile
+export const saveLawyerProfile = async (lawyerId, profileData) => {
+  try {
+    console.log("lawyer id in service : ",lawyerId)
+    const response = await axios.post(`${API_URL_LAWYER_PROFILE}/AddprofileDetails`, {
+      lawyerId: lawyerId,
+      ...profileData,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error saving lawyer profile:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Fetch a lawyer's profile by ID
+export const getLawyerProfile = async (lawyerId) => {
+  try {
+    const response = await axios.get(`${API_URL_LAWYER_PROFILE}/AddprofileDetails/${lawyerId}`);
+    console.log("lawyer profile data : ",response.data.profile)
+    return response.data.profile;
+  } catch (error) {
+    console.error("Error fetching lawyer profile:", error.response?.data || error.message);
     throw error;
   }
 };

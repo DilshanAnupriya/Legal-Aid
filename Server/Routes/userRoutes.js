@@ -47,7 +47,7 @@ router.get('/user-dashboard', authenticateToken, authorizeRoles('user'), (req, r
 router.get('/lawyer-dashboard', authenticateToken, authorizeRoles('lawyer'), (req, res) => {
   res.json({
     success: true,
-    message: 'Welcome to lawyer dashboard',
+    message: 'Welcome to lawyer dashbxoard',
     user: req.userDetails.toJSON()
   });
 });
