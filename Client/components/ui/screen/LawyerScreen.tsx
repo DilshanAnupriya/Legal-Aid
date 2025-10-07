@@ -1,8 +1,8 @@
 import LawyerNetworkScreen from "@/components/modals/LawyerNetworkScreen";
 import React, { useState, useEffect } from "react";
 import { StyleSheet, View, StatusBar, Alert } from "react-native";
-import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../../../context/ThemeContext';
+import { useNavigation } from "@react-navigation/native";
+import { useTheme } from "../../../context/ThemeContext";
 
 //import custom components
 import { getAllLawyers } from "../../../service/lawyerService";
@@ -30,9 +30,7 @@ export default function LawyerScreen() {
     "All",
     "Human Rights & Civil Liberties",
     "Women's Rights & Gender Justice",
-    "criminal Law"
-    
-  
+    "criminal Law",
   ];
 
   // Effects
@@ -42,42 +40,48 @@ export default function LawyerScreen() {
 
   // Fetch Lawyers
   const fetchLawyers = async (isRefresh = false) => {
-  if (isRefresh) {
-    setRefreshing(true);
-    setPage(1);
-  } else {
-    setLoading(true);
-  }
-
-  try {
-    console.log("fetch lawyers called");
-    const categoryParam = selectedCategory && selectedCategory !== "All" ? selectedCategory : "";
-    const currentPage = isRefresh ? 1 : page;
-
-    console.log("search text : ",searchText)
-    // Axios request
-    const response = await getAllLawyers(searchText,currentPage,10,categoryParam );
-    const data = response.data; // Axios automatically parses JSON
-    console.log("data:", data);
-
-    if (data.message === "list" && data.data) {
-      if (isRefresh || currentPage === 1) {
-        setLawyers(data.data);
-      } else {
-        setLawyers((prev) => [...prev, ...data.data]);
-      }
-
-      setTotalPages(data.pagination?.totalPages || 1);
-      setHasNext(data.pagination?.hasNext || false);
+    if (isRefresh) {
+      setRefreshing(true);
+      setPage(1);
+    } else {
+      setLoading(true);
     }
-  } catch (error) {
-    Alert.alert("Error", "Failed to fetch lawyers. Please try again.");
-    console.error(error);
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-};
+
+    try {
+      console.log("fetch lawyers called");
+      const categoryParam =
+        selectedCategory && selectedCategory !== "All" ? selectedCategory : "";
+      const currentPage = isRefresh ? 1 : page;
+
+      console.log("search text : ", searchText);
+      // Axios request
+      const response = await getAllLawyers(
+        searchText,
+        currentPage,
+        10,
+        categoryParam
+      );
+      const data = response.data; // Axios automatically parses JSON
+      console.log("dataaaaa:", data);
+
+      if (data.message === "list" && data.data) {
+        if (isRefresh || currentPage === 1) {
+          setLawyers(data.data);
+        } else {
+          setLawyers((prev) => [...prev, ...data.data]);
+        }
+
+        setTotalPages(data.pagination?.totalPages || 1);
+        setHasNext(data.pagination?.hasNext || false);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to fetch lawyers. Please try again.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   // Event Handlers
   const handleRefresh = () => {
@@ -106,17 +110,16 @@ export default function LawyerScreen() {
     setLawyers([]);
   };
 
-  const handleViewChange = (gridView:any) => {
-        setIsGridView(gridView);
-    };
+  const handleViewChange = (gridView: any) => {
+    setIsGridView(gridView);
+  };
 
-     // @ts-ignore
-    const handleCardPress = (item) => {
-        navigation.navigate('LawyerProfile', {
-        lawyerId: item._id, // or item.id depending on your backend
+  // @ts-ignore
+  const handleCardPress = (item) => {
+    navigation.navigate("LawyerProfile", {
+      lawyerId: item._id, // or item.id depending on your backend
     });
-
-    };
+  };
   return (
     <View style={[styles.container, { backgroundColor: colors.light }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />

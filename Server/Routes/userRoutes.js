@@ -4,7 +4,8 @@ const {
   registerUser, 
   loginUser, 
   getUserProfile, 
-  updateUserProfile 
+  updateUserProfile ,
+  getAllLawyers
 } = require('../controllers/userController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authmiddleware');
 
@@ -85,5 +86,8 @@ router.get('/admin-dashboard', authenticateToken, authorizeRoles('admin'), (req,
     permissions: req.userDetails.permissions || []
   });
 });
+
+// GET /api/lawyers
+router.get('/lawyers', getAllLawyers);
 
 module.exports = router;
