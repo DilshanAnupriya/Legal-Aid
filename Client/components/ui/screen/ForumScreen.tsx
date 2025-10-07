@@ -24,6 +24,7 @@ import PollCard from '../../cards/PollCard';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useTTS } from '../../../hooks/useTTS';
 
 const { width } = Dimensions.get('window');
 
@@ -57,6 +58,7 @@ const ForumsScreen = () => {
     const { user } = useAuth();
     const { t } = useTranslation();
     const { theme, colors } = useTheme();
+    const { speak, isSpeaking, stopSpeaking } = useTTS();
     const scrollViewRef = useRef<ScrollView>(null);
     const [activeCategory, setActiveCategory] = useState('All');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
@@ -1121,6 +1123,16 @@ const ForumsScreen = () => {
         }
     };
 
+    // Handle speaking forum titles
+    const handleSpeakTitle = async (title: string, type: 'forum' | 'poll' = 'forum') => {
+        if (isSpeaking) {
+            await stopSpeaking();
+        } else {
+            const textToSpeak = type === 'poll' ? `Poll: ${title}` : `Forum: ${title}`;
+            await speak(textToSpeak);
+        }
+    };
+
     // Create dynamic styles based on theme
     const styles = createStyles(colors, theme);
 
@@ -1488,7 +1500,24 @@ const ForumsScreen = () => {
                                                 
                                                 {/* Card Content */}
                                                 <View style={styles.gridPostContent}>
-                                                    <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                    <View style={styles.gridTitleContainer}>
+                                                        <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                        <TouchableOpacity
+                                                            style={styles.gridSpeakerButton}
+                                                            onPress={(e) => {
+                                                                e.stopPropagation();
+                                                                handleSpeakTitle(item.title, 'forum');
+                                                            }}
+                                                            activeOpacity={0.7}
+                                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                        >
+                                                            <Ionicons 
+                                                                name={isSpeaking ? "stop-circle" : "volume-high"} 
+                                                                size={16} 
+                                                                color={colors.primary} 
+                                                            />
+                                                        </TouchableOpacity>
+                                                    </View>
                                                     
                                                     {/* Category Badge */}
                                                     <View style={styles.gridCategoryBadge}>
@@ -1562,7 +1591,24 @@ const ForumsScreen = () => {
                                                     
                                                     {/* Card Content */}
                                                     <View style={styles.gridPostContent}>
-                                                        <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                        <View style={styles.gridTitleContainer}>
+                                                            <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                            <TouchableOpacity
+                                                                style={styles.gridSpeakerButton}
+                                                                onPress={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSpeakTitle(item.title, 'forum');
+                                                                }}
+                                                                activeOpacity={0.7}
+                                                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                            >
+                                                                <Ionicons 
+                                                                    name={isSpeaking ? "stop-circle" : "volume-high"} 
+                                                                    size={16} 
+                                                                    color={colors.primary} 
+                                                                />
+                                                            </TouchableOpacity>
+                                                        </View>
                                                         
                                                         {/* Category Badge */}
                                                         <View style={styles.gridCategoryBadge}>
@@ -1673,7 +1719,24 @@ const ForumsScreen = () => {
                                 {/* Main Content */}
                                 <View style={styles.modernCardContent}>
                                     <View style={styles.titleSection}>
-                                        <Text style={styles.modernPostTitle} numberOfLines={2}>{item.title}</Text>
+                                        <View style={styles.titleWithSpeaker}>
+                                            <Text style={styles.modernPostTitle} numberOfLines={2}>{item.title}</Text>
+                                            <TouchableOpacity
+                                                style={styles.listSpeakerButton}
+                                                onPress={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSpeakTitle(item.title, 'forum');
+                                                }}
+                                                activeOpacity={0.7}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            >
+                                                <Ionicons 
+                                                    name={isSpeaking ? "stop-circle" : "volume-high"} 
+                                                    size={20} 
+                                                    color={colors.primary} 
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
                                         {item.isAnswered && (
                                             <View style={styles.modernAnsweredBadge}>
                                                 <Text style={styles.modernAnsweredIcon}>✓</Text>
@@ -1954,6 +2017,7 @@ const ForumsScreen = () => {
                     </View>
                 </View>
             </Modal>
+
 
             {/* Sticky Header */}
             {isHeaderSticky && (
@@ -2607,6 +2671,8 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         color: theme === 'dark' ? colors.primary : '#1F2937',
         lineHeight: 24,
         marginBottom: 8,
+        flex: 1,
+        marginRight: 8,
     },
     modernAnsweredBadge: {
         flexDirection: 'row',
@@ -2803,7 +2869,8 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         fontWeight: '700',
         color: theme === 'dark' ? colors.primary : '#1F2937',
         lineHeight: 18,
-        marginBottom: 8,
+        flex: 1,
+        marginRight: 6,
         minHeight: 36, // Ensure consistent height
     },
     gridCategoryBadge: {
@@ -3079,6 +3146,33 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: theme === 'dark' ? colors.darkgray : '#E5E5E5',
+    },
+    // Speaker Button Styles for Cards
+    gridTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    gridSpeakerButton: {
+        padding: 4,
+        borderRadius: 12,
+        backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.1)',
+        marginLeft: 6,
+        marginTop: -2,
+    },
+    titleWithSpeaker: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        flex: 1,
+    },
+    listSpeakerButton: {
+        padding: 6,
+        borderRadius: 16,
+        backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.1)',
+        marginLeft: 8,
+        marginTop: -2,
     },
 });
 
