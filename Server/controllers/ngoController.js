@@ -342,18 +342,39 @@ const GetNgoByCategory = async (req, res) => {
 // Update NGO Status
 const UpdateNgoStatus = async (req, res) => {
     try {
+        console.log('UpdateNgoStatus called');
+        console.log('NGO ID:', req.params.id);
+        console.log('Request body:', req.body);
+        
         const { status } = req.body;
+        
+        if (!status) {
+            console.log('No status provided in request body');
+            return res.status(400).json({ message: "error", error: "Status is required" });
+        }
+        
+        console.log(`Updating NGO ${req.params.id} to status: ${status}`);
+        
         const updatedNgo = await NGO.findByIdAndUpdate(
             req.params.id,
             { status },
             { new: true }
         );
 
+        console.log('Update result:', updatedNgo ? 'Success' : 'Not found');
+        
         if (updatedNgo) {
+            console.log('NGO updated successfully:', {
+                id: updatedNgo._id,
+                name: updatedNgo.name,
+                newStatus: updatedNgo.status
+            });
             return res.status(200).json({ message: "status updated", data: updatedNgo });
         }
+        console.log('NGO not found with ID:', req.params.id);
         res.status(404).json({ message: "not found" });
     } catch (e) {
+        console.error('Error in UpdateNgoStatus:', e);
         res.status(500).json({ message: "error", error: e.message });
     }
 };

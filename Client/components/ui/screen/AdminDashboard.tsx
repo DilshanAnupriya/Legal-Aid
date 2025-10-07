@@ -169,12 +169,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation }) => {
               icon="briefcase-outline"
               color="#e74c3c"
             />
-            <StatCard
-              title="NGOs"
-              value={stats?.users.ngos || 0}
-              icon="business-outline"
-              color="#2ecc71"
-            />
+            <TouchableOpacity
+              onPress={() => {
+                if (navigation) {
+                  navigation.navigate('AdminNGOs');
+                }
+              }}
+            >
+              <StatCard
+                title="NGOs"
+                value={stats?.users.ngos || 0}
+                icon="business-outline"
+                color="#2ecc71"
+              />
+            </TouchableOpacity>
             <StatCard
               title="Active Users"
               value={stats?.users.active || 0}
@@ -216,6 +224,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation }) => {
           >
             <Ionicons name="people" size={20} color={COLOR.light.orange} />
             <Text style={styles.actionButtonText}>Manage Users</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              if (navigation) {
+                navigation.navigate('AdminNGOs');
+              }
+            }}
+          >
+            <Ionicons name="business" size={20} color={COLOR.light.orange} />
+            <Text style={styles.actionButtonText}>Manage NGOs</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 

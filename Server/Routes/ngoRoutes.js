@@ -16,7 +16,7 @@ const {
     UploadNgoImages,
     DeleteNgoImage,
     DeleteAllNgoImages
-} = require('../controllers/NgoController');
+} = require('../controllers/ngoController');
 
 // Multer configuration for multiple file types
 const uploadFields = ngo.fields([

@@ -5,6 +5,7 @@ const {
   getAdminProfile,
   getAllUsers,
   getAllLawyers,
+  getAllNGOs,
   updateUserStatus,
   deleteUser,
   getDashboardStats
@@ -32,6 +33,11 @@ router.get('/users', authenticateToken, requireAdmin, getAllUsers);
 // @route   GET /api/admin/lawyers
 // @access  Admin only
 router.get('/lawyers', authenticateToken, requireAdmin, getAllLawyers);
+
+// @desc    Get all NGOs
+// @route   GET /api/admin/ngos
+// @access  Admin only
+router.get('/ngos', authenticateToken, requireAdmin, getAllNGOs);
 
 // @desc    Update user status
 // @route   PUT /api/admin/users/:id/status
