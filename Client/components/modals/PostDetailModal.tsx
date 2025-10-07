@@ -14,8 +14,10 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useTTS } from '../../hooks/useTTS';
 
 interface PostDetailModalProps {
   visible: boolean;
@@ -27,6 +29,7 @@ interface PostDetailModalProps {
 const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClose, onPostUpdated }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { speak, isSpeaking, stopSpeaking } = useTTS();
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -391,6 +394,16 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
     setCommentToDelete(null);
   };
 
+  // Handle speaking description
+  const handleSpeakDescription = async () => {
+    if (isSpeaking) {
+      await stopSpeaking();
+    } else {
+      const textToSpeak = `Description: ${post.description}`;
+      await speak(textToSpeak);
+    }
+  };
+
   // Don't render anything if no post data
   if (!visible || !post) {
     return null;
@@ -485,7 +498,21 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
           {/* Description */}
           <View style={styles.descriptionSection}>
             <Text style={styles.sectionLabel}>{t('postDetail.description', { defaultValue: 'Description' })}</Text>
-            <Text style={styles.descriptionText}>{post.description}</Text>
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.descriptionText}>{post.description}</Text>
+              <TouchableOpacity
+                style={styles.descriptionSpeakerButton}
+                onPress={handleSpeakDescription}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons 
+                  name={isSpeaking ? "stop-circle" : "volume-high"} 
+                  size={22} 
+                  color="#3B82F6" 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Status Information */}
@@ -907,10 +934,25 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 10,
   },
+  descriptionContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
   descriptionText: {
     fontSize: 16,
     color: '#2C3E50',
     lineHeight: 24,
+    flex: 1,
+    marginRight: 12,
+  },
+  descriptionSpeakerButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -2,
   },
   statusSection: {
     backgroundColor: '#FFFFFF',
