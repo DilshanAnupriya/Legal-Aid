@@ -4,12 +4,14 @@ import AppointmentsSection from '@/components/ui/screen/widget/LawyerDashboard/A
 import ClientListSection from '@/components/ui/screen/widget/LawyerDashboard/ClientListSection';
 import FeedbackSection from '@/components/ui/screen/widget/LawyerDashboard/FeedbackSection';
 import AnalyticsSection from '@/components/ui/screen/widget/LawyerDashboard/AnalyticsSection';
+import TierProgressSection from './widget/LawyerDashboard/TierProgressSection';
 
 function LawyerDashboard() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Lawyer Dashboard</Text>
 
+      <TierProgressSection />
       <AnalyticsSection />
       <AppointmentsSection />
       <ClientListSection />

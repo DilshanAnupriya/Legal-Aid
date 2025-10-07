@@ -1,35 +1,102 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { getRecentAppointmentsForLawyer, updateAppointmentStatus } from "../../../../../service/appointmentSercive";
+import { useAuth } from "../../../../../context/AuthContext";
+import { useNavigation } from "@react-navigation/native";
 
-const mockAppointments = [
-  { id: '1', user: 'John Doe', case: 'Property Dispute', time: 'Oct 10, 10:30 AM', status: 'Pending' },
-  { id: '2', user: 'Sara Ali', case: 'Family Law', time: 'Oct 12, 02:00 PM', status: 'Confirmed' },
-];
+const AppointmentsSection = ({ onViewAll}) => {
+  const { user } = useAuth();
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+   const navigation = useNavigation();
 
-const AppointmentsSection = () => {
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!user?.id) return;
+      try {
+        const data = await getRecentAppointmentsForLawyer(user.id);
+        setAppointments(data);
+      } catch (error) {
+        console.error("Error fetching recent appointments:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAppointments();
+  }, [user]);
+
+  const handleStatusChange = async (appointmentId, newStatus) => {
+    try {
+      const result = await updateAppointmentStatus(appointmentId, newStatus);
+      setAppointments((prev) =>
+        prev.map((appt) =>
+          appt._id === appointmentId ? { ...appt, status: newStatus } : appt
+        )
+      );
+      Alert.alert("Success", `Status updated to ${newStatus}`);
+    } catch (error) {
+      console.error("Error updating status:", error);
+      Alert.alert("Error", "Failed to update appointment status");
+    }
+  };
+
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Appointments</Text>
-      <FlatList
-        data={mockAppointments}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.appointmentCard}>
-            <View>
-              <Text style={styles.clientName}>{item.user}</Text>
-              <Text style={styles.caseType}>{item.case}</Text>
-              <Text style={styles.time}>{item.time}</Text>
+      <Text style={styles.sectionTitle}>Recent Appointments</Text>
+
+      {loading ? (
+        <ActivityIndicator size="small" color="#007AFF" />
+      ) : appointments.length === 0 ? (
+        <Text style={styles.noDataText}>No recent appointments found.</Text>
+      ) : (
+        <FlatList
+          data={appointments}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <View style={styles.appointmentCard}>
+              <View>
+                <Text style={styles.clientName}>{item.contactName || "Client"}</Text>
+                <Text style={styles.caseType}>{item.meetingType || "Consultation"}</Text>
+                <Text style={styles.time}>
+                  {new Date(item.date).toDateString()} – {item.time}
+                </Text>
+              </View>
+              <View style={styles.statusButtons}>
+                {item.status !== "Confirmed" && (
+                  <TouchableOpacity
+                    style={[styles.statusButton, { backgroundColor: "#4CAF50" }]}
+                    onPress={() => handleStatusChange(item._id, "Confirmed")}
+                  >
+                    <Text style={styles.statusText}>Confirm</Text>
+                  </TouchableOpacity>
+                )}
+                {item.status !== "Cancelled" && (
+                  <TouchableOpacity
+                    style={[styles.statusButton, { backgroundColor: "#FF3B30" }]}
+                    onPress={() => handleStatusChange(item._id, "Cancelled")}
+                  >
+                    <Text style={styles.statusText}>Cancel</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-            <TouchableOpacity style={[styles.statusButton, 
-              { backgroundColor: item.status === 'Confirmed' ? '#4CAF50' : '#FFA500' }
-            ]}>
-              <Text style={styles.statusText}>{item.status}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
-      <TouchableOpacity style={styles.viewAll}>
-        <Text style={styles.viewAllText}>View All Appointments →</Text>
+          )}
+        />
+      )}
+
+      <TouchableOpacity style={styles.viewAll} onPress={onViewAll}>
+        <Text style={styles.viewAllText} 
+        onPress={() => navigation.navigate("LawyerAppointmentsScreen")} >
+          View All Appointments →
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -39,7 +106,7 @@ export default AppointmentsSection;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -47,46 +114,56 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 12,
-    color: '#333',
+    color: "#333",
   },
   appointmentCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#F4F4F4',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#F4F4F4",
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
   },
   clientName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#222',
+    fontWeight: "600",
+    color: "#222",
   },
   caseType: {
-    color: '#777',
+    color: "#777",
   },
   time: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
+  },
+  statusButtons: {
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   statusButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    justifyContent: 'center',
+    marginVertical: 4,
+    alignItems: "center",
   },
   statusText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   viewAll: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginTop: 8,
   },
   viewAllText: {
-    color: '#007AFF',
-    fontWeight: '500',
+    color: "#007AFF",
+    fontWeight: "500",
+  },
+  noDataText: {
+    textAlign: "center",
+    color: "#666",
+    marginVertical: 10,
   },
 });

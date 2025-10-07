@@ -1,6 +1,6 @@
 // controllers/appointmentController.js
 const Appointment = require('../models/Appointment');
-const Lawyer = require('../models/Lawyer');
+const Lawyer = require('../models/User');
 
 // Create an appointment
 exports.createAppointment = async (req, res) => {
@@ -45,5 +45,79 @@ exports.getUserAppointments = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get all appointments for a lawyer
+exports.getLawyerAppointments = async (req, res) => {
+  try {
+    const { lawyerId } = req.params;
+
+    const appointments = await Appointment.find({ lawyer: lawyerId })
+      .populate('user', 'firstName lastName email contactNumber') // show user info
+      .sort({ date: 1 });
+
+    if (!appointments || appointments.length === 0) {
+      return res.status(404).json({ message: 'No appointments found for this lawyer' });
+    }
+
+    res.json({ appointments });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+// Get recent 3 appointments for a lawyer
+exports.getRecentAppointmentsForLawyer = async (req, res) => {
+  try {
+    const { lawyerId } = req.params;
+
+    // Find the latest 3 upcoming appointments for the lawyer
+    const recentAppointments = await Appointment.find({ lawyer: lawyerId })
+      .populate('user', 'firstName lastName email contactNumber')
+      .sort({ date: -1, time: -1 }) // Sort by latest date/time
+      .limit(3);
+
+    if (!recentAppointments || recentAppointments.length === 0) {
+      return res.status(404).json({ message: 'No recent appointments found for this lawyer' });
+    }
+
+    res.json({ recentAppointments });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ✅ Update appointment status
+exports.updateAppointmentStatus = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+
+    if (!["Pending", "Confirmed", "Cancelled"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const appointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      { status },
+      { new: true }
+    );
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Status updated successfully",
+      appointment,
+    });
+  } catch (error) {
+    console.error("Error updating appointment status:", error);
+    res.status(500).json({ message: "Failed to update status" });
   }
 };

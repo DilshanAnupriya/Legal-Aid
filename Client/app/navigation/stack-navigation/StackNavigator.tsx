@@ -15,6 +15,7 @@ import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
 import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
 import LanguageDemo from "@/components/screens/LanguageDemo";
+import LawyerAppointmentsScreen from "@/components/ui/screen/widget/LawyerDashboard/LawyerAppointmentsScreen";
 
 
 const Stack = createStackNavigator();
@@ -116,6 +117,17 @@ export default function StackNavigator() {
                     headerShown: false,
                 }}
             />
+            
+            <Stack.Screen
+                name="LawyerAppointmentsScreen"
+                component={LawyerAppointmentsScreen}
+                options={{
+                    title: 'Lawyer Appointments Screen',
+                    headerShown: false,
+                }}
+            />
+
+
         </Stack.Navigator>
     );
 }
