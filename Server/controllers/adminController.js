@@ -1,6 +1,7 @@
 
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const NGO = require('../models/NgoModel');
 
 // Generate JWT Token with admin privileges
 const generateAdminToken = (userId, role, permissions) => {
@@ -34,8 +35,9 @@ const adminLogin = async (req, res) => {
       });
     }
 
-    // Check hardcoded credentials
-    if (username !== 'admin' || password !== 'admin') {
+    // Check hardcoded credentials (accept both 'admin' and 'admin@legalaid.com' as username)
+    if ((username !== 'admin' && username !== 'admin@legalaid.com') || password !== 'admin') {
+      console.log('Credential check failed:', { username, passwordMatch: password === 'admin' });
       return res.status(401).send({
         success: false,
         message: 'Invalid admin credentials'
@@ -271,7 +273,7 @@ const getDashboardStats = async (req, res) => {
     ] = await Promise.all([
       User.countDocuments({ role: 'user' }),
       User.countDocuments({ role: 'lawyer' }),
-      User.countDocuments({ role: 'ngo' }),
+      NGO.countDocuments(),  // Count from NGO model
       User.countDocuments({ status: 'active' }),
       User.find()
         .select('-password')
@@ -352,11 +354,68 @@ const getAllLawyers = async (req, res) => {
   }
 };
 
+// Get all NGOs from NGO model
+const getAllNGOs = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, search } = req.query;
+    
+    console.log('getAllNGOs called with params:', { page, limit, status, search });
+    
+    // Build query for NGOs
+    const query = {};
+    
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    
+    if (search && search.trim() !== '') {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    console.log('Query:', JSON.stringify(query));
+
+    const ngos = await NGO.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await NGO.countDocuments(query);
+
+    console.log(`Found ${ngos.length} NGOs (total: ${total})`);
+
+    res.send({
+      success: true,
+      ngos,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('Get NGOs error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).send({
+      success: false,
+      message: 'Server error getting NGOs',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   adminLogin,
   getAdminProfile,
   getAllUsers,
   getAllLawyers,
+  getAllNGOs,
   updateUserStatus,
   deleteUser,
   getDashboardStats

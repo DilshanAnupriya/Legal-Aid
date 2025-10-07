@@ -5,6 +5,7 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import LoginScreen from '@/components/ui/screen/LoginScreen';
 import SignUpScreen from '@/components/ui/screen/SignUpScreen';
 import AdminDashboard from '@/components/ui/screen/AdminDashboard';
+import AdminNGOsScreen from '@/components/ui/screen/AdminNGOsScreen';
 import StackNavigator from './StackNavigator';
 
 const Stack = createStackNavigator();
@@ -72,6 +73,14 @@ export default function AuthNavigator() {
                 options={{
                     title: 'Admin Dashboard',
                     headerLeft: () => null, // Disable back button
+                }}
+            />
+            <Stack.Screen
+                name="AdminNGOs"
+                component={AdminNGOsScreen}
+                options={{
+                    title: 'Manage NGOs',
+                    headerShown: false, // We have custom header in the component
                 }}
             />
         </Stack.Navigator>
