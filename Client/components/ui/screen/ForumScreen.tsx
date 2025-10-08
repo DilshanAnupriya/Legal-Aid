@@ -2389,7 +2389,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     // Search Bar Section
     searchBarSection: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 15,
         paddingVertical: 15,
         backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
     },
@@ -2399,7 +2399,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         gap: 10,
     },
     searchBarContainer: {
-        flex: 1,
+        flex: 0.97,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
@@ -2413,6 +2413,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        minWidth: 0,
     },
     viewButton: {
         backgroundColor: colors.primary,
@@ -2426,6 +2427,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 3,
+        flexShrink: 0,
     },
     viewButtonText: {
         color: theme === 'dark' ? '#2C3E50' : '#FFFFFF',
@@ -2451,13 +2453,16 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     searchBarIcon: {
         marginRight: 12,
+        flexShrink: 0,
     },
     searchBarInput: {
         flex: 1,
+        flexShrink: 1,
         fontSize: 16,
         color: theme === 'dark' ? colors.primary : '#1A1A1A',
         backgroundColor: 'transparent',
         borderWidth: 0,
+        minWidth: 0,
         ...(Platform.OS === 'web' && {
             outline: 'none',
             boxShadow: 'none',
@@ -2466,10 +2471,11 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     viewToggleContainer: {
         flexDirection: 'row',
-        marginLeft: 10,
+        marginLeft: 0,
         backgroundColor: theme === 'dark' ? colors.secondary : '#F5F5F5',
         borderRadius: 8,
         padding: 2,
+        flexShrink: 0,
     },
     viewToggleButton: {
         width: 36,
@@ -3367,7 +3373,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
     },
     stickySearchBarSection: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 15,
         paddingVertical: 15,
         backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
         borderBottomWidth: 1,
