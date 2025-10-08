@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../../context/ThemeContext';
 import LanguageSelector from '../../LanguageSelector';
 
 interface LanguageSettingsScreenProps {
@@ -17,10 +18,12 @@ interface LanguageSettingsScreenProps {
 
 const LanguageSettingsScreen: React.FC<LanguageSettingsScreenProps> = ({ navigation }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -106,7 +109,7 @@ const LanguageSettingsScreen: React.FC<LanguageSettingsScreenProps> = ({ navigat
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
     }),
   },
   header: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
@@ -244,7 +247,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#667eea',
+    borderLeftColor: colors.primary,
   },
   demoLabel: {
     fontSize: 12,

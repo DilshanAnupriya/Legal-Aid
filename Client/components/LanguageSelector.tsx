@@ -7,9 +7,12 @@ import {
   Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../context/ThemeContext';
 
 const LanguageSelector: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
 
   const languages = [
     { code: 'en', name: 'English', nativeName: 'English' },
@@ -63,7 +66,7 @@ const LanguageSelector: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: '#ffffff',
@@ -94,8 +97,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   activeButton: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   buttonText: {
     fontSize: 18,
