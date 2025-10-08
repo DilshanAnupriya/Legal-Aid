@@ -9,14 +9,14 @@ export default function LawyerProfileContactWidget({ contactInfo }) {
       detail: contactInfo.email
     },
     {
-      icon: '🔔',
-      type: 'Anonymous Hotline',
-      detail: contactInfo.hotline
+      icon: '📞',
+      type: 'Call',
+      detail: contactInfo.phone
     },
     {
       icon: '📍',
       type: 'Office Location',
-      detail: contactInfo.office
+      detail: contactInfo.officeLocation
     },
     {
       icon: '🌐',

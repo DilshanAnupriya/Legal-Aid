@@ -5,7 +5,8 @@ const {
   loginUser, 
   getUserProfile, 
   updateUserProfile ,
-  getAllLawyers
+  getAllLawyers,
+  
 } = require('../controllers/userController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authmiddleware');
 

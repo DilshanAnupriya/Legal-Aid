@@ -99,6 +99,7 @@ const userSchema = new mongoose.Schema(
     },
     reviews: {
       type: [{ rating: Number, comment: String }],
+    
       required: function () {
         return this.role === "lawyer";
       },
@@ -243,6 +244,7 @@ userSchema.methods.toJSON = function () {
     case "lawyer":
       return {
         ...baseData,
+        // _id: userObject._id,
         firstName: userObject.firstName,
         lastName: userObject.lastName,
         specialization: userObject.specialization,
@@ -251,7 +253,8 @@ userSchema.methods.toJSON = function () {
         tier: userObject.tier,
         totalPoints: userObject.totalPoints,
         reviews: userObject.reviews,
-        contributions:userObject.contributions
+        contributions:userObject.contributions,
+        rating: userObject.rating 
 
       };
 

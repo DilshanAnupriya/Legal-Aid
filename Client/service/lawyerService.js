@@ -6,6 +6,7 @@ const API_URL_LAWYER_PROFILE = "http://localhost:3000/api/lawyers";
 
 
 
+
 // Get all lawyers with category and pagination
 export const getAllLawyers = async (searchText = "", page = 1, limit = 10, category = "" ) => {
   console.log("service called : ")
@@ -70,4 +71,30 @@ export const getLawyerProfile = async (lawyerId) => {
     console.error("Error fetching lawyer profile:", error.response?.data || error.message);
     throw error;
   }
+};
+
+// Rate or review a lawyer
+export const rateLawyer = async (lawyerId, ratingData, token) => {
+  try {
+    console.log("lawyer id : ",lawyerId)
+    const response = await axios.post(
+      `${API_URL_LAWYER_PROFILE}/${lawyerId}/review`,
+      ratingData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // Include JWT token for auth
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error submitting lawyer review:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const getLawyerReviews = async (lawyerId) => {
+  const response = await axios.get(`${API_URL_LAWYER_PROFILE}/${lawyerId}/review`);
+  return response.data;
 };

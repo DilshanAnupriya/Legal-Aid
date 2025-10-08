@@ -428,5 +428,6 @@ module.exports = {
   loginUser,
   getUserProfile,
   updateUserProfile,
-  getAllLawyers
+  getAllLawyers,
+  
 };

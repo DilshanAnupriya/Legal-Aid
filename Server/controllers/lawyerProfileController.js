@@ -48,9 +48,50 @@ if (!lawyer || lawyer.role !== "lawyer") {
 exports.getProfile = async (req, res) => {
   try {
     const { lawyerId } = req.params;
-    const profile = await LawyerProfile.findOne({ lawyer: lawyerId }).populate("lawyer", "firstName lastName tier totalPoints");
-    if (!profile) return res.status(404).json({ message: "Profile not found" });
-    res.json({ profile });
+    console.log("lawyer id in get profile: ", lawyerId);
+
+    // Ensure lawyer exists
+    const lawyerExists = await Lawyer.findById(lawyerId);
+    if (!lawyerExists) {
+      return res.status(404).json({ message: "Lawyer not found" });
+    }
+
+    if (lawyerExists.role !== "lawyer") {
+      return res.status(400).json({ message: "Lawyer is not a lawyer" });
+    }
+
+    const profile = await LawyerProfile.findOne({ lawyer: lawyerId })
+      .populate({
+        path: "lawyer",
+        select: "firstName lastName tier totalPoints specialization reviews rating"
+      })
+      .lean(); // Use lean() to get plain JavaScript object
+
+    if (!profile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    // Transform the response to include lawyer details at root level
+    const response = {
+      _id: profile._id,
+      experience: profile.experience,
+      aboutMe: profile.aboutMe,
+      contactInfo: profile.contactInfo,
+      lawyerDetails: {
+        id: profile.lawyer._id,
+        firstName: profile.lawyer.firstName,
+        lastName: profile.lawyer.lastName,
+        tier: profile.lawyer.tier,
+        totalPoints: profile.lawyer.totalPoints,
+        specialization: profile.lawyer.specialization,
+        reviews: profile.lawyer.reviews,
+        rating: profile.lawyer.rating
+      },
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt
+    };
+
+    res.json({ profile: response });
   } catch (error) {
     console.error("Error fetching profile:", error);
     res.status(500).json({ message: "Server error" });

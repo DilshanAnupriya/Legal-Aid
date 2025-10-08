@@ -117,7 +117,7 @@ export default function LawyerScreen() {
   // @ts-ignore
   const handleCardPress = (item) => {
     navigation.navigate("LawyerProfile", {
-      lawyerId: item._id, // or item.id depending on your backend
+      lawyerId: item.id, // or item.id depending on your backend
     });
   };
   return (
