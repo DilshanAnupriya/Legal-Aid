@@ -1147,6 +1147,17 @@ const ForumsScreen = () => {
             >
                 {/* Modern Header with Gradient Background */}
                 <View style={styles.header}>
+                    <TouchableOpacity 
+                        style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}
+                        onPress={() => {/* Handle notification press */}}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons 
+                            name="notifications-outline" 
+                            size={28} 
+                            color={colors.white || '#FFFFFF'} 
+                        />
+                    </TouchableOpacity>
                     <View style={styles.headerContent}>
                         <Text style={styles.headerTitle}>{t('forum.title')}</Text>
                         <Text style={styles.headerSubtitle}>{t('forum.subtitle', { defaultValue: 'Connect • Ask • Learn • Grow' })}</Text>
