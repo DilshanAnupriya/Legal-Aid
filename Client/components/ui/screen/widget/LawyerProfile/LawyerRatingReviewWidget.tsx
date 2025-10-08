@@ -156,6 +156,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 15,
     elevation: 2,
+    height: 700
   },
   title: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
   lawyerName: { fontSize: 14, color: "#333", marginBottom: 8 },

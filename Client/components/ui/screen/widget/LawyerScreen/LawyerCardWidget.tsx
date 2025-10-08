@@ -12,6 +12,19 @@ import { useTheme } from "../../../../../context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
+// Tier list (same as TierProgressSection)
+const TIERS = [
+  { name: "Community Ally", points: 100, badge: "https://img.icons8.com/fluency/96/handshake--v1.png", color: "#6C757D" },
+  { name: "Legal Helper", points: 300, badge: "https://img.icons8.com/fluency/96/helping-hand.png", color: "#17A2B8" },
+  { name: "Justice Advocate", points: 600, badge: "https://img.icons8.com/fluency/96/scales.png", color: "#FFC107" },
+  { name: "Legal Mentor", points: 1000, badge: "https://img.icons8.com/fluency/96/guru.png", color: "#FF6B6B" },
+  { name: "Champion of Justice", points: Infinity, badge: "https://img.icons8.com/fluency/96/trophy.png", color: "#FFD700" },
+];
+
+const getTierData = (tierName) => {
+  return TIERS.find((t) => t.name === tierName) || TIERS[0];
+};
+
 // @ts-ignore
 const LawyerCardWidget = ({
   item,
@@ -20,9 +33,9 @@ const LawyerCardWidget = ({
   onChat,
   onBook,
 }) => {
-  const { colors, theme } = useTheme();
+  const { colors } = useTheme();
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating) => {
     const stars = [];
     const validRating = rating || 0;
     for (let i = 1; i <= 5; i++) {
@@ -43,20 +56,22 @@ const LawyerCardWidget = ({
   const specialization = item?.specialization || "Not Specified";
   const rating = item?.rating || 0;
   const status = item?.lawyerStatus || "pending";
+  const experience = item?.experience || 0;
+  const logoUri = item?.profilePicture || "https://via.placeholder.com/100";
+  const tierName = item?.tier || "Community Ally";
+  const tierData = getTierData(tierName);
 
   const getStatusColor = (status) => {
     switch (status) {
       case "accepted":
-        return "#4CAF50"; // Green
+        return "#4CAF50";
       case "rejected":
-        return "#FF3B30"; // Red
+        return "#FF3B30";
       case "pending":
       default:
-        return "#FFA500"; // Orange
+        return "#FFA500";
     }
   };
-  const experience = item?.experience || 0;
-  const logoUri = item?.profilePicture || "https://via.placeholder.com/100";
 
   if (isGridView) {
     return (
@@ -75,7 +90,21 @@ const LawyerCardWidget = ({
         <Text style={styles.gridSpecialization} numberOfLines={1}>
           {experience} yrs experience
         </Text>
+
+        {/* Tier Display */}
+        <View style={styles.tierContainer}>
+          <Image
+            source={{ uri: tierData.badge }}
+            style={styles.tierBadge}
+            resizeMode="contain"
+          />
+          <Text style={[styles.tierText, { color: tierData.color }]}>
+            {tierData.name}
+          </Text>
+        </View>
+
         <View style={styles.gridRatingContainer}>{renderStars(rating)}</View>
+
         <View style={styles.gridButtonContainer}>
           <TouchableOpacity
             style={styles.button}
@@ -96,11 +125,12 @@ const LawyerCardWidget = ({
             <Text style={styles.buttonText}>Book</Text>
           </TouchableOpacity>
         </View>
+
         <View style={styles.gridStatusBadge}>
           <Text
             style={[
               styles.gridStatusText,
-              { color: item?.isApproved ? "#4CAF50" : "#FF5722" },
+              { color: getStatusColor(status) },
             ]}
           >
             {status}
@@ -110,6 +140,7 @@ const LawyerCardWidget = ({
     );
   }
 
+  // LIST VIEW
   return (
     <TouchableOpacity
       style={styles.listCard}
@@ -118,6 +149,7 @@ const LawyerCardWidget = ({
     >
       <View style={styles.cardHeader}>
         <Image source={{ uri: logoUri }} style={styles.listLogo} />
+
         <View style={styles.cardHeaderInfo}>
           <Text style={styles.listLawyerName} numberOfLines={1}>
             {fullName}
@@ -128,10 +160,24 @@ const LawyerCardWidget = ({
           <Text style={styles.listSpecialization}>
             {experience} yrs experience
           </Text>
+
+          {/* Tier Display */}
+          <View style={styles.tierContainerInline}>
+            <Image
+              source={{ uri: tierData.badge }}
+              style={styles.tierBadgeSmall}
+              resizeMode="contain"
+            />
+            <Text style={[styles.tierTextSmall, { color: tierData.color }]}>
+              {tierData.name}
+            </Text>
+          </View>
+
           <View style={styles.ratingContainer}>
             {renderStars(rating)}
             <Text style={styles.ratingText}>({rating})</Text>
           </View>
+
           <View style={styles.listButtonContainer}>
             <TouchableOpacity
               style={styles.button}
@@ -153,11 +199,12 @@ const LawyerCardWidget = ({
             </TouchableOpacity>
           </View>
         </View>
+
         <View style={styles.statusBadge}>
           <Text
             style={[
               styles.statusText,
-              { color: item?.lawyerStatus ? "#4CAF50" : "#FF5722" },
+              { color: getStatusColor(status) },
             ]}
           >
             {status}
@@ -210,6 +257,29 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 12, fontWeight: "bold" },
   listButtonContainer: { flexDirection: "row", marginTop: 8 },
 
+  // Tier
+  tierContainer: {
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  tierBadge: {
+    width: 40,
+    height: 40,
+    marginBottom: 4,
+  },
+  tierText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  tierContainerInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  tierBadgeSmall: { width: 20, height: 20, marginRight: 6 },
+  tierTextSmall: { fontSize: 13, fontWeight: "600" },
+
   // Grid Styles
   gridCard: {
     backgroundColor: "#FFFFFF",
@@ -254,7 +324,6 @@ const styles = StyleSheet.create({
   gridButtonContainer: { flexDirection: "row", marginTop: 8 },
   gridStatusBadge: { position: "absolute", top: 12, right: 12 },
   gridStatusText: { fontSize: 10, fontWeight: "bold" },
-
   button: {
     flexDirection: "row",
     alignItems: "center",
