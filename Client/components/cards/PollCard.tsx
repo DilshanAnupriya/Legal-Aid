@@ -7,7 +7,9 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useTTS } from '../../hooks/useTTS';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +26,7 @@ interface PollCardProps {
 
 const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, userId, isPreview = false, canEdit = false, isGridView = false }) => {
   const { theme, colors } = useTheme();
+  const { speak, isSpeaking, stopSpeaking } = useTTS();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [isVoting, setIsVoting] = useState<boolean>(false);
@@ -74,6 +77,15 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, use
   const getOptionPercentage = (optionIndex: number) => {
     if (!poll.totalVotes || poll.totalVotes === 0) return 0;
     return ((poll.votes[optionIndex] || 0) / poll.totalVotes) * 100;
+  };
+
+  const handleSpeakTopic = async () => {
+    if (isSpeaking) {
+      await stopSpeaking();
+    } else {
+      const textToSpeak = `Poll: ${poll.topic}`;
+      await speak(textToSpeak);
+    }
   };
 
   const formatTimestamp = (dateString: string) => {
@@ -155,8 +167,22 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onVote, onEdit, onDelete, use
         </View>
       </View>
 
-      {/* Poll Topic */}
-      <Text style={styles.pollTopic}>{poll.topic}</Text>
+      {/* Poll Topic with Speaker Icon */}
+      <View style={styles.topicContainer}>
+        <Text style={styles.pollTopic}>{poll.topic}</Text>
+        <TouchableOpacity
+          style={styles.speakerButton}
+          onPress={handleSpeakTopic}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons 
+            name={isSpeaking ? "stop-circle" : "volume-high"} 
+            size={20} 
+            color={colors.primary} 
+          />
+        </TouchableOpacity>
+      </View>
 
       {/* Poll Options */}
       <View style={styles.optionsContainer}>
@@ -328,7 +354,7 @@ const createStyles = (colors: any, theme: string, isGridView: boolean = false) =
     fontWeight: '600',
     color: theme === 'dark' ? colors.primary : '#2C3E50',
     lineHeight: isGridView ? 18 : 22,
-    marginBottom: isGridView ? 12 : 16,
+    flex: 1,
     minHeight: isGridView ? 36 : 'auto', // Ensure consistent height in grid
   },
   optionsContainer: {
@@ -432,6 +458,19 @@ const createStyles = (colors: any, theme: string, isGridView: boolean = false) =
     fontSize: 14,
     color: '#ff7100',
     fontWeight: '600',
+  },
+  topicContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: isGridView ? 12 : 16,
+  },
+  speakerButton: {
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.1)',
+    marginLeft: 8,
+    marginTop: -2,
   },
 });
 

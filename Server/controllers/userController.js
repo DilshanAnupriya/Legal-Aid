@@ -1,12 +1,13 @@
 const User = require('../models/User');
+const NGO = require('../Models/NgoModel'); // Add this import
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token with role information
 const generateToken = (userId, role) => {
   return jwt.sign(
-    { userId, role }, 
-    process.env.JWT_SECRET || 'fallback_secret',
-    { expiresIn: '7d' }
+      { userId, role },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '7d' }
   );
 };
 
@@ -70,6 +71,26 @@ const registerUser = async (req, res) => {
     const user = new User(userData);
     await user.save();
 
+    // If role is NGO, create NGO document as well
+    if (role === 'ngo') {
+      const ngoData = {
+        name: roleData.organizationName,
+        description: roleData.description,
+        category: roleData.category,
+        contact: roleData.contact,
+        email: email.toLowerCase(),
+        logo: roleData.logo || null,
+        images: roleData.images || [],
+        status: 'active',
+        rating: 0
+      };
+
+      const ngo = new NGO(ngoData);
+      await ngo.save();
+
+      console.log('NGO document created:', ngo._id);
+    }
+
     // Generate token with role
     const token = generateToken(user._id, user.role);
 
@@ -82,7 +103,7 @@ const registerUser = async (req, res) => {
 
   } catch (error) {
     console.error('Registration error:', error);
-    
+
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -110,7 +131,7 @@ const validateRoleSpecificData = (role, data) => {
         return 'Invalid gender spectrum value';
       }
       break;
-      
+
     case 'lawyer':
       const requiredLawyerFields = ['firstName', 'lastName', 'specialization', 'contactNumber'];
       for (const field of requiredLawyerFields) {
@@ -119,7 +140,7 @@ const validateRoleSpecificData = (role, data) => {
         }
       }
       break;
-      
+
     case 'ngo':
       const requiredNgoFields = ['organizationName', 'description', 'category', 'contact'];
       for (const field of requiredNgoFields) {
@@ -139,7 +160,7 @@ const validateRoleSpecificData = (role, data) => {
         return 'Invalid NGO category';
       }
       break;
-      
+
     default:
       return 'Invalid role';
   }
@@ -158,7 +179,7 @@ const loginUser = async (req, res) => {
       // Admin login with hardcoded credentials
       if (username === 'admin' && password === 'admin') {
         // Find or create admin user in database
-        let admin = await User.findOne({ 
+        let admin = await User.findOne({
           role: 'admin',
           status: 'active'
         });
@@ -179,9 +200,9 @@ const loginUser = async (req, res) => {
 
         // Generate enhanced admin token
         const token = jwt.sign(
-          { userId: admin._id, role: admin.role, permissions: admin.permissions, isAdmin: true }, 
-          process.env.JWT_SECRET || 'fallback_secret',
-          { expiresIn: '24h' } // Shorter expiry for admin tokens
+            { userId: admin._id, role: admin.role, permissions: admin.permissions, isAdmin: true },
+            process.env.JWT_SECRET || 'fallback_secret',
+            { expiresIn: '24h' } // Shorter expiry for admin tokens
         );
 
         // Log admin login
@@ -254,7 +275,7 @@ const loginUser = async (req, res) => {
 const getUserProfile = async (req, res) => {
   try {
     const user = req.userDetails;
-    
+
     res.json({
       success: true,
       user: user.toJSON()
@@ -286,7 +307,7 @@ const updateUserProfile = async (req, res) => {
     // Validate role-specific updates
     const allowedFields = getAllowedUpdateFields(userRole);
     const filteredUpdateData = {};
-    
+
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key) && value !== undefined) {
         filteredUpdateData[key] = value;
@@ -301,9 +322,9 @@ const updateUserProfile = async (req, res) => {
     }
 
     const user = await User.findByIdAndUpdate(
-      userId,
-      filteredUpdateData,
-      { new: true, runValidators: true }
+        userId,
+        filteredUpdateData,
+        { new: true, runValidators: true }
     );
 
     if (!user) {
@@ -313,6 +334,26 @@ const updateUserProfile = async (req, res) => {
       });
     }
 
+    // If user is an NGO, also update the NGO document
+    if (userRole === 'ngo') {
+      const ngoUpdateData = {};
+
+      if (filteredUpdateData.organizationName) ngoUpdateData.name = filteredUpdateData.organizationName;
+      if (filteredUpdateData.description) ngoUpdateData.description = filteredUpdateData.description;
+      if (filteredUpdateData.category) ngoUpdateData.category = filteredUpdateData.category;
+      if (filteredUpdateData.contact) ngoUpdateData.contact = filteredUpdateData.contact;
+      if (filteredUpdateData.logo !== undefined) ngoUpdateData.logo = filteredUpdateData.logo;
+      if (filteredUpdateData.images !== undefined) ngoUpdateData.images = filteredUpdateData.images;
+
+      if (Object.keys(ngoUpdateData).length > 0) {
+        await NGO.findOneAndUpdate(
+            { email: user.email },
+            ngoUpdateData,
+            { new: true, runValidators: true }
+        );
+      }
+    }
+
     res.json({
       success: true,
       message: 'Profile updated successfully',
@@ -320,7 +361,7 @@ const updateUserProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    
+
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -340,7 +381,7 @@ const updateUserProfile = async (req, res) => {
 // Helper function to get allowed update fields based on role
 const getAllowedUpdateFields = (role) => {
   const commonFields = ['status'];
-  
+
   switch (role) {
     case 'user':
       return [...commonFields, 'birthday', 'genderSpectrum'];
@@ -352,6 +393,9 @@ const getAllowedUpdateFields = (role) => {
       return commonFields;
   }
 };
+
+// Add this to ngoController.js instead
+// This is just a reference for the new controller method needed
 
 module.exports = {
   registerUser,

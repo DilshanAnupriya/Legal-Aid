@@ -18,17 +18,17 @@ export default function NgoScreen({ navigation }) {
     const [topNgosLoading, setTopNgosLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [searchText, setSearchText] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('All');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [hasNext, setHasNext] = useState(false);
     const [isGridView, setIsGridView] = useState(true);
 
-    // Categories data
+    // Categories data - Must exactly match database enum values
     const categories = [
         'All',
         'Human Rights & Civil Liberties',
-        'Women\'s Rights & Gender Justice',
+        "Women's Rights & Gender Justice",
         'Child Protection',
         'Labor & Employment Rights',
         'Refugee & Migrant Rights',
@@ -85,18 +85,33 @@ export default function NgoScreen({ navigation }) {
         }
 
         try {
-            const categoryParam = selectedCategory && selectedCategory !== 'All' ? selectedCategory : '';
+            // Get the category value - empty string for 'All', otherwise use the selected category
+            const categoryParam = selectedCategory === 'All' ? '' : selectedCategory;
             const currentPage = isRefresh ? 1 : page;
 
-            const response = await fetch(
-                `${API_BASE_URL}/ngo/all?searchText=${searchText}&category=${categoryParam}&page=${currentPage}&size=10`
-            );
+            // Build URL with proper encoding
+            const url = `${API_BASE_URL}/ngo/all?searchText=${encodeURIComponent(searchText)}&category=${encodeURIComponent(categoryParam)}&page=${currentPage}&size=10`;
+
+            console.log('=== FETCH NGOs DEBUG ===');
+            console.log('Selected Category:', selectedCategory);
+            console.log('Category Param:', categoryParam);
+            console.log('Search Text:', searchText);
+            console.log('Page:', currentPage);
+            console.log('Full URL:', url);
+
+            const response = await fetch(url);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
+
+            console.log('API Response:', {
+                message: data.message,
+                dataCount: data.data?.length || 0,
+                pagination: data.pagination
+            });
 
             if (data.message === 'list' && data.data) {
                 if (isRefresh || currentPage === 1) {
@@ -130,13 +145,17 @@ export default function NgoScreen({ navigation }) {
         }
     };
 
-    const handleCategorySelect = (category: any) => {
-        setSelectedCategory(category === 'All' ? '' : category);
+    const handleCategorySelect = (category) => {
+        console.log('=== CATEGORY SELECT ===');
+        console.log('Category clicked:', category);
+        console.log('Previous category:', selectedCategory);
+
+        setSelectedCategory(category);
         setPage(1);
         setNgos([]);
     };
 
-    const handleSearch = (text: any) => {
+    const handleSearch = (text) => {
         setSearchText(text);
         setPage(1);
         setNgos([]);
@@ -148,12 +167,12 @@ export default function NgoScreen({ navigation }) {
         setNgos([]);
     };
 
-    const handleViewChange = (gridView: any) => {
+    const handleViewChange = (gridView) => {
         setIsGridView(gridView);
     };
 
     // Updated card press handler to navigate to profile
-    const handleCardPress = (item: any) => {
+    const handleCardPress = (item) => {
         console.log('NGO card pressed:', item.name);
 
         // Navigate to NGO Profile screen
@@ -167,7 +186,7 @@ export default function NgoScreen({ navigation }) {
         }
     };
 
-    const handleTopNgoPress = (item: any) => {
+    const handleTopNgoPress = (item) => {
         handleCardPress(item); // Reuse the same navigation logic
     };
 
@@ -177,7 +196,7 @@ export default function NgoScreen({ navigation }) {
     };
 
     // Determine if we should show top NGOs section
-    const showTopNgos = !searchText && !selectedCategory && topNgos.length > 0;
+    const showTopNgos = !searchText && selectedCategory === 'All' && topNgos.length > 0;
 
     return (
         <View style={styles.container}>

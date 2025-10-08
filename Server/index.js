@@ -19,7 +19,7 @@ app.use(cors({
     'http://10.0.2.2:8081', 'http://10.4.2.1:8081',
     'http://10.164.198.42:8081','http://10.164.198.42:3000'// Common dev server port
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
   optionsSuccessStatus: 200 // For legacy browser support
@@ -87,6 +87,7 @@ const lawyerRoutes = require('./Routes/lawyerRoutes');
 const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
+const notificationRoutes = require('./Routes/notificationRoutes');
 
 
 
@@ -99,6 +100,7 @@ app.use("/api/lawyers", lawyerRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 
 // Root route

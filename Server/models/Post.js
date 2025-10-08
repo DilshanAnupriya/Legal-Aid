@@ -18,6 +18,10 @@ const postSchema = new mongoose.Schema({
     required: true,
     default: 'Anonymous User'
   },
+  authorEmail: {
+    type: String,
+    default: null
+  },
   tags: [{
     type: String,
     trim: true
