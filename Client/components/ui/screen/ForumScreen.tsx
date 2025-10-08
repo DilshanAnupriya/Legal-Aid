@@ -2436,7 +2436,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     floatingActionButton: {
         position: 'absolute',
-        bottom: 100,
+        bottom: 20,
         right: 20,
         width: 56,
         height: 56,
