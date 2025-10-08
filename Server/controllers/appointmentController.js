@@ -1,6 +1,7 @@
 // controllers/appointmentController.js
 const Appointment = require('../models/Appointment');
 const Lawyer = require('../models/User');
+const { updateLawyerPoints } = require("../utils/lawyerPoints");
 
 // Create an appointment
 exports.createAppointment = async (req, res) => {
@@ -101,20 +102,38 @@ exports.updateAppointmentStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    const appointment = await Appointment.findByIdAndUpdate(
-      appointmentId,
-      { status },
-      { new: true }
-    );
-
-    if (!appointment) {
+    // Fetch current appointment first
+    const currentAppointment = await Appointment.findById(appointmentId);
+    if (!currentAppointment) {
       return res.status(404).json({ message: "Appointment not found" });
     }
+
+    // Check if this is the first time being confirmed
+    let pointsUpdate = null;
+    if (status === "Confirmed" && currentAppointment.status !== "Confirmed") {
+      // Only increase points if it's the first confirmation
+      pointsUpdate = await updateLawyerPoints(
+        currentAppointment.lawyer,
+        "appointment_held"
+      );
+    }
+    if (status === "Cancelled" && currentAppointment.status !== "Cancelled") {
+      // Only increase points if it's the first confirmation
+      pointsUpdate = await updateLawyerPoints(
+        currentAppointment.lawyer,
+        "appointment_cancel"
+      );
+    }
+
+    // Now update appointment status
+    currentAppointment.status = status;
+    await currentAppointment.save();
 
     res.status(200).json({
       success: true,
       message: "Status updated successfully",
-      appointment,
+      appointment: currentAppointment,
+      pointsUpdated: !!pointsUpdate,
     });
   } catch (error) {
     console.error("Error updating appointment status:", error);

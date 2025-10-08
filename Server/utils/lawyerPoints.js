@@ -6,6 +6,7 @@ const POINTS_TABLE = {
   forum_reply: 5,
   case_completed: 50,
   appointment_held: 20,
+  appointment_cancel: -20
 };
 
 // Rating-based points (star rating → points)
