@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useTTS } from '../../hooks/useTTS';
 
 interface PostDetailModalProps {
@@ -29,6 +30,7 @@ interface PostDetailModalProps {
 const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClose, onPostUpdated }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { theme, colors } = useTheme();
   const { speak, isSpeaking, stopSpeaking } = useTTS();
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -410,6 +412,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
     return null;
   }
 
+  const styles = createStyles(colors);
+
   return (
     <>
       <Modal
@@ -510,7 +514,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
                 <Ionicons 
                   name={isSpeaking ? "stop-circle" : "volume-high"} 
                   size={22} 
-                  color="#3B82F6" 
+                  color={colors.primary} 
                 />
               </TouchableOpacity>
             </View>
@@ -754,7 +758,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
@@ -774,7 +778,7 @@ const styles = StyleSheet.create({
   },
   closeIcon: {
     fontSize: 24,
-    color: 'colors.primary',
+    color: colors.primary,
     fontWeight: '600',
   },
   headerTitle: {
@@ -839,7 +843,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'colors.primary',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -898,7 +902,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   categoryBadge: {
-    backgroundColor: 'colors.primary',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -927,7 +931,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
-    color: 'colors.primary',
+    color: colors.primary,
     fontWeight: '500',
   },
   descriptionSection: {
@@ -950,7 +954,7 @@ const styles = StyleSheet.create({
   descriptionSpeakerButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -2,
@@ -1015,7 +1019,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 12,
     borderLeftWidth: 3,
-    borderLeftColor: 'colors.primary',
+    borderLeftColor: colors.primary,
   },
   commentHeader: {
     flexDirection: 'row',
@@ -1039,7 +1043,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'colors.primary',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -1085,7 +1089,7 @@ const styles = StyleSheet.create({
   },
   editCommentIcon: {
     fontSize: 12,
-    color: 'colors.primary',
+    color: colors.primary,
   },
   deleteCommentButton: {
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
@@ -1116,7 +1120,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2C3E50',
     borderWidth: 1,
-    borderColor: 'colors.primary',
+    borderColor: colors.primary,
     minHeight: 80,
     maxHeight: 120,
     textAlignVertical: 'top',
@@ -1145,7 +1149,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveEditButton: {
-    backgroundColor: 'colors.primary',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -1161,7 +1165,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'colors.primary',
+    borderColor: colors.primary,
   },
   currentUserLabel: {
     fontSize: 14,
@@ -1169,7 +1173,7 @@ const styles = StyleSheet.create({
   },
   currentUserName: {
     fontWeight: '600',
-    color: 'colors.primary',
+    color: colors.primary,
   },
   noCommentsContainer: {
     padding: 20,
@@ -1258,8 +1262,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#3498db',
-    borderColor: '#3498db',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   checkmark: {
     fontSize: 12,
@@ -1272,11 +1276,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   submitCommentButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-    shadowColor: '#3498db',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
