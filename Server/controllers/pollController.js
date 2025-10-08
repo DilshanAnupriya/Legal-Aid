@@ -1,9 +1,10 @@
 const Poll = require('../models/Poll');
+const { createNotification } = require('./notificationController');
 
 // Create a new poll
 const createPoll = async (req, res) => {
   try {
-    const { topic, options, isAnonymous, category, author } = req.body;
+    const { topic, options, isAnonymous, category, author, authorEmail } = req.body;
 
     // Validation
     if (!topic || !options || !Array.isArray(options) || options.length < 2) {
@@ -39,6 +40,7 @@ const createPoll = async (req, res) => {
       voters: [],
       totalVotes: 0,
       author: pollAuthor,
+      authorEmail: isAnonymous ? null : authorEmail,
       category: category || 'Family Law',
       isAnonymous: isAnonymous || false
     });
@@ -161,7 +163,13 @@ const getPollById = async (req, res) => {
 const voteOnPoll = async (req, res) => {
   try {
     const { id } = req.params;
-    const { optionIndex, userId } = req.body;
+    const { optionIndex, userId, voterName, voterEmail } = req.body;
+
+    console.log('========== POLL VOTE DEBUG ==========');
+    console.log('Poll ID:', id);
+    console.log('Voter Email:', voterEmail);
+    console.log('Voter Name:', voterName);
+    console.log('Option Index:', optionIndex);
 
     // Validation
     if (optionIndex === undefined || !userId) {
@@ -179,6 +187,10 @@ const voteOnPoll = async (req, res) => {
         message: 'Poll not found'
       });
     }
+
+    console.log('Poll Author Email:', poll.authorEmail);
+    console.log('Poll Author:', poll.author);
+    console.log('Poll is anonymous:', poll.isAnonymous);
 
     if (poll.status !== 'active') {
       return res.status(400).json({
@@ -198,12 +210,39 @@ const voteOnPoll = async (req, res) => {
     try {
       await poll.vote(userId, parseInt(optionIndex));
       
+      // Create notification if voter is not the poll creator
+      if (poll.authorEmail && voterEmail !== poll.authorEmail && !poll.isAnonymous) {
+        try {
+          const selectedOption = poll.options[parseInt(optionIndex)];
+          await createNotification({
+            recipient: poll.authorEmail,
+            sender: voterName || 'Someone',
+            type: 'comment', // Reusing comment type for now
+            postId: poll._id,
+            postTitle: poll.topic,
+            commentContent: `Voted for: ${selectedOption}`,
+            isRead: false
+          });
+          console.log(`✅ Notification created for poll creator ${poll.authorEmail}`);
+        } catch (notificationError) {
+          console.error('❌ Error creating notification:', notificationError);
+        }
+      } else {
+        console.log('⚠️ Notification NOT created. Reason:', 
+          !poll.authorEmail ? 'Poll has no authorEmail' :
+          voterEmail === poll.authorEmail ? 'Voter is poll creator' :
+          poll.isAnonymous ? 'Poll is anonymous' : 'Unknown'
+        );
+      }
+      console.log('====================================');
+      
       res.status(200).json({
         success: true,
         message: 'Vote cast successfully',
         data: poll
       });
     } catch (voteError) {
+      console.log('====================================');
       return res.status(400).json({
         success: false,
         message: voteError.message

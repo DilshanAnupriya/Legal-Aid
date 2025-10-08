@@ -224,6 +224,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ visible, post, onClos
       const commentData = {
         content: newComment.trim(),
         author: getUserDisplayName(),
+        authorEmail: user?.email, // Add email for notifications
         isAnonymous: isAnonymousComment,
       };
 
@@ -1257,8 +1258,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: 'colors.primary',
-    borderColor: 'colors.primary',
+    backgroundColor: '#3498db',
+    borderColor: '#3498db',
   },
   checkmark: {
     fontSize: 12,
@@ -1271,11 +1272,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   submitCommentButton: {
-    backgroundColor: 'colors.primary',
+    backgroundColor: '#3498db',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-    shadowColor: 'colors.primary',
+    shadowColor: '#3498db',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

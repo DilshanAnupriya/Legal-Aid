@@ -25,6 +25,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useTTS } from '../../../hooks/useTTS';
+import notificationService, { Notification } from '../../../services/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -156,6 +157,11 @@ const ForumsScreen = () => {
     const [isGridView, setIsGridView] = useState(false);
     const [searchBarText, setSearchBarText] = useState('');
     const [isHeaderSticky, setIsHeaderSticky] = useState(false);
+    
+    // Notification states
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
 
     // Handle scroll to show/hide sticky header
     const handleScroll = (event: any) => {
@@ -889,6 +895,97 @@ const ForumsScreen = () => {
         }
     }, [showSortDropdown, showContentTypeDropdown]);
 
+    // Fetch notifications
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (user && user.email) {
+                try {
+                    console.log('========== FRONTEND: FETCHING NOTIFICATIONS ==========');
+                    console.log('User email:', user.email);
+                    console.log('User object:', user);
+                    
+                    const userNotifications = await notificationService.getUserNotifications(user.email);
+                    console.log('Received notifications:', userNotifications.length);
+                    if (userNotifications.length > 0) {
+                        console.log('Sample notification:', userNotifications[0]);
+                    }
+                    setNotifications(userNotifications);
+                    
+                    const count = await notificationService.getUnreadCount(user.email);
+                    console.log('Unread count:', count);
+                    setUnreadCount(count);
+                    console.log('=====================================================');
+                } catch (error) {
+                    console.error('Error fetching notifications:', error);
+                }
+            } else {
+                console.log('Cannot fetch notifications - no user or email:', user);
+            }
+        };
+
+        fetchNotifications();
+        
+        // Poll for new notifications every 30 seconds
+        const intervalId = setInterval(fetchNotifications, 30000);
+        
+        return () => clearInterval(intervalId);
+    }, [user]);
+
+    // Handle notification click
+    const handleNotificationClick = async (notification: Notification) => {
+        try {
+            // Mark as read
+            if (!notification.isRead) {
+                await notificationService.markAsRead(notification._id);
+                setUnreadCount(prev => Math.max(0, prev - 1));
+                setNotifications(prev => 
+                    prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
+                );
+            }
+            
+            // Open the post
+            const response = await fetch(`${BASE_URL}/posts/${notification.postId}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setSelectedPost(data.data);
+                    setIsPostDetailModalVisible(true);
+                    setIsNotificationModalVisible(false);
+                }
+            }
+        } catch (error) {
+            console.error('Error handling notification click:', error);
+        }
+    };
+
+    // Handle mark all as read
+    const handleMarkAllAsRead = async () => {
+        if (user && user.email) {
+            try {
+                await notificationService.markAllAsRead(user.email);
+                setUnreadCount(0);
+                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            } catch (error) {
+                console.error('Error marking all as read:', error);
+            }
+        }
+    };
+
+    // Handle clear all notifications
+    const handleClearAllNotifications = async () => {
+        if (user && user.email) {
+            try {
+                await notificationService.clearAllNotifications(user.email);
+                setNotifications([]);
+                setUnreadCount(0);
+                Alert.alert('Success', 'All notifications cleared');
+            } catch (error) {
+                console.error('Error clearing all notifications:', error);
+                Alert.alert('Error', 'Failed to clear notifications');
+            }
+        }
+    };
+
     const filteredPosts = forumPosts.filter((item: ForumPost) => {
         const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
         
@@ -1008,13 +1105,22 @@ const ForumsScreen = () => {
 
     const handleVoteOnPoll = async (pollId: string, optionIndex: number, userId: string) => {
         try {
-            console.log('Voting on poll:', pollId, optionIndex, userId);
+            // Get voter name from user email
+            const voterName = user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : 'Someone';
+            const voterEmail = user?.email || userId;
+            
+            console.log('Voting on poll:', pollId, optionIndex, userId, voterName, voterEmail);
             const response = await fetch(`${BASE_URL}/polls/${pollId}/vote`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ optionIndex, userId }),
+                body: JSON.stringify({ 
+                    optionIndex, 
+                    userId,
+                    voterName,
+                    voterEmail
+                }),
             });
 
             if (!response.ok) {
@@ -1149,14 +1255,38 @@ const ForumsScreen = () => {
                 <View style={styles.header}>
                     <TouchableOpacity 
                         style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}
-                        onPress={() => {/* Handle notification press */}}
+                        onPress={() => setIsNotificationModalVisible(true)}
                         activeOpacity={0.7}
                     >
-                        <Ionicons 
-                            name="notifications-outline" 
-                            size={28} 
-                            color={colors.white || '#FFFFFF'} 
-                        />
+                        <View>
+                            <Ionicons 
+                                name="notifications-outline" 
+                                size={28} 
+                                color={colors.white || '#FFFFFF'} 
+                            />
+                            {unreadCount > 0 && (
+                                <View style={{
+                                    position: 'absolute',
+                                    top: -5,
+                                    right: -5,
+                                    backgroundColor: '#FF3B30',
+                                    borderRadius: 10,
+                                    minWidth: 20,
+                                    height: 20,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    paddingHorizontal: 5,
+                                }}>
+                                    <Text style={{
+                                        color: '#FFFFFF',
+                                        fontSize: 12,
+                                        fontWeight: 'bold',
+                                    }}>
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
                     </TouchableOpacity>
                     <View style={styles.headerContent}>
                         <Text style={styles.headerTitle}>{t('forum.title')}</Text>
@@ -1852,6 +1982,98 @@ const ForumsScreen = () => {
                     fetchTrendingTopics();
                 }}
             />
+
+            {/* Notification Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isNotificationModalVisible}
+                onRequestClose={() => setIsNotificationModalVisible(false)}
+            >
+                <View style={styles.notificationModalOverlay}>
+                    <View style={styles.notificationModalContent}>
+                        {/* Header */}
+                        <View style={styles.notificationModalHeader}>
+                            <Text style={styles.notificationModalTitle}>Notifications</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                {notifications.length > 0 && (
+                                    <>
+                                        {unreadCount > 0 && (
+                                            <TouchableOpacity 
+                                                onPress={handleMarkAllAsRead}
+                                                style={{ marginRight: 15 }}
+                                            >
+                                                <Text style={styles.markAllReadText}>Mark all read</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        <TouchableOpacity 
+                                            onPress={handleClearAllNotifications}
+                                            style={{ marginRight: 15 }}
+                                        >
+                                            <Text style={[styles.markAllReadText, { color: '#FF3B30' }]}>Clear all</Text>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                                <TouchableOpacity onPress={() => setIsNotificationModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color={theme === 'dark' ? colors.primary : '#2C3E50'} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Notifications List */}
+                        {notifications.length > 0 ? (
+                            <FlatList
+                                data={notifications}
+                                keyExtractor={(item) => item._id}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.notificationItem,
+                                            !item.isRead && styles.notificationItemUnread
+                                        ]}
+                                        onPress={() => handleNotificationClick(item)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.notificationIcon}>
+                                            <Ionicons 
+                                                name="chatbubble-ellipses" 
+                                                size={24} 
+                                                color={colors.primary} 
+                                            />
+                                        </View>
+                                        <View style={styles.notificationContent}>
+                                            <Text style={styles.notificationText}>
+                                                <Text style={styles.notificationSender}>{item.sender}</Text>
+                                                {' commented on your post: '}
+                                                <Text style={styles.notificationPostTitle}>{item.postTitle}</Text>
+                                            </Text>
+                                            <Text style={styles.notificationComment} numberOfLines={2}>
+                                                {item.commentContent}
+                                            </Text>
+                                            <Text style={styles.notificationTime}>
+                                                {notificationService.formatTimeAgo(item.createdAt)}
+                                            </Text>
+                                        </View>
+                                        {!item.isRead && (
+                                            <View style={styles.unreadDot} />
+                                        )}
+                                    </TouchableOpacity>
+                                )}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        ) : (
+                            <View style={styles.emptyNotifications}>
+                                <Ionicons 
+                                    name="notifications-off-outline" 
+                                    size={64} 
+                                    color={theme === 'dark' ? colors.darkgray : '#CCC'} 
+                                />
+                                <Text style={styles.emptyNotificationsText}>No notifications yet</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
 
             {/* Create Menu Popup */}
             <Modal
@@ -3184,6 +3406,108 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.1)',
         marginLeft: 8,
         marginTop: -2,
+    },
+    // Notification Modal Styles
+    notificationModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    notificationModalContent: {
+        backgroundColor: theme === 'dark' ? colors.secondary : '#FFFFFF',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: '80%',
+        paddingTop: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    notificationModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: theme === 'dark' ? colors.darkgray : '#E5E5E5',
+    },
+    notificationModalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
+    },
+    markAllReadText: {
+        fontSize: 14,
+        color: colors.primary,
+        fontWeight: '600',
+    },
+    notificationItem: {
+        flexDirection: 'row',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: theme === 'dark' ? colors.darkgray : '#F0F0F0',
+        backgroundColor: theme === 'dark' ? colors.secondary : '#FFFFFF',
+    },
+    notificationItemUnread: {
+        backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.05)',
+    },
+    notificationIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme === 'dark' ? colors.white : '#F0F0F0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    notificationContent: {
+        flex: 1,
+    },
+    notificationText: {
+        fontSize: 14,
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
+        marginBottom: 4,
+        lineHeight: 20,
+    },
+    notificationSender: {
+        fontWeight: '700',
+        color: colors.accent,
+    },
+    notificationPostTitle: {
+        fontWeight: '600',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
+    },
+    notificationComment: {
+        fontSize: 13,
+        color: theme === 'dark' ? colors.lightgray : '#666',
+        marginBottom: 4,
+        fontStyle: 'italic',
+    },
+    notificationTime: {
+        fontSize: 12,
+        color: theme === 'dark' ? colors.darkgray : '#999',
+    },
+    unreadDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#FF3B30',
+        marginLeft: 8,
+        alignSelf: 'center',
+    },
+    emptyNotifications: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    emptyNotificationsText: {
+        fontSize: 16,
+        color: theme === 'dark' ? colors.darkgray : '#999',
+        marginTop: 16,
     },
 });
 

@@ -40,6 +40,10 @@ const pollSchema = new mongoose.Schema({
     required: true,
     default: 'Anonymous User'
   },
+  authorEmail: {
+    type: String,
+    default: null
+  },
   category: {
     type: String,
     required: true,
