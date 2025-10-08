@@ -87,6 +87,7 @@ const lawyerRoutes = require('./Routes/lawyerRoutes');
 const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
+const notificationRoutes = require('./Routes/notificationRoutes');
 
 
 
@@ -99,6 +100,7 @@ app.use("/api/lawyers", lawyerRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 
 // Root route

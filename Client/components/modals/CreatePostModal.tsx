@@ -134,6 +134,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
       isAnonymous,
       author: getUserDisplayName(),
+      authorEmail: user?.email, // Add email for notifications
       category: selectedCategory, // Use selected category
       priority: 'medium', // Default priority
     };
