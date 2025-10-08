@@ -554,6 +554,111 @@ export class DocumentService {
   }
 
   /**
+   * Get document upload history with filtering and pagination
+   */
+  static async getUploadHistory(
+    page: number = 1,
+    limit: number = 20,
+    filters?: {
+      userId?: string;
+      status?: 'pending' | 'processing' | 'completed' | 'failed';
+      language?: 'english' | 'sinhala' | 'tamil';
+    }
+  ): Promise<DocumentListResponse> {
+    try {
+      const params: any = { page, limit };
+      
+      if (filters) {
+        if (filters.userId) params.userId = filters.userId;
+        if (filters.status) params.status = filters.status;
+        if (filters.language) params.language = filters.language;
+      }
+
+      const response = await api.get('/documents/history', { params });
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          documents: response.data.data.documents.map(this.transformServerDocument),
+          total: response.data.data.pagination.totalDocuments,
+          page: response.data.data.pagination.currentPage,
+          limit: limit
+        };
+      } else {
+        return {
+          success: false,
+          documents: [],
+          total: 0,
+          page,
+          limit,
+          error: response.data.message || 'Failed to load document history'
+        };
+      }
+    } catch (error: any) {
+      console.error('Get upload history error:', error);
+      return {
+        success: false,
+        documents: [],
+        total: 0,
+        page,
+        limit,
+        error: error.response?.data?.message || error.message || 'Network error - unable to connect to server'
+      };
+    }
+  }
+
+  /**
+   * Get document statistics
+   */
+  static async getDocumentStats(userId?: string): Promise<{
+    success: boolean;
+    stats?: {
+      total: number;
+      processed: number;
+      pending: number;
+      failed: number;
+      byLanguage: {
+        english: number;
+        sinhala: number;
+        tamil: number;
+      };
+      byType: {
+        legal_document: number;
+        contract: number;
+        certificate: number;
+        identification: number;
+        other: number;
+      };
+    };
+    error?: string;
+  }> {
+    try {
+      const params: any = {};
+      if (userId) params.userId = userId;
+
+      const response = await api.get('/documents/stats', { params });
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          stats: response.data.data
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to load document statistics'
+        };
+      }
+    } catch (error: any) {
+      console.error('Get document stats error:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to load document statistics'
+      };
+    }
+  }
+
+  /**
    * Extract OCR text from document (DEPRECATED - Use explainDocument instead)
    */
   static async extractOCRText(documentId: string): Promise<AIExplanationResponse> {

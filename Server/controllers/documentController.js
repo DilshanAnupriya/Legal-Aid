@@ -438,5 +438,125 @@ class DocumentController {
       });
     }
   }
+
+  /**
+   * Get document upload history
+   * GET /api/documents/history
+   */
+  async getUploadHistory(req, res) {
+    try {
+      const { page = 1, limit = 20, userId, status, language } = req.query;
+      
+      const filter = {};
+      
+      // Filter by userId if provided
+      if (userId) {
+        filter.userId = userId;
+      }
+      
+      // Filter by AI status if provided
+      if (status && ['pending', 'processing', 'completed', 'failed'].includes(status)) {
+        filter.aiStatus = status;
+      }
+      
+      // Filter by explanation language if provided
+      if (language && ['english', 'sinhala', 'tamil'].includes(language)) {
+        filter.explanationLanguage = language;
+      }
+
+      const documents = await Document.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .select('-__v'); // Exclude version field
+
+      // Add file URLs to documents
+      const documentsWithUrls = documents.map(doc => ({
+        ...doc.toObject(),
+        fileUrl: getFileUrl(doc.filepath, req)
+      }));
+
+      const total = await Document.countDocuments(filter);
+
+      res.json({
+        success: true,
+        data: {
+          documents: documentsWithUrls,
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / limit),
+            totalDocuments: total,
+            documentsPerPage: parseInt(limit)
+          }
+        }
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch document history',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Get document statistics
+   * GET /api/documents/stats
+   */
+  async getDocumentStats(req, res) {
+    try {
+      const { userId } = req.query;
+      
+      const filter = userId ? { userId } : {};
+      
+      // Get counts by status
+      const totalDocuments = await Document.countDocuments(filter);
+      const processedDocuments = await Document.countDocuments({ ...filter, isProcessed: true });
+      const pendingDocuments = await Document.countDocuments({ ...filter, aiStatus: 'pending' });
+      const failedDocuments = await Document.countDocuments({ ...filter, aiStatus: 'failed' });
+      
+      // Get counts by language
+      const englishDocs = await Document.countDocuments({ ...filter, explanationLanguage: 'english' });
+      const sinhalaDocs = await Document.countDocuments({ ...filter, explanationLanguage: 'sinhala' });
+      const tamilDocs = await Document.countDocuments({ ...filter, explanationLanguage: 'tamil' });
+      
+      // Get counts by document type
+      const legalDocs = await Document.countDocuments({ ...filter, documentType: 'legal_document' });
+      const contractDocs = await Document.countDocuments({ ...filter, documentType: 'contract' });
+      const certDocs = await Document.countDocuments({ ...filter, documentType: 'certificate' });
+      const idDocs = await Document.countDocuments({ ...filter, documentType: 'identification' });
+      const otherDocs = await Document.countDocuments({ ...filter, documentType: 'other' });
+      
+      res.json({
+        success: true,
+        data: {
+          total: totalDocuments,
+          processed: processedDocuments,
+          pending: pendingDocuments,
+          failed: failedDocuments,
+          byLanguage: {
+            english: englishDocs,
+            sinhala: sinhalaDocs,
+            tamil: tamilDocs
+          },
+          byType: {
+            legal_document: legalDocs,
+            contract: contractDocs,
+            certificate: certDocs,
+            identification: idDocs,
+            other: otherDocs
+          }
+        }
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch document statistics',
+        error: error.message
+      });
+    }
+  }
 }
 module.exports = new DocumentController();

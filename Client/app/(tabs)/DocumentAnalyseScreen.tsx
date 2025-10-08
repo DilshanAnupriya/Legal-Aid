@@ -12,8 +12,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { DocumentService } from '../../services/documentService';
+import DocumentHistory from '../../components/DocumentHistory';
 
 type Step = 'select' | 'configure' | 'results';
+type Tab = 'upload' | 'history';
 
 interface LanguageOption {
   label: string;
@@ -27,6 +29,7 @@ const LANGUAGES: LanguageOption[] = [
 ];
 
 export default function DocumentAnalyseScreen() {
+  const [activeTab, setActiveTab] = useState<Tab>('upload');
   const [currentStep, setCurrentStep] = useState<Step>('select');
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -42,6 +45,19 @@ export default function DocumentAnalyseScreen() {
     wordCount?: number;
     characterCount?: number;
   } | null>(null);
+
+  // Handle back navigation
+  const handleBack = () => {
+    if (currentStep === 'results') {
+      // From results, go back to configure
+      setCurrentStep('configure');
+    } else if (currentStep === 'configure') {
+      // From configure, go back to select and clear file
+      setCurrentStep('select');
+      setSelectedFile(null);
+    }
+    // If on select step, do nothing (already at the beginning)
+  };
 
   // Reset to start over
   const handleReset = () => {
@@ -316,13 +332,60 @@ export default function DocumentAnalyseScreen() {
 
   return (
     <View style={styles.container}>
-      {renderStepIndicator()}
-      
-      <View style={styles.content}>
-        {currentStep === 'select' && renderSelectStep()}
-        {currentStep === 'configure' && renderConfigureStep()}
-        {currentStep === 'results' && renderResultsStep()}
+      {/* Tab Selector */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'upload' && styles.tabActive]}
+          onPress={() => setActiveTab('upload')}
+        >
+          <Ionicons
+            name="cloud-upload-outline"
+            size={24}
+            color={activeTab === 'upload' ? '#007AFF' : '#666'}
+          />
+          <Text style={[styles.tabText, activeTab === 'upload' && styles.tabTextActive]}>
+            Upload & Analyze
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+          onPress={() => setActiveTab('history')}
+        >
+          <Ionicons
+            name="time-outline"
+            size={24}
+            color={activeTab === 'history' ? '#007AFF' : '#666'}
+          />
+          <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
+            History
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Tab Content */}
+      {activeTab === 'upload' ? (
+        <>
+          {/* Back Button - Show when not on first step */}
+          {currentStep !== 'select' && !analyzing && (
+            <View style={styles.backButtonContainer}>
+              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                <Ionicons name="arrow-back" size={24} color="#007AFF" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {renderStepIndicator()}
+          <View style={styles.content}>
+            {currentStep === 'select' && renderSelectStep()}
+            {currentStep === 'configure' && renderConfigureStep()}
+            {currentStep === 'results' && renderResultsStep()}
+          </View>
+        </>
+      ) : (
+        <DocumentHistory />
+      )}
     </View>
   );
 }
@@ -331,6 +394,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: '#007AFF',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  tabTextActive: {
+    color: '#007AFF',
+  },
+  backButtonContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   stepIndicator: {
     flexDirection: 'row',

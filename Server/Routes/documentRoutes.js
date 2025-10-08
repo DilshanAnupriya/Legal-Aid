@@ -118,9 +118,26 @@ router.post('/explain',
 router.get('/', documentController.getAllDocuments);
 
 /**
+ * @route   GET /api/documents/history
+ * @desc    Get document upload history with filtering and pagination
+ * @access  Public
+ * @note    Must be defined BEFORE /:id route
+ */
+router.get('/history', documentController.getUploadHistory);
+
+/**
+ * @route   GET /api/documents/stats
+ * @desc    Get document statistics
+ * @access  Public
+ * @note    Must be defined BEFORE /:id route
+ */
+router.get('/stats', documentController.getDocumentStats);
+
+/**
  * @route   GET /api/documents/languages
  * @desc    Get supported AI explanation languages
  * @access  Public
+ * @note    Must be defined BEFORE /:id route
  */
 router.get('/languages', documentController.getSupportedLanguages);
 
@@ -128,6 +145,7 @@ router.get('/languages', documentController.getSupportedLanguages);
  * @route   GET /api/documents/:id
  * @desc    Get document details by ID
  * @access  Public
+ * @note    This route uses a parameter, so it must be defined AFTER specific routes
  */
 router.get('/:id', 
   validateDocumentParams,
