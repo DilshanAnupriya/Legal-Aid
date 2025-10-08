@@ -140,7 +140,7 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ color, focused }) => {
           let iconName;
-          if (route.name === 'Dashboard') iconName = focused ? 'home' : 'home-outline';
+          if (route.name === 'Dashboard') iconName = focused ? 'home' : 'grid-outline';
           else if (route.name === 'Cases') iconName = focused ? 'briefcase' : 'briefcase-outline';
           else if (route.name === 'Documents') iconName = focused ? 'document-text' : 'document-text-outline';
           else if (route.name === 'Forum') iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
@@ -159,7 +159,42 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
         },
       })}
     >
-      <Tab.Screen name={'Dashboard'} component={LawyerDashboard} options={{ ...commonHeaderOptions, headerTitle: 'Dashboard' }} />
+      <Tab.Screen
+  name={'Dashboard'}
+  component={LawyerDashboard}
+  options={{
+    ...commonHeaderOptions,
+    headerTitle: 'Dashboard',
+    headerRight: () => (
+      <View style={styles.headerRightContainer}>
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: theme === 'light' ? COLOR.light.white : colors.darkgray }]}
+        >
+          <Ionicons name="search-outline" size={20} color={colors.primary} />
+        </TouchableOpacity>
+        <ThemeSwitcherComponent size="small" />
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: theme === 'light' ? COLOR.light.white : colors.darkgray }]}
+        >
+          <Ionicons name="notifications-outline" size={20} color={colors.primary} />
+          <View style={[styles.notificationBadge, { backgroundColor: '#FF6B35' }]}>
+            <Text style={styles.badgeText}>3</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.profileButton, {
+            backgroundColor: theme === 'light' ? COLOR.light.white : colors.darkgray,
+            borderColor: '#FF6B35'
+          }]}
+          onPress={navigateToProfile}
+        >
+          <Ionicons name="person" size={18} color={'#FF6B35'} />
+        </TouchableOpacity>
+      </View>
+    ),
+  }}
+/>
+
       <Tab.Screen name={'Cases'} component={LawyerCaseScreen} options={{ ...commonHeaderOptions, headerTitle: 'My Cases' }} />
       <Tab.Screen name={'Documents'} component={DocumentScreen} options={{ ...commonHeaderOptions, headerTitle: 'Documents' }} />
       <Tab.Screen name={'Forum'} component={ForumScreen} options={{ ...commonHeaderOptions, headerTitle: 'Forum' }} />

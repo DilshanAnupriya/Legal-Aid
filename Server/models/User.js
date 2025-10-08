@@ -122,6 +122,8 @@ const userSchema = new mongoose.Schema(
         return this.role === "lawyer" ? [] : undefined;
       },
     },
+
+    
     // NGO-specific fields
     organizationName: {
       type: String,
