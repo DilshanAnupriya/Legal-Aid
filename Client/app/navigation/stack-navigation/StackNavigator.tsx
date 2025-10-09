@@ -16,7 +16,7 @@ import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
 // import LanguageDemo from "@/components/screens/LanguageDemo";
 import LawyerAppointmentsScreen from "@/components/ui/screen/widget/LawyerDashboard/LawyerAppointmentsScreen";
-import ChatScreen from "@/components/ui/screen/ChatScreen";
+
 
 
 const Stack = createStackNavigator();
@@ -128,14 +128,7 @@ export default function StackNavigator() {
                 }}
             />
 
-            <Stack.Screen
-
-                name="ChatScreen"
-                component={ChatScreen}
-                options={{
-                    title: 'My Chats'
-                }}
-            />
+            
 
 
         </Stack.Navigator>

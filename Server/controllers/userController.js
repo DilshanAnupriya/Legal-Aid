@@ -433,17 +433,42 @@ const getAllLawyers = async (req, res) => {
       ];
     }
 
+    // Define tier priority (higher tiers come first)
+    const tierPriority = {
+      "Champion of Justice": 5,
+      "Legal Mentor": 4,
+      "Justice Advocate": 3,
+      "Legal Helper": 2,
+      "Community Ally": 1,
+    };
+
     // Count total matching lawyers
     const total = await User.countDocuments(filter);
 
-    // Fetch paginated lawyers
+     // Fetch all lawyers matching filter
     const lawyers = await User.find(filter)
-      .sort({ createdAt: -1 }) // Newest first
-      .skip((pageNumber - 1) * pageSize)
-      .limit(pageSize)
-      .select('-password'); // exclude password
+      .select("-password"); // remove .lean()
+
+      // Sort manually based on tier priority (high → low), then newest first
+    const sortedLawyers = lawyers.sort((a, b) => {
+      const tierA = tierPriority[a.tier] || 0;
+      const tierB = tierPriority[b.tier] || 0;
+
+      // Higher tier first
+      if (tierA !== tierB) return tierB - tierA;
+
+      // If same tier, sort by createdAt (newest first)
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    // Apply pagination after sorting
+    const startIndex = (pageNumber - 1) * pageSize;
+    const paginatedLawyers = sortedLawyers.slice(
+      startIndex,
+      startIndex + pageSize
+    );
 
     const totalPages = Math.ceil(total / pageSize);
+    
 
     return res.status(200).json({
       message: 'list',

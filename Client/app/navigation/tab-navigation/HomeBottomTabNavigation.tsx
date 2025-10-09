@@ -62,7 +62,7 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
 
   const navigateToChat = () => {
     console.log("navigate to chat pressed..");
-    navigation.navigate("ChatScreen");
+    // navigation.navigate("ChatScreen");
   };
 
   // Fetch notifications
@@ -85,9 +85,9 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
     fetchNotifications();
 
     // Poll for new notifications every 30 seconds
-    const intervalId = setInterval(fetchNotifications, 30000);
+    // const intervalId = setInterval(fetchNotifications, 30000);
 
-    return () => clearInterval(intervalId);
+    // return () => clearInterval(intervalId);
   }, [user]);
 
   // Handle notification click
