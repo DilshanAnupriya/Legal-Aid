@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { COLOR } from '@/constants/ColorPallet';
+import LawyerAdditionalDetails from './LawyerAdditionalDetails';
+
 
 interface LawyerProfileScreenProps {
     navigation: any;
@@ -283,8 +285,15 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
                             <Text style={styles.cancelButtonText}>Cancel</Text>
                         </TouchableOpacity>
                     )}
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>More Details</Text>
+                        <LawyerAdditionalDetails lawyerId={user.id} />
+                    </View>
                     
-                    <TouchableOpacity
+
+                    
+                    <TouchableOpacity   
                         style={styles.logoutButton}
                         onPress={handleLogout}
                     >

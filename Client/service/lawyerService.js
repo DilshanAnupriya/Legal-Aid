@@ -1,30 +1,15 @@
 import axios from "axios";
 
 // Change this to your backend URL (localhost or LAN IP)
-const API_URL = "http://localhost:3000/api/lawyers"; // Web
+const API_URL = "http://localhost:3000/api/auth/lawyers"; // Web
+const API_URL_LAWYER_PROFILE = "http://localhost:3000/api/lawyers";
 
-// Register a lawyer
-export const registerAdmin = async (lawyerData) => {
-  console.log("Registering lawyer...");
-  try {
-    const response = await axios.post(API_URL, lawyerData, {
-      headers: {
-        "Content-Type": "application/json", // Web uses JSON
-      },
-    });
-    console.log("Response:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error(
-      "Error registering lawyer:",
-      error.response?.data || error.message
-    );
-    throw error.response?.data || error;
-  }
-};
+
+
 
 // Get all lawyers with category and pagination
 export const getAllLawyers = async (searchText = "", page = 1, limit = 10, category = "" ) => {
+  console.log("service called : ")
   try {
     const params = {
       category: category || undefined,
@@ -59,4 +44,57 @@ export const searchLawyers = async (query) => {
     console.error("Error searching lawyers:", error.response?.data || error.message);
     throw error;
   }
+};
+
+// Save or update a lawyer's profile
+export const saveLawyerProfile = async (lawyerId, profileData) => {
+  try {
+    console.log("lawyer id in service : ",lawyerId)
+    const response = await axios.post(`${API_URL_LAWYER_PROFILE}/AddprofileDetails`, {
+      lawyerId: lawyerId,
+      ...profileData,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error saving lawyer profile:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Fetch a lawyer's profile by ID
+export const getLawyerProfile = async (lawyerId) => {
+  try {
+    const response = await axios.get(`${API_URL_LAWYER_PROFILE}/AddprofileDetails/${lawyerId}`);
+    console.log("lawyer profile data : ",response.data.profile)
+    return response.data.profile;
+  } catch (error) {
+    console.error("Error fetching lawyer profile:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Rate or review a lawyer
+export const rateLawyer = async (lawyerId, ratingData, token) => {
+  try {
+    console.log("lawyer id : ",lawyerId)
+    const response = await axios.post(
+      `${API_URL_LAWYER_PROFILE}/${lawyerId}/review`,
+      ratingData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // Include JWT token for auth
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error submitting lawyer review:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const getLawyerReviews = async (lawyerId) => {
+  const response = await axios.get(`${API_URL_LAWYER_PROFILE}/${lawyerId}/review`);
+  return response.data;
 };

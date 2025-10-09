@@ -8,6 +8,28 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
+const http = require("http");
+const socketIo = require("socket.io");
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: { origin: "*" },
+});
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("joinChat", (chatId) => {
+    socket.join(chatId);
+  });
+
+  socket.on("sendMessage", (data) => {
+    io.to(data.chatId).emit("receiveMessage", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+});
+
 app.use(cors({
   origin: [
     'http://localhost:3000', 'http://127.0.0.1:3000', 
@@ -87,6 +109,7 @@ const lawyerRoutes = require('./Routes/lawyerRoutes');
 const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
+const lawyerProfile = require('./Routes/lawyerProfileRoutes');
 const notificationRoutes = require('./Routes/notificationRoutes');
 
 
@@ -100,6 +123,7 @@ app.use("/api/lawyers", lawyerRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/lawyers/AddprofileDetails", lawyerProfile);
 app.use("/api/notifications", notificationRoutes);
 
 
