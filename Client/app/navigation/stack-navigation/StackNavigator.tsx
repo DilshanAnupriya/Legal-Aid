@@ -14,7 +14,7 @@ import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
 import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
-import LanguageDemo from "@/components/screens/LanguageDemo";
+// import LanguageDemo from "@/components/screens/LanguageDemo";
 import LawyerAppointmentsScreen from "@/components/ui/screen/widget/LawyerDashboard/LawyerAppointmentsScreen";
 import ChatScreen from "@/components/ui/screen/ChatScreen";
 
@@ -110,14 +110,14 @@ export default function StackNavigator() {
                     headerShown: false,
                 }}
             />
-            <Stack.Screen
+            {/* <Stack.Screen
                 name="LanguageDemo"
                 component={LanguageDemo}
                 options={{
                     title: 'Language Demo',
                     headerShown: false,
                 }}
-            />
+            /> */}
             
             <Stack.Screen
                 name="LawyerAppointmentsScreen"
