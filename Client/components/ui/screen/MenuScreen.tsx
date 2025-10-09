@@ -207,7 +207,7 @@ export default function MenuScreen({ navigation }: { navigation?: any }) {
                     />
 
                     <Menu.Item leadingIcon="file-multiple-outline" onPress={() => {}} title="Document Organizer" />
-                    <Menu.Item leadingIcon="robot-outline" onPress={() => {}} title="AI ChatBot Assist" />
+                    <Menu.Item leadingIcon="robot-outline" onPress={() => {navigation.navigate('Chat')}} title="AI ChatBot Assist" />
                     <Menu.Item leadingIcon="translate" onPress={() => {navigation.navigate('LanguageSettings')}} title="Languages"  />
                     <Menu.Item leadingIcon="charity" onPress={() => {navigation.navigate('Ngo')}} title="NGO"  />
                     <Menu.Item leadingIcon="cog-outline" onPress={() => {}} title="Settings" />

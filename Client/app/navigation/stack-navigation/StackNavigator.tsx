@@ -14,64 +14,57 @@ import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
 import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
-
+import ChatScreen from "@/components/ui/screen/ChatScreen"; // Add this import
 
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
     return (
         <Stack.Navigator
-
             screenOptions={{
-                headerStyle: styles.header, // Header background
-                headerTitleStyle: styles.headerTitle, // Header text
-                cardStyle: styles.card, // Screen background
+                headerStyle: styles.header,
+                headerTitleStyle: styles.headerTitle,
+                cardStyle: styles.card,
             }}
         >
             <Stack.Screen
                 name={'Process'}
                 component={HomeBottomTabNavigation}
-                options={{headerLeft: () => null, headerShown: false,}}
+                options={{headerLeft: () => null, headerShown: false}}
             />
             <Stack.Screen
                 name={'Ngo'}
                 options={{title:'NGO'}}
                 component={NgoScreen}
             />
-
             <Stack.Screen
                 name={'Profile'}
                 options={{title:'Profile'}}
                 component={UserProfile}
             />
-
             <Stack.Screen
                 name={'LawyerRegistrationForm'}
-                options={{title:'LawyerRegistrationForm'}}
+                options={{title:'Lawyer Registration'}}
                 component={LawyerRegistrationForm}
             />
-
             <Stack.Screen
                 name={'LawyersTableAdmin'}
                 options={{title:'Lawyers Table'}}
                 component={LawyersTableAdmin}
             />
-
             <Stack.Screen
                 name={'LawyerProfile'}
-                options={{title:'Lawyers profile'}}
+                options={{title:'Lawyer Profile'}}
                 component={LawyerProfile}
             />
             <Stack.Screen
                 name="NgoProfile"
                 component={NgoProfileScreen}
-                options={({ route }) => ({
+                options={{
                     title: 'NGO Profile',
-                    // You can add more options here if needed
-                })}
+                }}
             />
             <Stack.Screen
-
                 name="UserProfile"
                 component={UserProfileScreen}
                 options={{
@@ -97,7 +90,7 @@ export default function StackNavigator() {
                 component={RoleBasedWelcome}
                 options={{
                     title: 'Welcome',
-                    headerLeft: () => null, // Disable back button
+                    headerLeft: () => null,
                 }}
             />
             <Stack.Screen
@@ -107,15 +100,23 @@ export default function StackNavigator() {
                     headerShown: false,
                 }}
             />
+            {/* Legal Aid Chatbot Screen */}
+            <Stack.Screen
+                name="Chat"
+                component={ChatScreen}
+                options={{
+                    headerShown: false, // Using custom header in ChatScreen
+                }}
+            />
         </Stack.Navigator>
     );
 }
 
 const styles = StyleSheet.create({
     header: {
-        backgroundColor: COLOR.light.light, // example primary color
-        shadowColor: "transparent", // removes shadow on iOS
-        elevation: 0, // removes shadow on Android
+        backgroundColor: COLOR.light.light,
+        shadowColor: "transparent",
+        elevation: 0,
     },
     headerTitle: {
         color: COLOR.light.primary,
@@ -123,6 +124,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     card: {
-        backgroundColor: COLOR.light.light, // Changed from COLOR.light to COLOR.light.background
+        backgroundColor: COLOR.light.light,
     },
 });
