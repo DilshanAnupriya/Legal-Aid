@@ -8,6 +8,28 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 
+const http = require("http");
+const socketIo = require("socket.io");
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: { origin: "*" },
+});
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("joinChat", (chatId) => {
+    socket.join(chatId);
+  });
+
+  socket.on("sendMessage", (data) => {
+    io.to(data.chatId).emit("receiveMessage", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+});
+
 app.use(cors({
   origin: [
     'http://localhost:3000', 'http://127.0.0.1:3000', 

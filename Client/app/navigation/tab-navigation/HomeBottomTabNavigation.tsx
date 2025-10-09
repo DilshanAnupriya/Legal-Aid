@@ -41,6 +41,11 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
     }
   };
 
+  const navigateToChat = () => {
+    console.log("navigate to chat pressed..")
+    navigation.navigate('ChatScreen');
+  }
+
   /** Reusable header components */
   const commonHeaderOptions = {
     headerStyle: {
@@ -122,6 +127,14 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
               >
                 <Ionicons name="person" size={18} color={'#FF6B35'} />
               </TouchableOpacity>
+              {/* Chat / Messenger Icon */}
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: theme === 'light' ? COLOR.light.white : colors.darkgray, marginRight: 5 }]}
+          onPress={navigateToChat}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.primary} />
+        </TouchableOpacity>
+
             </View>
           ),
         }}
