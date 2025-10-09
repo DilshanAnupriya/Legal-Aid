@@ -31,7 +31,6 @@ export default function AuthNavigator() {
 
     // If user is authenticated, show main app navigation
     if (isAuthenticated) {
-        
         return <StackNavigator />;
     }
 
