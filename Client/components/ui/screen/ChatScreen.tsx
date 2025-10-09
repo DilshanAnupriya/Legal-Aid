@@ -36,7 +36,8 @@ const ChatScreen = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [ngoRecommendations, setNgoRecommendations] = useState(null);
     const [showRecommendations, setShowRecommendations] = useState(false);
-    const [messageCount, setMessageCount] = useState(0);
+    const [hasShownRecommendations, setHasShownRecommendations] = useState(false);
+    const [showNgoButton, setShowNgoButton] = useState(false);
     const flatListRef = useRef(null);
     const typingAnimation = useRef(new Animated.Value(0)).current;
 
@@ -71,14 +72,74 @@ const ChatScreen = () => {
         }
     }, [messages]);
 
-    // Fetch NGO recommendations after every 3 messages
+    // Smart Auto-Trigger for NGO Recommendations
     useEffect(() => {
-        if (messageCount >= 4 && messageCount % 3 === 0) {
-            fetchNGORecommendations();
+        if (hasShownRecommendations || isLoading) return;
+
+        const userMessages = messages.filter(msg => msg.sender === 'user');
+        const botMessages = messages.filter(msg => msg.sender === 'bot');
+
+        // Don't trigger if conversation is too short
+        if (userMessages.length < 2) return;
+
+        // Get last user message
+        const lastUserMessage = userMessages[userMessages.length - 1]?.text.toLowerCase() || '';
+
+        // TRIGGER CONDITIONS (any ONE triggers recommendations):
+
+        // 1. Urgent keywords detected
+        const urgentKeywords = ['urgent', 'emergency', 'help', 'need help', 'asap', 'immediate', 'crisis','give me ngo'];
+        const hasUrgentKeyword = urgentKeywords.some(keyword => lastUserMessage.includes(keyword));
+
+        // 2. Legal issue keywords detected
+        const legalKeywords = [
+            'discrimination', 'harassment', 'abuse', 'violence', 'fired', 'arrest',
+            'rights', 'illegal', 'lawsuit', 'case', 'lawyer', 'attorney', 'legal help',
+            'custody', 'divorce', 'deportation', 'asylum', 'wage', 'contract'
+        ];
+        const hasLegalKeyword = legalKeywords.some(keyword => lastUserMessage.includes(keyword));
+
+        // 3. After 4 exchanges (natural conversation flow)
+        const hasEnoughExchanges = userMessages.length >= 5 && botMessages.length >= 5;
+
+        // 4. Category-specific keywords (high confidence)
+        const categoryKeywords = [
+            'gay', 'lgbtq', 'transgender', 'lesbian', 'queer',
+            'women', 'sexual harassment', 'domestic violence', 'dowry',
+            'child', 'custody', 'adoption', 'minor',
+            'refugee', 'asylum', 'migrant', 'deportation',
+            'worker', 'employment', 'labor', 'overtime',
+            'police', 'detention', 'freedom'
+        ];
+        const hasCategoryKeyword = categoryKeywords.some(keyword => lastUserMessage.includes(keyword));
+
+        // Trigger if ANY condition is met
+        const shouldTrigger =
+            (hasUrgentKeyword && userMessages.length >= 2) ||  // Urgent need
+            (hasLegalKeyword && userMessages.length >= 3) ||    // Legal issue mentioned
+            (hasCategoryKeyword && userMessages.length >= 2) || // Category match
+            hasEnoughExchanges;                                 // Natural conversation
+
+        if (shouldTrigger) {
+            console.log('🎯 Smart trigger activated:', {
+                userMessages: userMessages.length,
+                hasUrgent: hasUrgentKeyword,
+                hasLegal: hasLegalKeyword,
+                hasCategory: hasCategoryKeyword,
+                hasExchanges: hasEnoughExchanges
+            });
+
+            // Small delay to feel more natural
+            setTimeout(() => {
+                fetchNGORecommendations();
+            }, 1000);
         }
-    }, [messageCount]);
+    }, [messages, hasShownRecommendations, isLoading]);
 
     const fetchNGORecommendations = async () => {
+        setHasShownRecommendations(true);
+        setShowNgoButton(false);
+
         try {
             const conversationHistory = messages
                 .filter((msg) => msg.sender !== 'system')
@@ -130,7 +191,6 @@ const ChatScreen = () => {
         setInputText('');
         setIsLoading(true);
         setIsTyping(true);
-        setMessageCount(prev => prev + 1);
 
         try {
             const conversationHistory = messages
@@ -161,7 +221,11 @@ const ChatScreen = () => {
                     timestamp: data.timestamp,
                 };
                 setMessages((prev) => [...prev, botMessage]);
-                setMessageCount(prev => prev + 1);
+
+                // Show NGO button after 3+ messages
+                if (messages.length >= 5) {
+                    setShowNgoButton(true);
+                }
             } else {
                 throw new Error(data.error || 'Failed to get response');
             }
@@ -200,6 +264,29 @@ const ChatScreen = () => {
             ]
         );
     };
+
+    const FindNGOButton = () => (
+        <View style={styles.findNgoButtonContainer}>
+            <TouchableOpacity
+                style={styles.findNgoButton}
+                onPress={fetchNGORecommendations}
+                activeOpacity={0.9}
+            >
+                <LinearGradient
+                    colors={[COLOR.light.primary, COLOR.light.secondary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.findNgoButtonGradient}
+                >
+                    <Ionicons name="search" size={20} color="#fff" />
+                    <Text style={styles.findNgoButtonText}>Find NGOs That Can Help</Text>
+                </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.findNgoHint}>
+                Get personalized NGO recommendations based on your conversation
+            </Text>
+        </View>
+    );
 
     const NGORecommendationCard = ({ ngo }) => (
         <View style={styles.ngoCard}>
@@ -426,6 +513,7 @@ const ChatScreen = () => {
                     ListFooterComponent={() => (
                         <>
                             {isTyping && <TypingIndicator />}
+                            {showNgoButton && !showRecommendations && <FindNGOButton />}
                             {showRecommendations && ngoRecommendations && (
                                 <NGORecommendationsSection />
                             )}
@@ -857,6 +945,42 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         color: '#6B7280',
+    },
+    // Find NGO Button Styles
+    findNgoButtonContainer: {
+        marginTop: 16,
+        marginBottom: 8,
+        alignItems: 'center',
+    },
+    findNgoButton: {
+        width: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+        elevation: 4,
+        shadowColor: COLOR.light.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    findNgoButtonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+    },
+    findNgoButtonText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#FFFFFF',
+    },
+    findNgoHint: {
+        fontSize: 12,
+        color: '#6B7280',
+        marginTop: 8,
+        textAlign: 'center',
+        paddingHorizontal: 20,
     },
     inputWrapper: {
         backgroundColor: '#FFFFFF',

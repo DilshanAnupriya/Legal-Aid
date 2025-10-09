@@ -26,7 +26,8 @@ const MatchNGOFromConversation = async (req, res) => {
             analysis: {
                 detectedCategories: analysis.categories,
                 keywords: analysis.keywords,
-                urgencyLevel: analysis.urgency
+                urgencyLevel: analysis.urgency,
+                categoryScores: analysis.categoryScores
             },
             recommendations: rankedNGOs.slice(0, 3), // Top 3 recommendations
             totalMatches: matchedNGOs.length
@@ -43,60 +44,123 @@ function analyzeConversation(conversationHistory, lastMessage) {
         .map(msg => msg.text.toLowerCase())
         .join(' ') + ' ' + (lastMessage || '').toLowerCase();
 
-    const categories = [];
+    const categoryScores = {};
     const keywords = [];
     let urgency = 'normal';
 
-    // Category detection with keywords
+    // Category detection with keywords and weights (FIXED VERSION)
     const categoryPatterns = {
-        'Human Rights & Civil Liberties': [
-            'human rights', 'civil liberties', 'freedom', 'discrimination',
-            'constitutional rights', 'civil rights', 'police', 'arrest',
-            'detention', 'torture', 'abuse', 'privacy', 'speech'
-        ],
-        'Women\'s Rights & Gender Justice': [
-            'women', 'gender', 'sexual harassment', 'domestic violence',
-            'dowry', 'maternity', 'equal pay', 'workplace harassment',
-            'sexual assault', 'rape', 'female', 'girl', 'mother'
-        ],
-        'Child Protection': [
-            'child', 'children', 'minor', 'custody', 'adoption',
-            'child abuse', 'child labor', 'education rights', 'guardian',
-            'juvenile', 'underage', 'pediatric', 'school'
-        ],
-        'Labor & Employment Rights': [
-            'employment', 'labor', 'worker', 'job', 'salary', 'wage',
-            'workplace', 'termination', 'fired', 'contract', 'overtime',
-            'benefits', 'pension', 'layoff', 'employer', 'employee'
-        ],
-        'Refugee & Migrant Rights': [
-            'refugee', 'asylum', 'immigrant', 'migrant', 'visa',
-            'deportation', 'citizenship', 'stateless', 'border',
-            'foreign worker', 'migration', 'displaced'
-        ],
-        'LGBTQ+ Rights': [
-            'lgbtq', 'lgbt', 'gay', 'lesbian', 'transgender', 'queer',
-            'sexual orientation', 'gender identity', 'same-sex',
-            'discrimination', 'pride', 'transgender rights'
-        ]
+        'LGBTQ+ Rights': {
+            highPriority: [
+                'lgbtq', 'lgbt', 'lgbtq+', 'lgbtqia', 'gay rights', 'lesbian rights',
+                'transgender rights', 'queer rights', 'same-sex marriage', 'same sex marriage',
+                'pride', 'coming out', 'homophobia', 'transphobia', 'sexual minority',
+                'gender non-conforming'
+            ],
+            mediumPriority: [
+                'gay', 'lesbian', 'transgender', 'trans', 'bisexual', 'queer',
+                'sexual orientation', 'gender identity', 'same-sex', 'same sex',
+                'non-binary', 'nonbinary', 'gender expression', 'homosexual'
+            ],
+            weight: 15 // Higher weight for LGBTQ+ to prioritize it
+        },
+        'Women\'s Rights & Gender Justice': {
+            highPriority: [
+                'women rights', 'women\'s rights', 'gender equality', 'feminist',
+                'sexual harassment', 'domestic violence', 'rape case', 'dowry case',
+                'sexual assault', 'dowry', 'maternity rights', 'gender-based violence'
+            ],
+            mediumPriority: [
+                'women', 'female', 'girl', 'mother', 'maternity', 'pregnancy',
+                'equal pay', 'workplace harassment', 'gender discrimination', 'lady'
+            ],
+            weight: 10
+        },
+        'Child Protection': {
+            highPriority: [
+                'child abuse', 'child labor', 'child rights', 'child welfare',
+                'child protection', 'child custody', 'child marriage', 'minor abuse'
+            ],
+            mediumPriority: [
+                'child', 'children', 'minor', 'custody', 'adoption', 'kid',
+                'education rights', 'guardian', 'juvenile', 'underage', 'school'
+            ],
+            weight: 10
+        },
+        'Labor & Employment Rights': {
+            highPriority: [
+                'labor rights', 'employment rights', 'worker rights', 'labour rights',
+                'workplace discrimination', 'unfair dismissal', 'wage theft', 'labor law'
+            ],
+            mediumPriority: [
+                'employment', 'labor', 'labour', 'worker', 'job', 'salary', 'wage',
+                'workplace', 'termination', 'fired', 'contract', 'overtime',
+                'benefits', 'pension', 'layoff', 'employer', 'employee'
+            ],
+            weight: 8
+        },
+        'Refugee & Migrant Rights': {
+            highPriority: [
+                'refugee rights', 'asylum seeker', 'migrant rights', 'refugee status',
+                'deportation', 'immigration law', 'asylum law'
+            ],
+            mediumPriority: [
+                'refugee', 'asylum', 'immigrant', 'migrant', 'visa',
+                'citizenship', 'stateless', 'border', 'foreign worker',
+                'migration', 'displaced'
+            ],
+            weight: 10
+        },
+        'Human Rights & Civil Liberties': {
+            highPriority: [
+                'human rights', 'civil liberties', 'civil rights', 'human rights violation',
+                'constitutional rights', 'freedom of speech', 'police brutality',
+                'wrongful arrest'
+            ],
+            mediumPriority: [
+                'freedom', 'discrimination', 'police', 'arrest',
+                'detention', 'torture', 'abuse', 'privacy', 'speech', 'liberty'
+            ],
+            weight: 7
+        }
     };
 
-    // Detect categories and extract keywords
+    // Score each category based on keyword matches with weighted scoring
     for (const [category, patterns] of Object.entries(categoryPatterns)) {
-        const matches = patterns.filter(pattern =>
-            fullText.includes(pattern)
-        );
+        let score = 0;
+        const foundKeywords = [];
 
-        if (matches.length > 0) {
-            categories.push(category);
-            keywords.push(...matches);
+        // Check high priority keywords (15 points each)
+        patterns.highPriority.forEach(pattern => {
+            if (fullText.includes(pattern)) {
+                score += 15 * patterns.weight;
+                foundKeywords.push(pattern);
+            }
+        });
+
+        // Check medium priority keywords (3 points each)
+        patterns.mediumPriority.forEach(pattern => {
+            if (fullText.includes(pattern)) {
+                score += 3 * patterns.weight;
+                foundKeywords.push(pattern);
+            }
+        });
+
+        if (score > 0) {
+            categoryScores[category] = score;
+            keywords.push(...foundKeywords);
         }
     }
 
+    // Get categories sorted by score (highest first)
+    const categories = Object.entries(categoryScores)
+        .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
+        .map(([category]) => category);
+
     // Detect urgency
     const urgentKeywords = [
-        'urgent', 'emergency', 'immediate', 'help', 'asap',
-        'crisis', 'danger', 'threat', 'violence', 'abuse'
+        'urgent', 'emergency', 'immediate', 'help now', 'asap',
+        'crisis', 'danger', 'threat', 'violence', 'severe'
     ];
 
     if (urgentKeywords.some(keyword => fullText.includes(keyword))) {
@@ -106,11 +170,22 @@ function analyzeConversation(conversationHistory, lastMessage) {
     // Remove duplicate keywords
     const uniqueKeywords = [...new Set(keywords)];
 
+    // If no strong matches found, return general legal aid
+    const finalCategories = categories.length > 0 ? categories : ['General Legal Aid'];
+
+    console.log('=== NGO MATCHING DEBUG ===');
+    console.log('Search text:', fullText);
+    console.log('Category Scoring:', categoryScores);
+    console.log('Final Categories (ordered by relevance):', finalCategories);
+    console.log('Found Keywords:', uniqueKeywords);
+    console.log('========================');
+
     return {
-        categories: categories.length > 0 ? categories : ['General Legal Aid'],
+        categories: finalCategories,
         keywords: uniqueKeywords,
         urgency,
-        messageCount: conversationHistory.length
+        messageCount: conversationHistory.length,
+        categoryScores // Return for debugging
     };
 }
 
@@ -128,7 +203,9 @@ async function findMatchingNGOs(analysis) {
 
     const ngos = await NGO.find(query)
         .sort({ rating: -1, createdAt: -1 })
-        .limit(10);
+        .limit(20); // Get more results for better filtering
+
+    console.log(`Found ${ngos.length} matching NGOs for categories:`, analysis.categories);
 
     return ngos;
 }
@@ -138,45 +215,56 @@ function rankNGOsByRelevance(ngos, analysis) {
     return ngos.map(ngo => {
         let relevanceScore = 0;
 
-        // Category match (highest weight)
-        if (analysis.categories.includes(ngo.category)) {
-            relevanceScore += 50;
+        // Category match with position-based scoring (HIGHEST PRIORITY)
+        const categoryIndex = analysis.categories.indexOf(ngo.category);
+        if (categoryIndex !== -1) {
+            // First category gets 200 points, second gets 120, third gets 60
+            const categoryScores = [200, 120, 60, 30, 15];
+            relevanceScore += categoryScores[categoryIndex] || 10;
         }
 
-        // Keyword matching in description
+        // Keyword matching in description and name
         const ngoText = (ngo.name + ' ' + ngo.description).toLowerCase();
         const keywordMatches = analysis.keywords.filter(keyword =>
             ngoText.includes(keyword)
         ).length;
         relevanceScore += keywordMatches * 5;
 
-        // Rating boost
-        relevanceScore += ngo.rating * 5;
+        // Rating boost (higher rated NGOs get preference)
+        relevanceScore += ngo.rating * 10;
 
         // Urgency handling - prioritize higher-rated NGOs for urgent cases
         if (analysis.urgency === 'high' && ngo.rating >= 4) {
-            relevanceScore += 15;
+            relevanceScore += 25;
         }
+
+        console.log(`NGO: ${ngo.name}, Category: ${ngo.category}, Score: ${relevanceScore}`);
 
         return {
             ...ngo.toObject(),
             relevanceScore,
-            matchReason: generateMatchReason(ngo, analysis)
+            matchReason: generateMatchReason(ngo, analysis, categoryIndex)
         };
     })
         .sort((a, b) => b.relevanceScore - a.relevanceScore);
 }
 
 // Generate human-readable match reason
-function generateMatchReason(ngo, analysis) {
+function generateMatchReason(ngo, analysis, categoryIndex) {
     const reasons = [];
 
-    if (analysis.categories.includes(ngo.category)) {
+    if (categoryIndex === 0) {
+        reasons.push(`Perfect match for ${ngo.category}`);
+    } else if (categoryIndex === 1) {
+        reasons.push(`Strong match for ${ngo.category}`);
+    } else if (categoryIndex !== -1) {
         reasons.push(`Specializes in ${ngo.category}`);
     }
 
     if (ngo.rating >= 4.5) {
-        reasons.push('Highly rated organization');
+        reasons.push('Highly rated');
+    } else if (ngo.rating >= 4.0) {
+        reasons.push('Well-rated');
     }
 
     if (analysis.urgency === 'high') {
@@ -185,7 +273,7 @@ function generateMatchReason(ngo, analysis) {
 
     return reasons.length > 0
         ? reasons.join(' • ')
-        : 'Matches your legal needs';
+        : 'Matches your needs';
 }
 
 // Get detailed NGO recommendation with booking info
