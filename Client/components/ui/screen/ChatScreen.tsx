@@ -12,6 +12,9 @@ import {
     SafeAreaView,
     StatusBar,
     Animated,
+    Image,
+    Linking,
+    Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLOR } from '@/constants/ColorPallet';
@@ -31,9 +34,13 @@ const ChatScreen = () => {
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
+    const [ngoRecommendations, setNgoRecommendations] = useState(null);
+    const [showRecommendations, setShowRecommendations] = useState(false);
+    const [messageCount, setMessageCount] = useState(0);
     const flatListRef = useRef(null);
     const typingAnimation = useRef(new Animated.Value(0)).current;
 
+    // Typing animation
     useEffect(() => {
         if (isTyping) {
             Animated.loop(
@@ -55,6 +62,7 @@ const ChatScreen = () => {
         }
     }, [isTyping]);
 
+    // Auto-scroll
     useEffect(() => {
         if (flatListRef.current && messages.length > 0) {
             setTimeout(() => {
@@ -62,6 +70,51 @@ const ChatScreen = () => {
             }, 100);
         }
     }, [messages]);
+
+    // Fetch NGO recommendations after every 3 messages
+    useEffect(() => {
+        if (messageCount >= 4 && messageCount % 3 === 0) {
+            fetchNGORecommendations();
+        }
+    }, [messageCount]);
+
+    const fetchNGORecommendations = async () => {
+        try {
+            const conversationHistory = messages
+                .filter((msg) => msg.sender !== 'system')
+                .map((msg) => ({
+                    sender: msg.sender,
+                    text: msg.text,
+                }));
+
+            const response = await fetch(`${API_URL}/api/ngo/match`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversationHistory,
+                    lastMessage: messages[messages.length - 1]?.text
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.recommendations?.length > 0) {
+                setNgoRecommendations(data);
+                setShowRecommendations(true);
+
+                // Add a system message about recommendations
+                const recommendationMessage = {
+                    id: Date.now().toString(),
+                    text: `I found ${data.recommendations.length} organizations that can help you with ${data.analysis.detectedCategories.join(', ')}. Check the recommendations below! 👇`,
+                    sender: 'bot',
+                    timestamp: new Date().toISOString(),
+                };
+                setMessages((prev) => [...prev, recommendationMessage]);
+            }
+        } catch (error) {
+            console.error('NGO matching error:', error);
+        }
+    };
 
     const sendMessage = async () => {
         if (!inputText.trim() || isLoading) return;
@@ -77,6 +130,7 @@ const ChatScreen = () => {
         setInputText('');
         setIsLoading(true);
         setIsTyping(true);
+        setMessageCount(prev => prev + 1);
 
         try {
             const conversationHistory = messages
@@ -107,6 +161,7 @@ const ChatScreen = () => {
                     timestamp: data.timestamp,
                 };
                 setMessages((prev) => [...prev, botMessage]);
+                setMessageCount(prev => prev + 1);
             } else {
                 throw new Error(data.error || 'Failed to get response');
             }
@@ -124,6 +179,130 @@ const ChatScreen = () => {
             setIsTyping(false);
         }
     };
+
+    const handleContactNGO = (ngo) => {
+        Alert.alert(
+            'Contact NGO',
+            `Would you like to contact ${ngo.name}?`,
+            [
+                {
+                    text: 'Call',
+                    onPress: () => Linking.openURL(`tel:${ngo.contact}`)
+                },
+                {
+                    text: 'Email',
+                    onPress: () => Linking.openURL(`mailto:${ngo.email}`)
+                },
+                {
+                    text: 'Cancel',
+                    style: 'cancel'
+                }
+            ]
+        );
+    };
+
+    const NGORecommendationCard = ({ ngo }) => (
+        <View style={styles.ngoCard}>
+            <View style={styles.ngoCardContent}>
+                {ngo.logo && (
+                    <Image
+                        source={{ uri: ngo.logo }}
+                        style={styles.ngoLogo}
+                    />
+                )}
+                <View style={styles.ngoInfo}>
+                    <View style={styles.ngoHeader}>
+                        <Text style={styles.ngoName} numberOfLines={2}>{ngo.name}</Text>
+                        <View style={styles.ratingBadge}>
+                            <Ionicons name="star" size={12} color="#F59E0B" />
+                            <Text style={styles.ratingText}>{ngo.rating.toFixed(1)}</Text>
+                        </View>
+                    </View>
+
+                    <Text style={styles.ngoDescription} numberOfLines={3}>
+                        {ngo.description}
+                    </Text>
+
+                    <View style={styles.ngoBadges}>
+                        <View style={styles.categoryBadge}>
+                            <Text style={styles.categoryBadgeText} numberOfLines={1}>
+                                {ngo.category}
+                            </Text>
+                        </View>
+                        {ngo.matchReason && (
+                            <View style={styles.matchBadge}>
+                                <Ionicons name="checkmark-circle" size={10} color="#059669" />
+                                <Text style={styles.matchBadgeText} numberOfLines={1}>
+                                    {ngo.matchReason.split(' • ')[0]}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={styles.ngoActions}>
+                        <TouchableOpacity
+                            style={styles.contactButton}
+                            onPress={() => handleContactNGO(ngo)}
+                        >
+                            <LinearGradient
+                                colors={[COLOR.light.primary, COLOR.light.secondary]}
+                                style={styles.contactButtonGradient}
+                            >
+                                <Ionicons name="call" size={16} color="#fff" />
+                                <Text style={styles.contactButtonText}>Contact</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.detailsButton}
+                            onPress={() => Alert.alert('View Details', `More info about ${ngo.name}`)}
+                        >
+                            <Text style={styles.detailsButtonText}>Details</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </View>
+    );
+
+    const NGORecommendationsSection = () => (
+        <View style={styles.recommendationsSection}>
+            <View style={styles.recommendationHeader}>
+                <View style={styles.recommendationHeaderContent}>
+                    <Ionicons name="bulb" size={24} color={COLOR.light.primary} />
+                    <View style={styles.recommendationHeaderText}>
+                        <Text style={styles.recommendationTitle}>
+                            Recommended NGOs for You
+                        </Text>
+                        <Text style={styles.recommendationSubtitle}>
+                            {ngoRecommendations.recommendations.length} organizations can help
+                        </Text>
+                    </View>
+                </View>
+
+                {ngoRecommendations.analysis && (
+                    <View style={styles.detectedCategories}>
+                        {ngoRecommendations.analysis.detectedCategories.slice(0, 2).map((cat, idx) => (
+                            <View key={idx} style={styles.categoryTag}>
+                                <Text style={styles.categoryTagText}>{cat}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+            </View>
+
+            {ngoRecommendations.recommendations.map((ngo) => (
+                <NGORecommendationCard key={ngo._id} ngo={ngo} />
+            ))}
+
+            <TouchableOpacity
+                style={styles.hideButton}
+                onPress={() => setShowRecommendations(false)}
+            >
+                <Text style={styles.hideButtonText}>Hide Recommendations</Text>
+            </TouchableOpacity>
+        </View>
+    );
 
     const TypingIndicator = () => (
         <View style={styles.typingContainer}>
@@ -211,7 +390,7 @@ const ChatScreen = () => {
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={COLOR.light.primary} />
 
-            {/* Modern Header with Gradient */}
+            {/* Header */}
             <LinearGradient
                 colors={[COLOR.light.primary, COLOR.light.secondary]}
                 start={{ x: 0, y: 0 }}
@@ -244,11 +423,18 @@ const ChatScreen = () => {
                     onContentSizeChange={() =>
                         flatListRef.current?.scrollToEnd({ animated: true })
                     }
+                    ListFooterComponent={() => (
+                        <>
+                            {isTyping && <TypingIndicator />}
+                            {showRecommendations && ngoRecommendations && (
+                                <NGORecommendationsSection />
+                            )}
+                        </>
+                    )}
                 />
-                {isTyping && <TypingIndicator />}
             </View>
 
-            {/* Modern Input Area */}
+            {/* Input Area */}
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
@@ -481,6 +667,196 @@ const styles = StyleSheet.create({
         height: 8,
         borderRadius: 4,
         backgroundColor: COLOR.light.primary,
+    },
+    // NGO Recommendation Styles
+    recommendationsSection: {
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    recommendationHeader: {
+        backgroundColor: '#EEF2FF',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 2,
+        borderColor: '#C7D2FE',
+    },
+    recommendationHeaderContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    recommendationHeaderText: {
+        flex: 1,
+    },
+    recommendationTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1F2937',
+        marginBottom: 2,
+    },
+    recommendationSubtitle: {
+        fontSize: 13,
+        color: '#6B7280',
+    },
+    detectedCategories: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginTop: 8,
+    },
+    categoryTag: {
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#C7D2FE',
+    },
+    categoryTagText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: COLOR.light.primary,
+    },
+    ngoCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 2,
+        borderColor: '#E0E7FF',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    ngoCardContent: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    ngoLogo: {
+        width: 64,
+        height: 64,
+        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+    },
+    ngoInfo: {
+        flex: 1,
+    },
+    ngoHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 8,
+    },
+    ngoName: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1F2937',
+        marginRight: 8,
+    },
+    ratingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        backgroundColor: '#FEF3C7',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    ratingText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#F59E0B',
+    },
+    ngoDescription: {
+        fontSize: 13,
+        color: '#6B7280',
+        lineHeight: 18,
+        marginBottom: 10,
+    },
+    ngoBadges: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginBottom: 12,
+    },
+    categoryBadge: {
+        backgroundColor: '#EEF2FF',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 10,
+        maxWidth: '60%',
+    },
+    categoryBadgeText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: COLOR.light.primary,
+    },
+    matchBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        backgroundColor: '#D1FAE5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+        maxWidth: '40%',
+    },
+    matchBadgeText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#059669',
+    },
+    ngoActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    contactButton: {
+        flex: 1,
+        borderRadius: 10,
+        overflow: 'hidden',
+        elevation: 2,
+    },
+    contactButtonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+    },
+    contactButtonText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#FFFFFF',
+    },
+    detailsButton: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: COLOR.light.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    detailsButtonText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: COLOR.light.primary,
+    },
+    hideButton: {
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    hideButtonText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#6B7280',
     },
     inputWrapper: {
         backgroundColor: '#FFFFFF',

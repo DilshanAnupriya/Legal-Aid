@@ -87,7 +87,7 @@ const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
 const notificationRoutes = require('./Routes/notificationRoutes');
-
+const ngoMatchingRoutes = require('./Routes/ngoMatchingRoutes');
 // API Routes
 app.use("/api/ngo", ngoRoutes);
 app.use("/api/posts", postRoutes);
@@ -98,7 +98,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
-
+app.use("/api/ngo", ngoMatchingRoutes);
 // ==================== GEMINI CHATBOT ROUTES ====================
 
 // Helper function to list available models
