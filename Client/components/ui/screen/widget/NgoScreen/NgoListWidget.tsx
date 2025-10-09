@@ -5,22 +5,15 @@ import NgoCard from './NgoCardWidget';
 
 
 const NgoListWidget = ({
-                           // @ts-ignore
-                     data,
-                           // @ts-ignore
-                     isGridView,
-                           // @ts-ignore
-                     loading,
-                           // @ts-ignore
-                     refreshing,
-                           // @ts-ignore
-                     onRefresh,
-                           // @ts-ignore
-                     onLoadMore,
-                           // @ts-ignore
-                     onCardPress
-                 }) => {
-    // @ts-ignore
+                           data,
+                           isGridView,
+                           loading,
+                           refreshing,
+                           onRefresh,
+                           onLoadMore,
+                           onCardPress,
+                           showTopSection = false  // Added this prop
+                       }) => {
     const renderNgoCard = ({ item }) => (
         <NgoCard
             item={item}
@@ -52,13 +45,26 @@ const NgoListWidget = ({
         );
     };
 
+    // Add header for All NGOs section when Top NGOs are shown
+    const renderListHeader = () => {
+        if (!showTopSection) return null;
+        return (
+            <View style={styles.allNgosHeader}>
+                <Text style={styles.allNgosTitle}>All NGOs</Text>
+            </View>
+        );
+    };
+
     return (
         <FlatList
             data={data}
             renderItem={renderNgoCard}
             keyExtractor={(item) => item._id}
             style={styles.ngoList}
-            contentContainerStyle={styles.ngoListContent}
+            contentContainerStyle={[
+                styles.ngoListContent,
+                showTopSection && styles.ngoListContentWithTop
+            ]}
             refreshControl={
                 <RefreshControl
                     refreshing={refreshing}
@@ -70,6 +76,7 @@ const NgoListWidget = ({
             onEndReached={onLoadMore}
             onEndReachedThreshold={0.3}
             ListFooterComponent={renderFooter}
+            ListHeaderComponent={renderListHeader}
             showsVerticalScrollIndicator={false}
             numColumns={isGridView ? 2 : 1}
             key={isGridView ? 'grid' : 'list'}
@@ -84,6 +91,18 @@ const styles = StyleSheet.create({
     },
     ngoListContent: {
         padding: 16,
+    },
+    ngoListContentWithTop: {
+        paddingTop: 8, // Less padding when Top NGOs section is shown
+    },
+    allNgosHeader: {
+        marginBottom: 16,
+        marginTop: 8,
+    },
+    allNgosTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
     },
     loadingFooter: {
         flexDirection: 'row',

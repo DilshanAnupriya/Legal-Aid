@@ -3,7 +3,7 @@ const Post = require('../models/Post');
 // Create a new post
 const createPost = async (req, res) => {
   try {
-    const { title, description, tags, isAnonymous, category, priority } = req.body;
+    const { title, description, tags, isAnonymous, category, priority, authorEmail } = req.body;
 
     // Validation
     if (!title || !description) {
@@ -44,6 +44,7 @@ const createPost = async (req, res) => {
       title,
       description,
       author,
+      authorEmail: isAnonymous ? null : authorEmail,
       tags: tags || [],
       category: postCategory,
       isAnonymous: isAnonymous || false,

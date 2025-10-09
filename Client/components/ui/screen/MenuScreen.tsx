@@ -191,11 +191,6 @@ export default function MenuScreen({ navigation }: { navigation?: any }) {
                         title="Languages"  
                     />
                     <Menu.Item 
-                        leadingIcon="charity" 
-                        onPress={() => {navigation.navigate('Ngo')}} 
-                        title="NGO Directory"  
-                    />
-                    <Menu.Item 
                         leadingIcon="cog-outline" 
                         onPress={() => {}} 
                         title="Settings" 

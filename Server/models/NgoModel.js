@@ -58,4 +58,5 @@ NGOSchema.statics.topRatings = function(){
     return this.find({rating:{$gt:4}});
 }
 
-module.exports = mongoose.model('NGO', NGOSchema);
+// Check if model already exists to prevent OverwriteModelError
+module.exports = mongoose.models.NGO || mongoose.model('NGO', NGOSchema);

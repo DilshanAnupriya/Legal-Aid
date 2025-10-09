@@ -1,5 +1,6 @@
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
+const { createNotification } = require('./notificationController');
 
 // Add a comment to a post
 const addComment = async (req, res) => {
@@ -43,6 +44,48 @@ const addComment = async (req, res) => {
         $set: { lastActivity: Date.now() }
       }
     );
+
+    // Create notification if commenter is not the post author
+    const commentAuthor = isAnonymous ? 'Anonymous User' : (author || 'Anonymous User');
+    const commentAuthorEmail = req.body.authorEmail; // Get commenter's email
+    
+    console.log('========== NOTIFICATION DEBUG ==========');
+    console.log('Post Author Email:', post.authorEmail);
+    console.log('Comment Author Email:', commentAuthorEmail);
+    console.log('Comment Author Name:', commentAuthor);
+    console.log('Is Anonymous:', isAnonymous);
+    console.log('Should create notification:', post.authorEmail && commentAuthorEmail !== post.authorEmail && !isAnonymous);
+    
+    // Only create notification if:
+    // 1. Post has an authorEmail (not anonymous)
+    // 2. Commenter is not the post author
+    // 3. Comment is not anonymous
+    if (post.authorEmail && commentAuthorEmail !== post.authorEmail && !isAnonymous) {
+      try {
+        const notificationData = {
+          recipient: post.authorEmail, // Use email instead of display name
+          sender: commentAuthor, // Display name for showing in UI
+          type: 'comment',
+          postId: post._id,
+          postTitle: post.title,
+          commentContent: content.substring(0, 200), // Truncate to 200 chars
+          isRead: false
+        };
+        console.log('Creating notification with data:', notificationData);
+        await createNotification(notificationData);
+        console.log(`✅ Notification created successfully for ${post.authorEmail}`);
+      } catch (notificationError) {
+        // Log error but don't fail the comment creation
+        console.error('❌ Error creating notification:', notificationError);
+      }
+    } else {
+      console.log('⚠️ Notification NOT created. Reason:', 
+        !post.authorEmail ? 'Post has no authorEmail' :
+        commentAuthorEmail === post.authorEmail ? 'Commenter is post author' :
+        isAnonymous ? 'Comment is anonymous' : 'Unknown'
+      );
+    }
+    console.log('========================================');
 
     res.status(201).json({
       success: true,

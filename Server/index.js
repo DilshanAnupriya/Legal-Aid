@@ -41,50 +41,16 @@ app.use(cors({
     'http://10.0.2.2:8081', 'http://10.4.2.1:8081',
     'http://10.164.198.42:8081','http://10.164.198.42:3000'// Common dev server port
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
   optionsSuccessStatus: 200 // For legacy browser support
 }));
 
 
-// JSON parsing with error handling
-app.use((req, res, next) => {
-  if (req.method === 'GET') {
-    return next();
-  }
-  
-  let body = '';
-  req.setEncoding('utf8');
-  
-  req.on('data', (chunk) => {
-    body += chunk;
-  });
-  
-  req.on('end', () => {
-    if (body && req.headers['content-type']?.includes('application/json')) {
-      try {
-        req.body = JSON.parse(body);
-      } catch (error) {
-        console.error('JSON parse error:', error.message, 'Body received:', body);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid JSON in request body'
-        });
-      }
-    } else if (body) {
-      req.body = body;
-    } else {
-      req.body = {};
-    }
-    next();
-  });
-});
-
-
-app.use(express.json());
-
-app.use(express.urlencoded({ extended: true }));
+// Body parsing middleware - increased limits for file uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging middleware for debugging
 app.use((req, res, next) => {
@@ -144,6 +110,7 @@ const appointmentRoutes = require('./Routes/appointmentRoutes');
 const documentRoutes = require('./Routes/documentRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
 const lawyerProfile = require('./Routes/lawyerProfileRoutes');
+const notificationRoutes = require('./Routes/notificationRoutes');
 
 
 
@@ -157,6 +124,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/lawyers/AddprofileDetails", lawyerProfile);
+app.use("/api/notifications", notificationRoutes);
 
 
 // Root route

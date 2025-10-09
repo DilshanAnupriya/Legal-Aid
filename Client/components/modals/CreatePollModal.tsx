@@ -168,6 +168,7 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({
         options: filledOptions,
         isAnonymous,
         author: getUserDisplayName(),
+        authorEmail: user?.email, // Add email for notifications
         category: selectedCategory,
         votes: new Array(filledOptions.length).fill(0),
         voters: [], // Array to track who voted to prevent duplicate voting

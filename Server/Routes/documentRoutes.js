@@ -18,7 +18,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fields: 10,
+    files: 1,
+    parts: 12
   },
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
@@ -33,10 +36,45 @@ const upload = multer({
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only images and PDF files are allowed for OCR scanning!'), false);
+      cb(new Error('Only images and PDF files are allowed!'), false);
     }
   }
 });
+
+// Multer configuration specifically for AI explanation (PDF only)
+const pdfUpload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fields: 10,
+    files: 1,
+    parts: 12
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed for AI explanation!'), false);
+    }
+  }
+});
+
+// Error handling middleware for multer
+const handleMulterError = (err, req, res, next) => {
+  if (err) {
+    if (err.message) {
+      return res.status(400).json({
+        success: false,
+        message: err.message
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'File upload error'
+    });
+  }
+  next();
+};
 
 // Document validation middleware
 const validateDocumentParams = (req, res, next) => {
@@ -57,17 +95,19 @@ const validateDocumentParams = (req, res, next) => {
  */
 router.post('/upload', 
   upload.single('document'),
+  handleMulterError,
   documentController.uploadDocument
 );
 
 /**
- * @route   POST /api/documents/scan
- * @desc    Upload and scan a document with OCR
+ * @route   POST /api/documents/explain
+ * @desc    Upload and explain a PDF document with AI (Gemini)
  * @access  Public
  */
-router.post('/scan', 
-  upload.single('document'),
-  documentController.scanDocument
+router.post('/explain', 
+  pdfUpload.single('document'),
+  handleMulterError,
+  documentController.explainDocument
 );
 
 /**
@@ -78,9 +118,26 @@ router.post('/scan',
 router.get('/', documentController.getAllDocuments);
 
 /**
- * @route   GET /api/documents/languages
- * @desc    Get supported OCR languages
+ * @route   GET /api/documents/history
+ * @desc    Get document upload history with filtering and pagination
  * @access  Public
+ * @note    Must be defined BEFORE /:id route
+ */
+router.get('/history', documentController.getUploadHistory);
+
+/**
+ * @route   GET /api/documents/stats
+ * @desc    Get document statistics
+ * @access  Public
+ * @note    Must be defined BEFORE /:id route
+ */
+router.get('/stats', documentController.getDocumentStats);
+
+/**
+ * @route   GET /api/documents/languages
+ * @desc    Get supported AI explanation languages
+ * @access  Public
+ * @note    Must be defined BEFORE /:id route
  */
 router.get('/languages', documentController.getSupportedLanguages);
 
@@ -88,6 +145,7 @@ router.get('/languages', documentController.getSupportedLanguages);
  * @route   GET /api/documents/:id
  * @desc    Get document details by ID
  * @access  Public
+ * @note    This route uses a parameter, so it must be defined AFTER specific routes
  */
 router.get('/:id', 
   validateDocumentParams,

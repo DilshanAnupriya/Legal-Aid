@@ -81,7 +81,7 @@ const FindNgoById = async (req, res) => {
     }
 };
 
-// Update NGO with image handling
+// Update NGO profile (without images)
 const UpdateNgo = async (req, res) => {
     try {
         const updateData = { ...req.body };
@@ -91,27 +91,9 @@ const UpdateNgo = async (req, res) => {
             return res.status(404).json({ message: "not found" });
         }
 
-        // Handle logo update
-        if (req.files && req.files.logo) {
-            // Delete old logo from cloudinary if exists
-            if (existingNgo.logo) {
-                const publicId = existingNgo.logo.split('/').pop().split('.')[0];
-                await cloudinary.uploader.destroy(`ngo_logos/${publicId}`);
-            }
-            updateData.logo = req.files.logo[0].path;
-        }
-
-        // Handle images update
-        if (req.files && req.files.images) {
-            // Delete old images from cloudinary if exists
-            if (existingNgo.images && existingNgo.images.length > 0) {
-                for (const imageUrl of existingNgo.images) {
-                    const publicId = imageUrl.split('/').pop().split('.')[0];
-                    await cloudinary.uploader.destroy(`ngo_logos/${publicId}`);
-                }
-            }
-            updateData.images = req.files.images.map(file => file.path);
-        }
+        // Remove image fields from update data to prevent accidental updates
+        delete updateData.logo;
+        delete updateData.images;
 
         const updatedNgo = await NGO.findByIdAndUpdate(
             req.params.id,
@@ -125,22 +107,195 @@ const UpdateNgo = async (req, res) => {
     }
 };
 
+// Upload/Update NGO Logo
+const UploadNgoLogo = async (req, res) => {
+    try {
+        const existingNgo = await NGO.findById(req.params.id);
+
+        if (!existingNgo) {
+            return res.status(404).json({ message: "not found" });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: "error", error: "No logo file provided" });
+        }
+
+        // Delete old logo from cloudinary if exists
+        if (existingNgo.logo && existingNgo.logo.includes('cloudinary')) {
+            try {
+                const publicId = existingNgo.logo.split('/').slice(-2).join('/').split('.')[0];
+                await cloudinary.uploader.destroy(publicId);
+                console.log('Deleted old logo from Cloudinary');
+            } catch (error) {
+                console.error('Error deleting old logo:', error);
+            }
+        }
+
+        // Update with new logo
+        const updatedNgo = await NGO.findByIdAndUpdate(
+            req.params.id,
+            { logo: req.file.path },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: "logo updated successfully",
+            data: updatedNgo
+        });
+    } catch (e) {
+        console.error('Upload logo error:', e);
+        res.status(500).json({ message: "error", error: e.message });
+    }
+};
+
+// Upload/Add NGO Images
+const UploadNgoImages = async (req, res) => {
+    try {
+        const existingNgo = await NGO.findById(req.params.id);
+
+        if (!existingNgo) {
+            return res.status(404).json({ message: "not found" });
+        }
+
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ message: "error", error: "No image files provided" });
+        }
+
+        // Get new image paths
+        const newImages = req.files.map(file => file.path);
+
+        // Add new images to existing images array
+        const updatedImages = [...(existingNgo.images || []), ...newImages];
+
+        const updatedNgo = await NGO.findByIdAndUpdate(
+            req.params.id,
+            { images: updatedImages },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: "images uploaded successfully",
+            data: updatedNgo,
+            uploadedCount: newImages.length
+        });
+    } catch (e) {
+        console.error('Upload images error:', e);
+        res.status(500).json({ message: "error", error: e.message });
+    }
+};
+
+// Delete specific NGO image by URL
+const DeleteNgoImage = async (req, res) => {
+    try {
+        const { imageUrl } = req.body;
+        const existingNgo = await NGO.findById(req.params.id);
+
+        if (!existingNgo) {
+            return res.status(404).json({ message: "not found" });
+        }
+
+        if (!imageUrl) {
+            return res.status(400).json({ message: "error", error: "Image URL is required" });
+        }
+
+        // Check if image exists in NGO images array
+        const imageIndex = existingNgo.images.indexOf(imageUrl);
+        if (imageIndex === -1) {
+            return res.status(404).json({ message: "error", error: "Image not found in NGO profile" });
+        }
+
+        // Delete from cloudinary if it's a cloudinary URL
+        if (imageUrl.includes('cloudinary')) {
+            try {
+                const publicId = imageUrl.split('/').slice(-2).join('/').split('.')[0];
+                await cloudinary.uploader.destroy(publicId);
+                console.log('Deleted image from Cloudinary:', publicId);
+            } catch (error) {
+                console.error('Error deleting from Cloudinary:', error);
+            }
+        }
+
+        // Remove image from array
+        existingNgo.images.splice(imageIndex, 1);
+        await existingNgo.save();
+
+        res.status(200).json({
+            message: "image deleted successfully",
+            data: existingNgo
+        });
+    } catch (e) {
+        console.error('Delete image error:', e);
+        res.status(500).json({ message: "error", error: e.message });
+    }
+};
+
+// Delete all NGO images
+const DeleteAllNgoImages = async (req, res) => {
+    try {
+        const existingNgo = await NGO.findById(req.params.id);
+
+        if (!existingNgo) {
+            return res.status(404).json({ message: "not found" });
+        }
+
+        if (!existingNgo.images || existingNgo.images.length === 0) {
+            return res.status(400).json({ message: "error", error: "No images to delete" });
+        }
+
+        // Delete all images from cloudinary
+        for (const imageUrl of existingNgo.images) {
+            if (imageUrl.includes('cloudinary')) {
+                try {
+                    const publicId = imageUrl.split('/').slice(-2).join('/').split('.')[0];
+                    await cloudinary.uploader.destroy(publicId);
+                    console.log('Deleted image from Cloudinary');
+                } catch (error) {
+                    console.error('Error deleting image:', error);
+                }
+            }
+        }
+
+        // Clear images array
+        existingNgo.images = [];
+        await existingNgo.save();
+
+        res.status(200).json({
+            message: "all images deleted successfully",
+            data: existingNgo
+        });
+    } catch (e) {
+        console.error('Delete all images error:', e);
+        res.status(500).json({ message: "error", error: e.message });
+    }
+};
+
 // Delete NGO with image cleanup
 const DeleteNgo = async (req, res) => {
     try {
         const deletedNgo = await NGO.findByIdAndDelete(req.params.id);
 
         if (deletedNgo) {
-            // Clean up images from cloudinary
-            if (deletedNgo.logo) {
-                const logoPublicId = deletedNgo.logo.split('/').pop().split('.')[0];
-                await cloudinary.uploader.destroy(`ngo_logos/${logoPublicId}`);
+            // Clean up logo from cloudinary
+            if (deletedNgo.logo && deletedNgo.logo.includes('cloudinary')) {
+                try {
+                    const logoPublicId = deletedNgo.logo.split('/').slice(-2).join('/').split('.')[0];
+                    await cloudinary.uploader.destroy(logoPublicId);
+                } catch (error) {
+                    console.error('Error deleting logo:', error);
+                }
             }
 
+            // Clean up images from cloudinary
             if (deletedNgo.images && deletedNgo.images.length > 0) {
                 for (const imageUrl of deletedNgo.images) {
-                    const publicId = imageUrl.split('/').pop().split('.')[0];
-                    await cloudinary.uploader.destroy(`ngo_logos/${publicId}`);
+                    if (imageUrl.includes('cloudinary')) {
+                        try {
+                            const publicId = imageUrl.split('/').slice(-2).join('/').split('.')[0];
+                            await cloudinary.uploader.destroy(publicId);
+                        } catch (error) {
+                            console.error('Error deleting image:', error);
+                        }
+                    }
                 }
             }
 
@@ -187,16 +342,53 @@ const GetNgoByCategory = async (req, res) => {
 // Update NGO Status
 const UpdateNgoStatus = async (req, res) => {
     try {
+        console.log('UpdateNgoStatus called');
+        console.log('NGO ID:', req.params.id);
+        console.log('Request body:', req.body);
+        
         const { status } = req.body;
+        
+        if (!status) {
+            console.log('No status provided in request body');
+            return res.status(400).json({ message: "error", error: "Status is required" });
+        }
+        
+        console.log(`Updating NGO ${req.params.id} to status: ${status}`);
+        
         const updatedNgo = await NGO.findByIdAndUpdate(
             req.params.id,
             { status },
             { new: true }
         );
 
+        console.log('Update result:', updatedNgo ? 'Success' : 'Not found');
+        
         if (updatedNgo) {
+            console.log('NGO updated successfully:', {
+                id: updatedNgo._id,
+                name: updatedNgo.name,
+                newStatus: updatedNgo.status
+            });
             return res.status(200).json({ message: "status updated", data: updatedNgo });
         }
+        console.log('NGO not found with ID:', req.params.id);
+        res.status(404).json({ message: "not found" });
+    } catch (e) {
+        console.error('Error in UpdateNgoStatus:', e);
+        res.status(500).json({ message: "error", error: e.message });
+    }
+};
+
+const FindNgoByEmail = async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        const ngo = await NGO.findOne({ email: email });
+
+        if (ngo) {
+            return res.status(200).json({ message: "success", data: ngo });
+        }
+
         res.status(404).json({ message: "not found" });
     } catch (e) {
         res.status(500).json({ message: "error", error: e.message });
@@ -211,5 +403,11 @@ module.exports = {
     DeleteNgo,
     TopRatings,
     GetNgoByCategory,
-    UpdateNgoStatus
+    UpdateNgoStatus,
+    FindNgoByEmail,
+    // New image management functions
+    UploadNgoLogo,
+    UploadNgoImages,
+    DeleteNgoImage,
+    DeleteAllNgoImages
 };

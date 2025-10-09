@@ -18,6 +18,7 @@ import LanguageDemo from "@/components/screens/LanguageDemo";
 import LawyerAppointmentsScreen from "@/components/ui/screen/widget/LawyerDashboard/LawyerAppointmentsScreen";
 import ChatScreen from "@/components/ui/screen/ChatScreen";
 
+
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {

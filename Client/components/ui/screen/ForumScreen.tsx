@@ -24,6 +24,8 @@ import PollCard from '../../cards/PollCard';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useTTS } from '../../../hooks/useTTS';
+import notificationService, { Notification } from '../../../services/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -57,6 +59,7 @@ const ForumsScreen = () => {
     const { user } = useAuth();
     const { t } = useTranslation();
     const { theme, colors } = useTheme();
+    const { speak, isSpeaking, stopSpeaking } = useTTS();
     const scrollViewRef = useRef<ScrollView>(null);
     const [activeCategory, setActiveCategory] = useState('All');
     const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
@@ -154,6 +157,11 @@ const ForumsScreen = () => {
     const [isGridView, setIsGridView] = useState(false);
     const [searchBarText, setSearchBarText] = useState('');
     const [isHeaderSticky, setIsHeaderSticky] = useState(false);
+    
+    // Notification states
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
 
     // Handle scroll to show/hide sticky header
     const handleScroll = (event: any) => {
@@ -887,6 +895,97 @@ const ForumsScreen = () => {
         }
     }, [showSortDropdown, showContentTypeDropdown]);
 
+    // Fetch notifications
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (user && user.email) {
+                try {
+                    console.log('========== FRONTEND: FETCHING NOTIFICATIONS ==========');
+                    console.log('User email:', user.email);
+                    console.log('User object:', user);
+                    
+                    const userNotifications = await notificationService.getUserNotifications(user.email);
+                    console.log('Received notifications:', userNotifications.length);
+                    if (userNotifications.length > 0) {
+                        console.log('Sample notification:', userNotifications[0]);
+                    }
+                    setNotifications(userNotifications);
+                    
+                    const count = await notificationService.getUnreadCount(user.email);
+                    console.log('Unread count:', count);
+                    setUnreadCount(count);
+                    console.log('=====================================================');
+                } catch (error) {
+                    console.error('Error fetching notifications:', error);
+                }
+            } else {
+                console.log('Cannot fetch notifications - no user or email:', user);
+            }
+        };
+
+        fetchNotifications();
+        
+        // Poll for new notifications every 30 seconds
+        const intervalId = setInterval(fetchNotifications, 30000);
+        
+        return () => clearInterval(intervalId);
+    }, [user]);
+
+    // Handle notification click
+    const handleNotificationClick = async (notification: Notification) => {
+        try {
+            // Mark as read
+            if (!notification.isRead) {
+                await notificationService.markAsRead(notification._id);
+                setUnreadCount(prev => Math.max(0, prev - 1));
+                setNotifications(prev => 
+                    prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
+                );
+            }
+            
+            // Open the post
+            const response = await fetch(`${BASE_URL}/posts/${notification.postId}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setSelectedPost(data.data);
+                    setIsPostDetailModalVisible(true);
+                    setIsNotificationModalVisible(false);
+                }
+            }
+        } catch (error) {
+            console.error('Error handling notification click:', error);
+        }
+    };
+
+    // Handle mark all as read
+    const handleMarkAllAsRead = async () => {
+        if (user && user.email) {
+            try {
+                await notificationService.markAllAsRead(user.email);
+                setUnreadCount(0);
+                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            } catch (error) {
+                console.error('Error marking all as read:', error);
+            }
+        }
+    };
+
+    // Handle clear all notifications
+    const handleClearAllNotifications = async () => {
+        if (user && user.email) {
+            try {
+                await notificationService.clearAllNotifications(user.email);
+                setNotifications([]);
+                setUnreadCount(0);
+                Alert.alert('Success', 'All notifications cleared');
+            } catch (error) {
+                console.error('Error clearing all notifications:', error);
+                Alert.alert('Error', 'Failed to clear notifications');
+            }
+        }
+    };
+
     const filteredPosts = forumPosts.filter((item: ForumPost) => {
         const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
         
@@ -1006,13 +1105,22 @@ const ForumsScreen = () => {
 
     const handleVoteOnPoll = async (pollId: string, optionIndex: number, userId: string) => {
         try {
-            console.log('Voting on poll:', pollId, optionIndex, userId);
+            // Get voter name from user email
+            const voterName = user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : 'Someone';
+            const voterEmail = user?.email || userId;
+            
+            console.log('Voting on poll:', pollId, optionIndex, userId, voterName, voterEmail);
             const response = await fetch(`${BASE_URL}/polls/${pollId}/vote`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ optionIndex, userId }),
+                body: JSON.stringify({ 
+                    optionIndex, 
+                    userId,
+                    voterName,
+                    voterEmail
+                }),
             });
 
             if (!response.ok) {
@@ -1121,6 +1229,16 @@ const ForumsScreen = () => {
         }
     };
 
+    // Handle speaking forum titles
+    const handleSpeakTitle = async (title: string, type: 'forum' | 'poll' = 'forum') => {
+        if (isSpeaking) {
+            await stopSpeaking();
+        } else {
+            const textToSpeak = type === 'poll' ? `Poll: ${title}` : `Forum: ${title}`;
+            await speak(textToSpeak);
+        }
+    };
+
     // Create dynamic styles based on theme
     const styles = createStyles(colors, theme);
 
@@ -1135,6 +1253,41 @@ const ForumsScreen = () => {
             >
                 {/* Modern Header with Gradient Background */}
                 <View style={styles.header}>
+                    <TouchableOpacity 
+                        style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}
+                        onPress={() => setIsNotificationModalVisible(true)}
+                        activeOpacity={0.7}
+                    >
+                        <View>
+                            <Ionicons 
+                                name="notifications-outline" 
+                                size={28} 
+                                color={colors.white || '#FFFFFF'} 
+                            />
+                            {unreadCount > 0 && (
+                                <View style={{
+                                    position: 'absolute',
+                                    top: -5,
+                                    right: -5,
+                                    backgroundColor: '#FF3B30',
+                                    borderRadius: 10,
+                                    minWidth: 20,
+                                    height: 20,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    paddingHorizontal: 5,
+                                }}>
+                                    <Text style={{
+                                        color: '#FFFFFF',
+                                        fontSize: 12,
+                                        fontWeight: 'bold',
+                                    }}>
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </TouchableOpacity>
                     <View style={styles.headerContent}>
                         <Text style={styles.headerTitle}>{t('forum.title')}</Text>
                         <Text style={styles.headerSubtitle}>{t('forum.subtitle', { defaultValue: 'Connect • Ask • Learn • Grow' })}</Text>
@@ -1488,7 +1641,24 @@ const ForumsScreen = () => {
                                                 
                                                 {/* Card Content */}
                                                 <View style={styles.gridPostContent}>
-                                                    <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                    <View style={styles.gridTitleContainer}>
+                                                        <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                        <TouchableOpacity
+                                                            style={styles.gridSpeakerButton}
+                                                            onPress={(e) => {
+                                                                e.stopPropagation();
+                                                                handleSpeakTitle(item.title, 'forum');
+                                                            }}
+                                                            activeOpacity={0.7}
+                                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                        >
+                                                            <Ionicons 
+                                                                name={isSpeaking ? "stop-circle" : "volume-high"} 
+                                                                size={16} 
+                                                                color={colors.primary} 
+                                                            />
+                                                        </TouchableOpacity>
+                                                    </View>
                                                     
                                                     {/* Category Badge */}
                                                     <View style={styles.gridCategoryBadge}>
@@ -1562,7 +1732,24 @@ const ForumsScreen = () => {
                                                     
                                                     {/* Card Content */}
                                                     <View style={styles.gridPostContent}>
-                                                        <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                        <View style={styles.gridTitleContainer}>
+                                                            <Text style={styles.gridPostTitle} numberOfLines={2}>{item.title}</Text>
+                                                            <TouchableOpacity
+                                                                style={styles.gridSpeakerButton}
+                                                                onPress={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSpeakTitle(item.title, 'forum');
+                                                                }}
+                                                                activeOpacity={0.7}
+                                                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                            >
+                                                                <Ionicons 
+                                                                    name={isSpeaking ? "stop-circle" : "volume-high"} 
+                                                                    size={16} 
+                                                                    color={colors.primary} 
+                                                                />
+                                                            </TouchableOpacity>
+                                                        </View>
                                                         
                                                         {/* Category Badge */}
                                                         <View style={styles.gridCategoryBadge}>
@@ -1673,7 +1860,24 @@ const ForumsScreen = () => {
                                 {/* Main Content */}
                                 <View style={styles.modernCardContent}>
                                     <View style={styles.titleSection}>
-                                        <Text style={styles.modernPostTitle} numberOfLines={2}>{item.title}</Text>
+                                        <View style={styles.titleWithSpeaker}>
+                                            <Text style={styles.modernPostTitle} numberOfLines={2}>{item.title}</Text>
+                                            <TouchableOpacity
+                                                style={styles.listSpeakerButton}
+                                                onPress={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSpeakTitle(item.title, 'forum');
+                                                }}
+                                                activeOpacity={0.7}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            >
+                                                <Ionicons 
+                                                    name={isSpeaking ? "stop-circle" : "volume-high"} 
+                                                    size={20} 
+                                                    color={colors.primary} 
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
                                         {item.isAnswered && (
                                             <View style={styles.modernAnsweredBadge}>
                                                 <Text style={styles.modernAnsweredIcon}>✓</Text>
@@ -1778,6 +1982,98 @@ const ForumsScreen = () => {
                     fetchTrendingTopics();
                 }}
             />
+
+            {/* Notification Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isNotificationModalVisible}
+                onRequestClose={() => setIsNotificationModalVisible(false)}
+            >
+                <View style={styles.notificationModalOverlay}>
+                    <View style={styles.notificationModalContent}>
+                        {/* Header */}
+                        <View style={styles.notificationModalHeader}>
+                            <Text style={styles.notificationModalTitle}>Notifications</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                {notifications.length > 0 && (
+                                    <>
+                                        {unreadCount > 0 && (
+                                            <TouchableOpacity 
+                                                onPress={handleMarkAllAsRead}
+                                                style={{ marginRight: 15 }}
+                                            >
+                                                <Text style={styles.markAllReadText}>Mark all read</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        <TouchableOpacity 
+                                            onPress={handleClearAllNotifications}
+                                            style={{ marginRight: 15 }}
+                                        >
+                                            <Text style={[styles.markAllReadText, { color: '#FF3B30' }]}>Clear all</Text>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                                <TouchableOpacity onPress={() => setIsNotificationModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color={theme === 'dark' ? colors.primary : '#2C3E50'} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Notifications List */}
+                        {notifications.length > 0 ? (
+                            <FlatList
+                                data={notifications}
+                                keyExtractor={(item) => item._id}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.notificationItem,
+                                            !item.isRead && styles.notificationItemUnread
+                                        ]}
+                                        onPress={() => handleNotificationClick(item)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.notificationIcon}>
+                                            <Ionicons 
+                                                name="chatbubble-ellipses" 
+                                                size={24} 
+                                                color={colors.primary} 
+                                            />
+                                        </View>
+                                        <View style={styles.notificationContent}>
+                                            <Text style={styles.notificationText}>
+                                                <Text style={styles.notificationSender}>{item.sender}</Text>
+                                                {' commented on your post: '}
+                                                <Text style={styles.notificationPostTitle}>{item.postTitle}</Text>
+                                            </Text>
+                                            <Text style={styles.notificationComment} numberOfLines={2}>
+                                                {item.commentContent}
+                                            </Text>
+                                            <Text style={styles.notificationTime}>
+                                                {notificationService.formatTimeAgo(item.createdAt)}
+                                            </Text>
+                                        </View>
+                                        {!item.isRead && (
+                                            <View style={styles.unreadDot} />
+                                        )}
+                                    </TouchableOpacity>
+                                )}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        ) : (
+                            <View style={styles.emptyNotifications}>
+                                <Ionicons 
+                                    name="notifications-off-outline" 
+                                    size={64} 
+                                    color={theme === 'dark' ? colors.darkgray : '#CCC'} 
+                                />
+                                <Text style={styles.emptyNotificationsText}>No notifications yet</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
 
             {/* Create Menu Popup */}
             <Modal
@@ -1955,6 +2251,7 @@ const ForumsScreen = () => {
                 </View>
             </Modal>
 
+
             {/* Sticky Header */}
             {isHeaderSticky && (
                 <View style={styles.stickyHeader}>
@@ -2092,7 +2389,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     // Search Bar Section
     searchBarSection: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 15,
         paddingVertical: 15,
         backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
     },
@@ -2102,7 +2399,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         gap: 10,
     },
     searchBarContainer: {
-        flex: 1,
+        flex: 0.97,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: theme === 'dark' ? colors.white : '#FFFFFF',
@@ -2116,6 +2413,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        minWidth: 0,
     },
     viewButton: {
         backgroundColor: colors.primary,
@@ -2129,6 +2427,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 3,
+        flexShrink: 0,
     },
     viewButtonText: {
         color: theme === 'dark' ? '#2C3E50' : '#FFFFFF',
@@ -2137,7 +2436,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     floatingActionButton: {
         position: 'absolute',
-        bottom: 30,
+        bottom: 20,
         right: 20,
         width: 56,
         height: 56,
@@ -2154,13 +2453,16 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     searchBarIcon: {
         marginRight: 12,
+        flexShrink: 0,
     },
     searchBarInput: {
         flex: 1,
+        flexShrink: 1,
         fontSize: 16,
         color: theme === 'dark' ? colors.primary : '#1A1A1A',
         backgroundColor: 'transparent',
         borderWidth: 0,
+        minWidth: 0,
         ...(Platform.OS === 'web' && {
             outline: 'none',
             boxShadow: 'none',
@@ -2169,10 +2471,11 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     viewToggleContainer: {
         flexDirection: 'row',
-        marginLeft: 10,
+        marginLeft: 0,
         backgroundColor: theme === 'dark' ? colors.secondary : '#F5F5F5',
         borderRadius: 8,
         padding: 2,
+        flexShrink: 0,
     },
     viewToggleButton: {
         width: 36,
@@ -2607,6 +2910,8 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         color: theme === 'dark' ? colors.primary : '#1F2937',
         lineHeight: 24,
         marginBottom: 8,
+        flex: 1,
+        marginRight: 8,
     },
     modernAnsweredBadge: {
         flexDirection: 'row',
@@ -2803,7 +3108,8 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         fontWeight: '700',
         color: theme === 'dark' ? colors.primary : '#1F2937',
         lineHeight: 18,
-        marginBottom: 8,
+        flex: 1,
+        marginRight: 6,
         minHeight: 36, // Ensure consistent height
     },
     gridCategoryBadge: {
@@ -3067,7 +3373,7 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
     },
     stickySearchBarSection: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 15,
         paddingVertical: 15,
         backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
         borderBottomWidth: 1,
@@ -3079,6 +3385,135 @@ const createStyles = (colors: any, theme: string) => StyleSheet.create({
         backgroundColor: theme === 'dark' ? colors.light : '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: theme === 'dark' ? colors.darkgray : '#E5E5E5',
+    },
+    // Speaker Button Styles for Cards
+    gridTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    gridSpeakerButton: {
+        padding: 4,
+        borderRadius: 12,
+        backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.1)',
+        marginLeft: 6,
+        marginTop: -2,
+    },
+    titleWithSpeaker: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        flex: 1,
+    },
+    listSpeakerButton: {
+        padding: 6,
+        borderRadius: 16,
+        backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.1)',
+        marginLeft: 8,
+        marginTop: -2,
+    },
+    // Notification Modal Styles
+    notificationModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    notificationModalContent: {
+        backgroundColor: theme === 'dark' ? colors.secondary : '#FFFFFF',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: '80%',
+        paddingTop: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    notificationModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: theme === 'dark' ? colors.darkgray : '#E5E5E5',
+    },
+    notificationModalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
+    },
+    markAllReadText: {
+        fontSize: 14,
+        color: colors.primary,
+        fontWeight: '600',
+    },
+    notificationItem: {
+        flexDirection: 'row',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: theme === 'dark' ? colors.darkgray : '#F0F0F0',
+        backgroundColor: theme === 'dark' ? colors.secondary : '#FFFFFF',
+    },
+    notificationItemUnread: {
+        backgroundColor: theme === 'dark' ? 'rgba(255, 113, 0, 0.1)' : 'rgba(255, 113, 0, 0.05)',
+    },
+    notificationIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme === 'dark' ? colors.white : '#F0F0F0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    notificationContent: {
+        flex: 1,
+    },
+    notificationText: {
+        fontSize: 14,
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
+        marginBottom: 4,
+        lineHeight: 20,
+    },
+    notificationSender: {
+        fontWeight: '700',
+        color: colors.accent,
+    },
+    notificationPostTitle: {
+        fontWeight: '600',
+        color: theme === 'dark' ? colors.primary : '#2C3E50',
+    },
+    notificationComment: {
+        fontSize: 13,
+        color: theme === 'dark' ? colors.lightgray : '#666',
+        marginBottom: 4,
+        fontStyle: 'italic',
+    },
+    notificationTime: {
+        fontSize: 12,
+        color: theme === 'dark' ? colors.darkgray : '#999',
+    },
+    unreadDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#FF3B30',
+        marginLeft: 8,
+        alignSelf: 'center',
+    },
+    emptyNotifications: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    emptyNotificationsText: {
+        fontSize: 16,
+        color: theme === 'dark' ? colors.darkgray : '#999',
+        marginTop: 16,
     },
 });
 
