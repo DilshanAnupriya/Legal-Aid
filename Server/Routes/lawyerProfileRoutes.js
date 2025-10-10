@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { createOrUpdateProfile, getProfile } = require("../controllers/lawyerProfileController");
+const { lawyer } = require('../config/multer');
 
-// Auth middleware can be added here
-router.post("/", createOrUpdateProfile); // Create or update profile
-router.get("/:lawyerId", getProfile);   // Get profile
+router.post("/", lawyer.single("profilePicture"), createOrUpdateProfile); // Upload profile picture
+router.get("/:lawyerId", getProfile);
 
 module.exports = router;

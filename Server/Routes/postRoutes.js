@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+
+
 const {
   createPost,
   getPosts,
@@ -33,7 +35,7 @@ const {
 // @route   POST /api/posts
 // @desc    Create a new post
 // @access  Public (for now - can add authentication later)
-router.post('/', createRateLimit(), validateCreatePost, createPost);
+router.post('/',createRateLimit(), validateCreatePost, createPost);
 
 // @route   GET /api/posts
 // @desc    Get all posts with filtering and pagination

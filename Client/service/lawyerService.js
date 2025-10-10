@@ -47,24 +47,36 @@ export const searchLawyers = async (query) => {
 };
 
 // Save or update a lawyer's profile
-export const saveLawyerProfile = async (lawyerId, profileData) => {
+export const saveLawyerProfile = async (formData) => {
   try {
-    console.log("lawyer id in service : ",lawyerId)
-    const response = await axios.post(`${API_URL_LAWYER_PROFILE}/AddprofileDetails`, {
-      lawyerId: lawyerId,
-      ...profileData,
+    const response = await fetch(`${API_URL_LAWYER_PROFILE}/AddprofileDetails`, {
+      method: 'POST',
+      headers: {
+        // Do NOT set Content-Type header - let browser set it with boundary
+       
+      },
+      body: formData,
     });
-    return response.data;
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to save profile');
+    }
+    
+    return data;
   } catch (error) {
-    console.error("Error saving lawyer profile:", error.response?.data || error.message);
     throw error;
   }
 };
 
+
 // Fetch a lawyer's profile by ID
 export const getLawyerProfile = async (lawyerId) => {
   try {
-    const response = await axios.get(`${API_URL_LAWYER_PROFILE}/AddprofileDetails/${lawyerId}`);
+    const response = await axios.get(`${API_URL_LAWYER_PROFILE}/AddprofileDetails/${lawyerId}`,{
+      timeout: 10000, // 10 second timeout
+    });
     console.log("lawyer profile data : ",response.data.profile)
     return response.data.profile;
   } catch (error) {

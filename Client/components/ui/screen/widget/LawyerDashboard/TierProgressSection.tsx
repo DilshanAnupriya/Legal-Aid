@@ -77,7 +77,7 @@ const TierProgressSection = () => {
     };
 
     fetchUserData();
-    intervalId = setInterval(fetchUserData, 500);
+    intervalId = setInterval(fetchUserData, 50000);
     return () => clearInterval(intervalId);
   }, [user]);
 

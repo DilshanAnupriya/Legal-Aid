@@ -40,6 +40,10 @@ const lawyerProfileSchema = new mongoose.Schema(
         default: [],
       },
     },
+    profilePicture: {
+      type: String, // store image file path or URL
+      default: "",  // empty by default
+    },
     createdAt: {
       type: Date,
       default: Date.now,

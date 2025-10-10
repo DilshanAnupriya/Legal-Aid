@@ -28,6 +28,29 @@ const ngoStorage = new CloudinaryStorage({
     }
 });
 
+// Cloudinary storage for Lawyer images
+const lawyerStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'lawyer_logos',
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+        transformation: [
+            { width: 1000, height: 1000, crop: 'limit' }, // Resize large images
+            { quality: 'auto' } // Auto optimize quality
+        ]
+    }
+});
+
+// Multer instance
+const lawyerUpload = multer({
+  storage: lawyerStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files allowed!'), false);
+  }
+});
+
 // Local storage for documents (needed for OCR processing)
 const documentStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -81,6 +104,8 @@ const documentUpload = multer({
     }
 });
 
+
+
 module.exports = {
     // For NGO uploads (cloudinary)
     ngo: ngoUpload,
@@ -88,5 +113,8 @@ module.exports = {
     
     // For document uploads (local storage for OCR)
     document: documentUpload,
-    single: documentUpload.single.bind(documentUpload)
+    single: documentUpload.single.bind(documentUpload),
+
+    lawyer: lawyerUpload,
+    single: lawyerUpload.single.bind(lawyerUpload),
 };
