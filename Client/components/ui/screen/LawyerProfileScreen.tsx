@@ -8,12 +8,14 @@ import {
     TouchableOpacity,
     Alert,
     StatusBar,
-    ActivityIndicator
+    ActivityIndicator,
+    Dimensions
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { COLOR } from '@/constants/ColorPallet';
 import LawyerAdditionalDetails from './LawyerAdditionalDetails';
 
+const { width } = Dimensions.get('window');
 
 interface LawyerProfileScreenProps {
     navigation: any;
@@ -81,8 +83,6 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
             console.log('[LawyerProfile] Starting logout process...');
             await logout();
             console.log('[LawyerProfile] Logout completed successfully');
-            // Navigation will be handled automatically by AuthNavigator
-            // when isAuthenticated becomes false
         } catch (error: any) {
             console.error('[LawyerProfile] Logout error:', error);
             Alert.alert('Error', error.message || 'Failed to logout');
@@ -100,62 +100,74 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor={COLOR.light.light} />
-            
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Lawyer Profile</Text>
-                <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => isEditing ? handleSave() : setIsEditing(true)}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                        <Text style={styles.editButtonText}>
-                            {isEditing ? 'Save' : 'Edit'}
-                        </Text>
-                    )}
-                </TouchableOpacity>
-            </View>
+            <StatusBar barStyle="light-content" backgroundColor={COLOR.light.primary} />
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Basic Info Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Basic Information</Text>
-                    
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Email</Text>
-                        <Text style={styles.fieldValue}>{user.email}</Text>
+            <ScrollView
+                style={styles.content}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {/* Header Banner */}
+                <View style={styles.headerBanner}>
+                    <View style={styles.headerContent}>
+                        <Text style={styles.headerTitle}>Lawyer Profile</Text>
+                        <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={() => isEditing ? handleSave() : setIsEditing(true)}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                                <Text style={styles.editButtonText}>
+                                    {isEditing ? 'Save' : 'Edit'}
+                                </Text>
+                            )}
+                        </TouchableOpacity>
                     </View>
+                </View>
 
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>User Type</Text>
-                        <View style={styles.userTypeBadge}>
-                            <Text style={styles.userTypeText}>Legal Professional</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Account Status</Text>
-                        <View style={[
-                            styles.statusBadge,
-                            user.status === 'active' && styles.activeStatus
-                        ]}>
-                            <Text style={styles.statusText}>
-                                {user.status?.toUpperCase() || 'PENDING'}
+                {/* Basic Info Card with rounded top */}
+                <View style={styles.basicInfoContainer}>
+                    <View style={styles.profileHeader}>
+                        <View style={styles.avatarContainer}>
+                            <Text style={styles.avatarText}>
+                                {user.firstName?.[0] || user.email?.[0] || 'L'}
                             </Text>
+                        </View>
+                        <View style={styles.nameContainer}>
+                            <Text style={styles.fullName}>
+                                {profileData.firstName && profileData.lastName 
+                                    ? `${profileData.firstName} ${profileData.lastName}`
+                                    : 'Complete Your Profile'
+                                }
+                            </Text>
+                            <Text style={styles.specialization}>
+                                {profileData.specialization || 'No Specialization'}
+                            </Text>
+                            <View style={styles.badgeContainer}>
+                                <View style={styles.userTypeBadge}>
+                                    <Text style={styles.userTypeText}>Legal Professional</Text>
+                                </View>
+                                <View style={[
+                                    styles.statusBadge,
+                                    user.status === 'active' && styles.activeStatus
+                                ]}>
+                                    <Text style={styles.statusText}>
+                                        {user.status?.toUpperCase() || 'PENDING'}
+                                    </Text>
+                                </View>
+                            </View>
                         </View>
                     </View>
                 </View>
 
                 {/* Professional Information Section */}
-                <View style={styles.section}>
+                <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Professional Information</Text>
                     
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>First Name *</Text>
+                    <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>First Name</Text>
                         {isEditing ? (
                             <TextInput
                                 style={styles.input}
@@ -165,12 +177,12 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
                                 placeholderTextColor="#999"
                             />
                         ) : (
-                            <Text style={styles.fieldValue}>{profileData.firstName || 'Not set'}</Text>
+                            <Text style={styles.infoValue}>{profileData.firstName || 'Not set'}</Text>
                         )}
                     </View>
 
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Last Name *</Text>
+                    <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Last Name</Text>
                         {isEditing ? (
                             <TextInput
                                 style={styles.input}
@@ -180,38 +192,12 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
                                 placeholderTextColor="#999"
                             />
                         ) : (
-                            <Text style={styles.fieldValue}>{profileData.lastName || 'Not set'}</Text>
+                            <Text style={styles.infoValue}>{profileData.lastName || 'Not set'}</Text>
                         )}
                     </View>
 
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Full Name</Text>
-                        <Text style={styles.fieldValue}>
-                            {profileData.firstName && profileData.lastName 
-                                ? `${profileData.firstName} ${profileData.lastName}`
-                                : 'Complete your name above'
-                            }
-                        </Text>
-                    </View>
-
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Contact Number *</Text>
-                        {isEditing ? (
-                            <TextInput
-                                style={styles.input}
-                                value={profileData.contactNumber}
-                                onChangeText={(text) => setProfileData(prev => ({ ...prev, contactNumber: text }))}
-                                placeholder="Enter contact number"
-                                placeholderTextColor="#999"
-                                keyboardType="phone-pad"
-                            />
-                        ) : (
-                            <Text style={styles.fieldValue}>{profileData.contactNumber || 'Not set'}</Text>
-                        )}
-                    </View>
-
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Specialization *</Text>
+                    <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Specialization</Text>
                         {isEditing ? (
                             <View style={styles.specializationContainer}>
                                 {specializationOptions.map((option) => (
@@ -233,18 +219,44 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
                                 ))}
                             </View>
                         ) : (
-                            <Text style={styles.fieldValue}>{profileData.specialization || 'Not specified'}</Text>
+                            <Text style={styles.infoValue}>{profileData.specialization || 'Not specified'}</Text>
+                        )}
+                    </View>
+                </View>
+
+                {/* Contact Information Section */}
+                <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>Contact Information</Text>
+                    
+                    <View style={styles.contactItem}>
+                        <Text style={styles.contactLabel}>Email:</Text>
+                        <Text style={styles.contactValue}>{user.email}</Text>
+                    </View>
+
+                    <View style={styles.contactItem}>
+                        <Text style={styles.contactLabel}>Phone:</Text>
+                        {isEditing ? (
+                            <TextInput
+                                style={[styles.input, styles.contactInput]}
+                                value={profileData.contactNumber}
+                                onChangeText={(text) => setProfileData(prev => ({ ...prev, contactNumber: text }))}
+                                placeholder="Enter contact number"
+                                placeholderTextColor="#999"
+                                keyboardType="phone-pad"
+                            />
+                        ) : (
+                            <Text style={styles.contactValue}>{profileData.contactNumber || 'Not set'}</Text>
                         )}
                     </View>
                 </View>
 
                 {/* Account Information Section */}
-                <View style={styles.section}>
+                <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Account Information</Text>
                     
-                    <View style={styles.field}>
-                        <Text style={styles.fieldLabel}>Member Since</Text>
-                        <Text style={styles.fieldValue}>
+                    <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Member Since:</Text>
+                        <Text style={styles.detailValue}>
                             {new Date(user.createdAt).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'long',
@@ -254,9 +266,9 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
                     </View>
 
                     {user.updatedAt && (
-                        <View style={styles.field}>
-                            <Text style={styles.fieldLabel}>Last Updated</Text>
-                            <Text style={styles.fieldValue}>
+                        <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>Last Updated:</Text>
+                            <Text style={styles.detailValue}>
                                 {new Date(user.updatedAt).toLocaleDateString('en-US', {
                                     year: 'numeric',
                                     month: 'long',
@@ -267,11 +279,17 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
                     )}
                 </View>
 
+                {/* Additional Details Section */}
+                <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>More Details</Text>
+                    <LawyerAdditionalDetails lawyerId={user.id} />
+                </View>
+
                 {/* Action Buttons */}
-                <View style={styles.actionSection}>
+                <View style={styles.actionButtonsContainer}>
                     {isEditing && (
                         <TouchableOpacity
-                            style={styles.cancelButton}
+                            style={[styles.actionButton, styles.secondaryButton]}
                             onPress={() => {
                                 setIsEditing(false);
                                 setProfileData({
@@ -282,22 +300,15 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
                                 });
                             }}
                         >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                            <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Cancel</Text>
                         </TouchableOpacity>
                     )}
-
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>More Details</Text>
-                        <LawyerAdditionalDetails lawyerId={user.id} />
-                    </View>
-                    
-
                     
                     <TouchableOpacity   
-                        style={styles.logoutButton}
+                        style={styles.actionButton}
                         onPress={handleLogout}
                     >
-                        <Text style={styles.logoutButtonText}>Logout</Text>
+                        <Text style={styles.actionButtonText}>Logout</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -308,97 +319,107 @@ export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenP
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLOR.light.light,
+        backgroundColor: '#F8F9FA',
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: COLOR.light.light,
+        backgroundColor: '#F8F9FA',
     },
     loadingText: {
         marginTop: 10,
         fontSize: 16,
-        color: COLOR.light.primary,
+        color: '#666',
     },
-    header: {
+    content: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: 50,
+    },
+    headerBanner: {
+        backgroundColor: COLOR.light.primary,
+        paddingTop: 50,
+        paddingBottom: 40,
+        paddingHorizontal: 16,
+    },
+    headerContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9ECEF',
     },
     headerTitle: {
+        color: '#FFFFFF',
         fontSize: 24,
         fontWeight: 'bold',
-        color: COLOR.light.primary,
     },
     editButton: {
-        backgroundColor: COLOR.light.primary,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         borderRadius: 8,
-        minWidth: 60,
+        minWidth: 70,
         alignItems: 'center',
     },
     editButtonText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
     },
-    content: {
-        flex: 1,
-        padding: 20,
-    },
-    section: {
+    basicInfoContainer: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 20,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
+        padding: 16,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        marginTop: -20,
+        position: 'relative',
+        zIndex: 1,
     },
-    sectionTitle: {
-        fontSize: 20,
+    profileHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+    },
+    avatarContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: COLOR.light.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    avatarText: {
+        fontSize: 32,
         fontWeight: 'bold',
+        color: '#FFFFFF',
+        textTransform: 'uppercase',
+    },
+    nameContainer: {
+        flex: 1,
+    },
+    fullName: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginBottom: 4,
+    },
+    specialization: {
+        fontSize: 16,
         color: COLOR.light.primary,
-        marginBottom: 16,
+        marginBottom: 8,
     },
-    field: {
-        marginBottom: 16,
-    },
-    fieldLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 6,
-    },
-    fieldValue: {
-        fontSize: 16,
-        color: '#555',
-        paddingVertical: 4,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#DDD',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        fontSize: 16,
-        backgroundColor: '#F8F9FA',
+    badgeContainer: {
+        flexDirection: 'row',
+        gap: 8,
+        flexWrap: 'wrap',
     },
     userTypeBadge: {
         backgroundColor: '#8E44AD',
-        alignSelf: 'flex-start',
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
     userTypeText: {
         color: '#FFFFFF',
@@ -407,10 +428,9 @@ const styles = StyleSheet.create({
     },
     statusBadge: {
         backgroundColor: '#E74C3C',
-        alignSelf: 'flex-start',
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
     activeStatus: {
         backgroundColor: '#27AE60',
@@ -420,10 +440,48 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
     },
+    sectionContainer: {
+        backgroundColor: '#FFFFFF',
+        marginHorizontal: 16,
+        marginVertical: 8,
+        padding: 16,
+        borderRadius: 12,
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginBottom: 12,
+    },
+    infoItem: {
+        marginBottom: 16,
+    },
+    infoLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 6,
+    },
+    infoValue: {
+        fontSize: 16,
+        color: '#444',
+        lineHeight: 22,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#DDD',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        fontSize: 16,
+        backgroundColor: '#F8F9FA',
+        color: '#333',
+    },
     specializationContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
+        marginTop: 4,
     },
     specializationOption: {
         borderWidth: 1,
@@ -431,11 +489,10 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        marginBottom: 8,
     },
     selectedSpecializationOption: {
-        backgroundColor: '#8E44AD',
-        borderColor: '#8E44AD',
+        backgroundColor: COLOR.light.primary,
+        borderColor: COLOR.light.primary,
     },
     specializationOptionText: {
         fontSize: 14,
@@ -445,30 +502,69 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: '600',
     },
-    actionSection: {
-        marginTop: 20,
+    contactItem: {
+        flexDirection: 'row',
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F1F1',
+        alignItems: 'center',
+    },
+    contactLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        width: 80,
+    },
+    contactValue: {
+        fontSize: 16,
+        color: COLOR.light.primary,
+        flex: 1,
+    },
+    contactInput: {
+        flex: 1,
+        marginLeft: 0,
+        paddingVertical: 8,
+    },
+    detailItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 6,
+    },
+    detailLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        width: 130,
+    },
+    detailValue: {
+        fontSize: 16,
+        color: '#444',
+        flex: 1,
+    },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        paddingVertical: 20,
         gap: 12,
     },
-    cancelButton: {
-        backgroundColor: '#6C757D',
-        paddingVertical: 14,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    cancelButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    logoutButton: {
+    actionButton: {
+        flex: 1,
         backgroundColor: '#E74C3C',
-        paddingVertical: 14,
-        borderRadius: 8,
+        paddingVertical: 16,
+        borderRadius: 12,
         alignItems: 'center',
     },
-    logoutButtonText: {
+    secondaryButton: {
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: '#6C757D',
+    },
+    actionButtonText: {
         color: '#FFFFFF',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
+    },
+    secondaryButtonText: {
+        color: '#6C757D',
     },
 });
