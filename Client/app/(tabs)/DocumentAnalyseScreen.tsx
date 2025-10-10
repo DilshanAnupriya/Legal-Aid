@@ -13,6 +13,8 @@ import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { DocumentService } from '../../services/documentService';
 import DocumentHistory from '../../components/DocumentHistory';
+import { applyUnicodeStyle } from '../../utils/unicodeUtils';
+import { useTheme } from '../../context/ThemeContext';
 
 type Step = 'select' | 'configure' | 'results';
 type Tab = 'upload' | 'history';
@@ -29,6 +31,7 @@ const LANGUAGES: LanguageOption[] = [
 ];
 
 export default function DocumentAnalyseScreen() {
+  const { theme, colors } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>('upload');
   const [currentStep, setCurrentStep] = useState<Step>('select');
   const [selectedFile, setSelectedFile] = useState<any>(null);
@@ -96,7 +99,38 @@ export default function DocumentAnalyseScreen() {
     }
   };
 
-  // Handle analysis
+  // Format AI explanation for better readability
+  const formatExplanation = (explanation: string) => {
+    // Split by periods to create sentences
+    const sentences = explanation.split('.').filter(sentence => sentence.trim().length > 0);
+    
+    // Group sentences into paragraphs (every 2-3 sentences)
+    const paragraphs = [];
+    for (let i = 0; i < sentences.length; i += 2) {
+      const paragraph = sentences.slice(i, i + 2).join('. ') + '.';
+      paragraphs.push(paragraph.trim());
+    }
+    
+    return paragraphs;
+  };
+
+  // Create a simple summary from the explanation
+  const createSummary = (explanation: string) => {
+    const sentences = explanation.split('.').filter(sentence => sentence.trim().length > 0);
+    // Take the first sentence as a quick summary
+    const summary = sentences[0]?.trim() + '.';
+    return summary.length > 150 ? summary.substring(0, 147) + '...' : summary;
+  };
+
+  // Extract key points from explanation
+  const extractKeyPoints = (explanation: string) => {
+    const keyWords = ['important', 'key', 'main', 'primary', 'essential', 'significant', 'critical', 'must', 'should', 'required'];
+    const sentences = explanation.split('.').filter(sentence => sentence.trim().length > 0);
+    
+    return sentences.filter(sentence => 
+      keyWords.some(keyword => sentence.toLowerCase().includes(keyword))
+    ).slice(0, 3); // Limit to top 3 key points
+  };
   const handleAnalyze = async () => {
     if (!selectedFile) {
       Alert.alert('Error', 'No document selected');
@@ -139,42 +173,42 @@ export default function DocumentAnalyseScreen() {
 
   // Render Step Indicator
   const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
+    <View style={[styles.stepIndicator, { backgroundColor: colors.white }]}>
       <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, currentStep === 'select' && styles.stepCircleActive]}>
+        <View style={[styles.stepCircle, currentStep === 'select' && styles.stepCircleActive, { backgroundColor: currentStep !== 'select' ? colors.light : colors.primary + '20' }]}>
           <Ionicons 
             name={currentStep !== 'select' ? "checkmark" : "document"} 
             size={20} 
-            color={currentStep !== 'select' ? "#4CAF50" : "#007AFF"} 
+            color={currentStep !== 'select' ? colors.accent : colors.primary} 
           />
         </View>
-        <Text style={styles.stepText}>Select PDF</Text>
+        <Text style={[styles.stepText, { color: colors.primary }]}>Select PDF</Text>
       </View>
 
-      <View style={styles.stepLine} />
+      <View style={[styles.stepLine, { backgroundColor: colors.light }]} />
 
       <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, currentStep === 'configure' && styles.stepCircleActive]}>
+        <View style={[styles.stepCircle, currentStep === 'configure' && styles.stepCircleActive, { backgroundColor: currentStep === 'results' ? colors.light : currentStep === 'configure' ? colors.primary + '20' : colors.light }]}>
           <Ionicons 
             name={currentStep === 'results' ? "checkmark" : "settings"} 
             size={20} 
-            color={currentStep === 'results' ? "#4CAF50" : currentStep === 'configure' ? "#007AFF" : "#ccc"} 
+            color={currentStep === 'results' ? colors.accent : currentStep === 'configure' ? colors.primary : colors.darkgray} 
           />
         </View>
-        <Text style={styles.stepText}>Configure</Text>
+        <Text style={[styles.stepText, { color: colors.primary }]}>Configure</Text>
       </View>
 
-      <View style={styles.stepLine} />
+      <View style={[styles.stepLine, { backgroundColor: colors.light }]} />
 
       <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, currentStep === 'results' && styles.stepCircleActive]}>
+        <View style={[styles.stepCircle, currentStep === 'results' && styles.stepCircleActive, { backgroundColor: currentStep === 'results' ? colors.primary + '20' : colors.light }]}>
           <Ionicons 
             name="eye" 
             size={20} 
-            color={currentStep === 'results' ? "#007AFF" : "#ccc"} 
+            color={currentStep === 'results' ? colors.primary : colors.darkgray} 
           />
         </View>
-        <Text style={styles.stepText}>Results</Text>
+        <Text style={[styles.stepText, { color: colors.primary }]}>Results</Text>
       </View>
     </View>
   );
@@ -182,19 +216,19 @@ export default function DocumentAnalyseScreen() {
   // Render Step 1: Select Document
   const renderSelectStep = () => (
     <View style={styles.stepContent}>
-      <View style={styles.uploadArea}>
-        <Ionicons name="cloud-upload-outline" size={80} color="#007AFF" />
-        <Text style={styles.uploadTitle}>Upload Legal Document</Text>
-        <Text style={styles.uploadSubtitle}>Select a PDF file for AI analysis</Text>
+      <View style={[styles.uploadArea, { backgroundColor: colors.white }]}>
+        <Ionicons name="cloud-upload-outline" size={80} color={colors.primary} />
+        <Text style={[styles.uploadTitle, { color: colors.primary }]}>Upload Legal Document</Text>
+        <Text style={[styles.uploadSubtitle, { color: colors.darkgray }]}>Select a PDF file for AI analysis</Text>
         
-        <TouchableOpacity style={styles.selectButton} onPress={handleSelectFile}>
-          <Ionicons name="folder-open-outline" size={24} color="#fff" />
-          <Text style={styles.selectButtonText}>Select PDF Document</Text>
+        <TouchableOpacity style={[styles.selectButton, { backgroundColor: colors.primary }]} onPress={handleSelectFile}>
+          <Ionicons name="folder-open-outline" size={24} color={colors.white} />
+          <Text style={[styles.selectButtonText, { color: colors.white }]}>Select PDF Document</Text>
         </TouchableOpacity>
 
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={20} color="#007AFF" />
-          <Text style={styles.infoText}>
+        <View style={[styles.infoBox, { backgroundColor: colors.primary + '10' }]}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+          <Text style={[styles.infoText, { color: colors.primary }]}>
             Only PDF files are supported. The AI will analyze and explain the document in your chosen language.
           </Text>
         </View>
@@ -206,26 +240,26 @@ export default function DocumentAnalyseScreen() {
   const renderConfigureStep = () => (
     <View style={styles.stepContent}>
       <View style={styles.configCard}>
-        <View style={styles.fileInfoCard}>
-          <Ionicons name="document-text" size={48} color="#007AFF" />
-          <Text style={styles.fileName}>{selectedFile?.name || 'No file'}</Text>
-          <Text style={styles.fileSize}>
+        <View style={[styles.fileInfoCard, { backgroundColor: colors.white }]}>
+          <Ionicons name="document-text" size={48} color={colors.primary} />
+          <Text style={[styles.fileName, { color: colors.primary }]}>{selectedFile?.name || 'No file'}</Text>
+          <Text style={[styles.fileSize, { color: colors.darkgray }]}>
             {selectedFile?.size ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` : ''}
           </Text>
           
-          <TouchableOpacity style={styles.changeFileButton} onPress={() => setCurrentStep('select')}>
-            <Ionicons name="swap-horizontal" size={18} color="#007AFF" />
-            <Text style={styles.changeFileText}>Change File</Text>
+          <TouchableOpacity style={[styles.changeFileButton, { backgroundColor: colors.light }]} onPress={() => setCurrentStep('select')}>
+            <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+            <Text style={[styles.changeFileText, { color: colors.primary }]}>Change File</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.languageSection}>
-          <Text style={styles.sectionTitle}>Analysis Language</Text>
-          <Text style={styles.sectionSubtitle}>
+        <View style={[styles.languageSection, { backgroundColor: colors.white }]}>
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Analysis Language</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.darkgray }]}>
             Select the language for AI explanation and summary
           </Text>
           
-          <View style={styles.languagePickerContainer}>
+          <View style={[styles.languagePickerContainer, { backgroundColor: colors.light }]}>
             <Picker
               selectedValue={analysisLanguage}
               onValueChange={(value) => setAnalysisLanguage(value as 'english' | 'sinhala' | 'tamil')}
@@ -239,31 +273,31 @@ export default function DocumentAnalyseScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.analyzeButton}
+          style={[styles.analyzeButton, { backgroundColor: colors.accent }]}
           onPress={handleAnalyze}
           disabled={analyzing}
         >
           {analyzing ? (
             <>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.analyzeButtonText}>
+              <ActivityIndicator color={colors.white} size="small" />
+              <Text style={[styles.analyzeButtonText, { color: colors.white }]}>
                 Analyzing... {uploadProgress}%
               </Text>
             </>
           ) : (
             <>
-              <Ionicons name="flash" size={24} color="#fff" />
-              <Text style={styles.analyzeButtonText}>Analyze Document</Text>
+              <Ionicons name="flash" size={24} color={colors.white} />
+              <Text style={[styles.analyzeButtonText, { color: colors.white }]}>Analyze Document</Text>
             </>
           )}
         </TouchableOpacity>
 
         {analyzing && (
           <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
+            <View style={[styles.progressBar, { backgroundColor: colors.light }]}>
+              <View style={[styles.progressFill, { backgroundColor: colors.accent, width: `${uploadProgress}%` }]} />
             </View>
-            <Text style={styles.progressText}>
+            <Text style={[styles.progressText, { color: colors.darkgray }]}>
               {uploadProgress < 50 ? 'Uploading document...' : 'AI is analyzing...'}
             </Text>
           </View>
@@ -275,11 +309,11 @@ export default function DocumentAnalyseScreen() {
   // Render Step 3: Results
   const renderResultsStep = () => (
     <ScrollView style={styles.stepContent}>
-      <View style={styles.resultsCard}>
-        <View style={styles.resultsHeader}>
-          <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
-          <Text style={styles.resultsTitle}>Analysis Complete!</Text>
-          <Text style={styles.resultsSubtitle}>
+      <View style={[styles.resultsCard, { backgroundColor: colors.white }]}>
+        <View style={[styles.resultsHeader, { borderBottomColor: colors.light }]}>
+          <Ionicons name="checkmark-circle" size={48} color={colors.accent} />
+          <Text style={[styles.resultsTitle, { color: colors.primary }]}>Analysis Complete!</Text>
+          <Text style={[styles.resultsSubtitle, { color: colors.darkgray }]}>
             Document analyzed in {analysisLanguage.charAt(0).toUpperCase() + analysisLanguage.slice(1)}
           </Text>
         </View>
@@ -287,10 +321,66 @@ export default function DocumentAnalyseScreen() {
         {analysisResults?.explanation && (
           <View style={styles.explanationSection}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="document-text-outline" size={24} color="#007AFF" />
-              <Text style={styles.sectionTitle}>AI Explanation</Text>
+              <Ionicons name="document-text-outline" size={24} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>AI Analysis Summary</Text>
             </View>
-            <Text style={styles.explanationText}>{analysisResults.explanation}</Text>
+            
+            {/* Quick Summary */}
+            <View style={[styles.quickSummary, { backgroundColor: colors.primary + '10', borderLeftColor: colors.primary }]}>
+              <View style={styles.summaryHeader}>
+                <Ionicons name="flash-outline" size={18} color={colors.primary} />
+                <Text style={[styles.summaryTitle, { color: colors.primary }]}>Quick Summary</Text>
+              </View>
+              <Text style={[styles.summaryText, { color: colors.primary }]}>
+                {createSummary(analysisResults.explanation)}
+              </Text>
+            </View>
+            
+            {/* Key Points Section */}
+            {extractKeyPoints(analysisResults.explanation).length > 0 && (
+              <View style={[styles.keyPointsContainer, { backgroundColor: colors.accent + '10', borderLeftColor: colors.accent }]}>
+                <View style={styles.keyPointsHeader}>
+                  <Ionicons name="bulb-outline" size={18} color={colors.accent} />
+                  <Text style={[styles.keyPointsTitle, { color: colors.accent }]}>Key Points</Text>
+                </View>
+                {extractKeyPoints(analysisResults.explanation).map((point: string, index: number) => (
+                  <View key={index} style={styles.keyPointItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+                    <Text style={[styles.keyPointText, { color: colors.primary }]}>
+                      {point.trim()}.
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            {/* Detailed Explanation */}
+            <View style={[styles.detailedExplanation, { backgroundColor: colors.primary + '10', borderLeftColor: colors.primary, borderLeftWidth: 4 }]}>
+              <View style={styles.explanationHeader}>
+                <Ionicons name="library-outline" size={20} color={colors.primary} />
+                <Text style={[styles.explanationHeaderText, { color: colors.primary }]}>Detailed Analysis</Text>
+                <TouchableOpacity 
+                  style={[styles.readAloudButton, { backgroundColor: colors.accent + '15', borderColor: colors.accent }]}
+                  onPress={() => {/* Add TTS functionality */}}
+                >
+                  <Ionicons name="volume-high-outline" size={16} color={colors.accent} />
+                  <Text style={[styles.readAloudText, { color: colors.accent }]}>Listen</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {formatExplanation(analysisResults.explanation).map((paragraph, index) => (
+                <View key={index} style={styles.paragraphContainer}>
+                  <Text 
+                    style={[
+                      applyUnicodeStyle(styles.explanationText, paragraph, analysisLanguage),
+                      { color: colors.primary }
+                    ]}
+                  >
+                    {paragraph}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
@@ -298,66 +388,66 @@ export default function DocumentAnalyseScreen() {
           <View style={styles.statsContainer}>
             {analysisResults.wordCount ? (
               <View style={styles.statBox}>
-                <Ionicons name="text-outline" size={24} color="#FF9800" />
-                <Text style={styles.statValue}>{analysisResults.wordCount}</Text>
-                <Text style={styles.statLabel}>Words</Text>
+                <Ionicons name="text-outline" size={24} color={colors.orange} />
+                <Text style={[styles.statValue, { color: colors.primary }]}>{analysisResults.wordCount}</Text>
+                <Text style={[styles.statLabel, { color: colors.darkgray }]}>Words</Text>
               </View>
             ) : null}
             
             {analysisResults.characterCount ? (
               <View style={styles.statBox}>
-                <Ionicons name="reader-outline" size={24} color="#2196F3" />
-                <Text style={styles.statValue}>{analysisResults.characterCount}</Text>
-                <Text style={styles.statLabel}>Characters</Text>
+                <Ionicons name="reader-outline" size={24} color={colors.secondary} />
+                <Text style={[styles.statValue, { color: colors.primary }]}>{analysisResults.characterCount}</Text>
+                <Text style={[styles.statLabel, { color: colors.darkgray }]}>Characters</Text>
               </View>
             ) : null}
 
             {analysisResults.confidence ? (
               <View style={styles.statBox}>
-                <Ionicons name="analytics-outline" size={24} color="#4CAF50" />
-                <Text style={styles.statValue}>{Math.round(analysisResults.confidence * 100)}%</Text>
-                <Text style={styles.statLabel}>Confidence</Text>
+                <Ionicons name="analytics-outline" size={24} color={colors.accent} />
+                <Text style={[styles.statValue, { color: colors.primary }]}>{Math.round(analysisResults.confidence * 100)}%</Text>
+                <Text style={[styles.statLabel, { color: colors.darkgray }]}>Confidence</Text>
               </View>
             ) : null}
           </View>
         )}
 
-        <TouchableOpacity style={styles.newAnalysisButton} onPress={handleReset}>
-          <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
-          <Text style={styles.newAnalysisText}>Analyze Another Document</Text>
+        <TouchableOpacity style={[styles.newAnalysisButton, { borderColor: colors.primary }]} onPress={handleReset}>
+          <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
+          <Text style={[styles.newAnalysisText, { color: colors.primary }]}>Analyze Another Document</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.light }]}>
       {/* Tab Selector */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: colors.white, borderBottomColor: colors.light }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'upload' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'upload' && [styles.tabActive, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('upload')}
         >
           <Ionicons
             name="cloud-upload-outline"
             size={24}
-            color={activeTab === 'upload' ? '#007AFF' : '#666'}
+            color={activeTab === 'upload' ? colors.primary : colors.darkgray}
           />
-          <Text style={[styles.tabText, activeTab === 'upload' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, activeTab === 'upload' && [styles.tabTextActive, { color: colors.primary }], { color: activeTab === 'upload' ? colors.primary : colors.darkgray }]}>
             Upload & Analyze
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'history' && [styles.tabActive, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('history')}
         >
           <Ionicons
             name="time-outline"
             size={24}
-            color={activeTab === 'history' ? '#007AFF' : '#666'}
+            color={activeTab === 'history' ? colors.primary : colors.darkgray}
           />
-          <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, activeTab === 'history' && [styles.tabTextActive, { color: colors.primary }], { color: activeTab === 'history' ? colors.primary : colors.darkgray }]}>
             History
           </Text>
         </TouchableOpacity>
@@ -368,10 +458,10 @@ export default function DocumentAnalyseScreen() {
         <>
           {/* Back Button - Show when not on first step */}
           {currentStep !== 'select' && !analyzing && (
-            <View style={styles.backButtonContainer}>
+            <View style={[styles.backButtonContainer, { backgroundColor: colors.white, borderBottomColor: colors.light }]}>
               <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="arrow-back" size={24} color="#007AFF" />
-                <Text style={styles.backButtonText}>Back</Text>
+                <Ionicons name="arrow-back" size={24} color={colors.primary} />
+                <Text style={[styles.backButtonText, { color: colors.primary }]}>Back</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -393,13 +483,15 @@ export default function DocumentAnalyseScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   tab: {
     flex: 1,
@@ -412,22 +504,24 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#007AFF',
+    // borderBottomColor will be set dynamically
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
   },
   tabTextActive: {
-    color: '#007AFF',
+    // color will be set dynamically
   },
   backButtonContainer: {
-    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   backButton: {
     flexDirection: 'row',
@@ -437,7 +531,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
   },
   stepIndicator: {
     flexDirection: 'row',
@@ -445,9 +538,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 20,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   stepItem: {
     alignItems: 'center',
@@ -456,23 +552,25 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f0f0f0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   stepCircleActive: {
-    backgroundColor: '#E3F2FD',
+    // backgroundColor will be set dynamically
   },
   stepText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500',
   },
   stepLine: {
     width: 40,
     height: 2,
-    backgroundColor: '#e0e0e0',
     marginHorizontal: 8,
     marginBottom: 32,
   },
@@ -488,37 +586,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
+    borderRadius: 12,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   uploadTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
     marginTop: 20,
     marginBottom: 8,
+    textAlign: 'center',
   },
   uploadSubtitle: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 32,
+    textAlign: 'center',
   },
   selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   selectButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#E3F2FD',
     padding: 16,
     borderRadius: 12,
     marginTop: 32,
@@ -527,29 +634,30 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#1976D2',
     lineHeight: 20,
   },
   configCard: {
     flex: 1,
   },
   fileInfoCard: {
-    backgroundColor: '#fff',
     padding: 24,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   fileName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginTop: 12,
     textAlign: 'center',
   },
   fileSize: {
     fontSize: 14,
-    color: '#666',
     marginTop: 4,
   },
   changeFileButton: {
@@ -559,33 +667,32 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
     gap: 8,
   },
   changeFileText: {
     fontSize: 14,
-    color: '#007AFF',
     fontWeight: '500',
   },
   languageSection: {
-    backgroundColor: '#fff',
     padding: 20,
     borderRadius: 12,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 16,
   },
   languagePickerContainer: {
-    backgroundColor: '#f5f5f5',
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -596,13 +703,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
     paddingVertical: 16,
     borderRadius: 12,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   analyzeButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },
@@ -611,46 +721,133 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#e0e0e0',
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4CAF50',
     borderRadius: 4,
   },
   progressText: {
     textAlign: 'center',
     marginTop: 8,
     fontSize: 14,
-    color: '#666',
   },
   resultsCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   resultsHeader: {
     alignItems: 'center',
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
     marginBottom: 20,
   },
   resultsTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
     marginTop: 12,
   },
   resultsSubtitle: {
     fontSize: 14,
-    color: '#666',
     marginTop: 4,
   },
   explanationSection: {
     marginBottom: 24,
+  },
+  quickSummary: {
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    marginBottom: 20,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  summaryText: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  keyPointsContainer: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+  },
+  keyPointsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  keyPointsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  keyPointItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+    paddingLeft: 4,
+  },
+  keyPointText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  detailedExplanation: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  explanationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  explanationHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  readAloudButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  readAloudText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  paragraphContainer: {
+    marginBottom: 16,
+    paddingLeft: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -661,8 +858,8 @@ const styles = StyleSheet.create({
   explanationText: {
     fontSize: 16,
     lineHeight: 28,
-    color: '#333',
     textAlign: 'justify',
+    color: '#333', // Default color, will be overridden by theme
   },
   statsContainer: {
     flexDirection: 'row',
@@ -670,7 +867,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#f0f0f0',
     marginBottom: 24,
   },
   statBox: {
@@ -678,13 +874,11 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
     marginTop: 8,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
     marginTop: 4,
   },
   newAnalysisButton: {
@@ -694,12 +888,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 12,
     borderWidth: 2,
-    borderColor: '#007AFF',
     borderRadius: 12,
   },
   newAnalysisText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
   },
 });

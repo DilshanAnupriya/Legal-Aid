@@ -307,10 +307,32 @@ class DocumentController {
         const document = new Document(documentData);
         await document.save();
 
-        return res.status(500).json({
+        // Determine appropriate status code based on error type
+        let statusCode = 500;
+        let userMessage = 'AI explanation failed';
+
+        if (aiError.message.includes('overloaded') || aiError.message.includes('503')) {
+          statusCode = 503;
+          userMessage = 'AI service is currently busy. Please try again in a few moments.';
+        } else if (aiError.message.includes('quota') || aiError.message.includes('429')) {
+          statusCode = 429;
+          userMessage = 'AI service quota exceeded. Please try again later.';
+        } else if (aiError.message.includes('API key')) {
+          statusCode = 500;
+          userMessage = 'AI service configuration error. Please contact support.';
+        } else if (aiError.message.includes('safety')) {
+          statusCode = 400;
+          userMessage = 'Document content was blocked by safety filters. Please try with a different document.';
+        }
+
+        return res.status(statusCode).json({
           success: false,
-          message: 'AI explanation failed',
-          error: aiError.message
+          message: userMessage,
+          error: aiError.message,
+          errorType: statusCode === 503 ? 'service_overloaded' : 
+                     statusCode === 429 ? 'quota_exceeded' :
+                     statusCode === 400 ? 'content_blocked' : 'unknown',
+          documentId: document._id // Return document ID for potential retry
         });
       }
 
