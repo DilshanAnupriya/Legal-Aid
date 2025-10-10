@@ -30,7 +30,7 @@ export default function LawyerScreen() {
     "All",
     "Human Rights & Civil Liberties",
     "Women's Rights & Gender Justice",
-    "criminal Law",
+    "Criminal Law",
   ];
 
   // Effects

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet, Animated, Image, TouchableOpacity, LayoutAnimation, UIManager, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../../../context/AuthContext";
+import { useTheme } from "../../../../../context/ThemeContext";
 import axios from "axios";
 
 // Enable layout animation on Android
@@ -35,6 +36,7 @@ const RATING_POINTS = {
 
 const TierProgressSection = () => {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [totalPoints, setTotalPoints] = useState(0);
   const [currentTier, setCurrentTier] = useState("Community Ally");
   const [nextTierPoints, setNextTierPoints] = useState(0);
@@ -89,15 +91,15 @@ const TierProgressSection = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.white, shadowColor: colors.shadow }]}>
       {/* Tier Header */}
       <View style={styles.header}>
-        <View style={styles.badgeContainer}>
+        <View style={[styles.badgeContainer, { backgroundColor: colors.light, borderColor: colors.accent }]}>
           <Image source={{ uri: currentTierData.badge }} style={styles.badge} resizeMode="contain" />
         </View>
         <View style={styles.tierInfo}>
-          <Text style={[styles.tierTitle, { color: currentTierData.color }]}>{currentTier}</Text>
-          <Text style={styles.pointsText}>
+          <Text style={[styles.tierTitle, { color: colors.accent  }]}>{currentTier}</Text>
+          <Text style={[styles.pointsText, { color: colors.accent }]}>
             {totalPoints} points
             {nextTierPoints !== Infinity
               ? ` • ${pointsToNextTier} to next tier`
@@ -107,7 +109,7 @@ const TierProgressSection = () => {
       </View>
 
       {/* Progress Bar */}
-      <View style={styles.progressBackground}>
+      <View style={[styles.progressBackground, { backgroundColor: colors.darkgray }]}>
         <Animated.View
           style={[
             styles.progressBar,
@@ -123,8 +125,8 @@ const TierProgressSection = () => {
       </View>
 
       {/* All Tiers */}
-      <View style={styles.allTiersContainer}>
-        <Text style={styles.allTiersTitle}>All Tiers</Text>
+      <View style={[styles.allTiersContainer, { borderTopColor: colors.darkgray }]}>
+        <Text style={[styles.allTiersTitle, { color: colors.primary }]}>All Tiers</Text>
         <View style={styles.tierBadgesRow}>
           {TIERS.map((tier, index) => {
             const isUnlocked = totalPoints >= (index > 0 ? TIERS[index - 1].points : 0);
@@ -134,24 +136,22 @@ const TierProgressSection = () => {
                 <View
                   style={[
                     styles.smallBadgeContainer,
-                    isCurrent && styles.currentBadgeContainer,
-                    !isUnlocked && styles.lockedBadgeContainer,
+                    { backgroundColor: colors.light, borderColor: colors.darkgray },
+                    isCurrent && { borderColor: tier.color, backgroundColor: colors.light },
+                    !isUnlocked && { backgroundColor: colors.light, borderColor: colors.darkgray },
                   ]}
                 >
                   <Image
                     source={{ uri: tier.badge }}
-                    style={[styles.smallBadge, !isUnlocked && styles.lockedBadge]}
+                    style={[styles.smallBadge, !isUnlocked && { opacity: 0.3 }]}
                     resizeMode="contain"
                   />
                 </View>
-                <Text
-                  style={[styles.tierBadgeName, !isUnlocked && styles.lockedText]}
-                  numberOfLines={2}
-                >
+                <Text style={[styles.tierBadgeName, !isUnlocked && { color: colors.darkgray }]} numberOfLines={2}>
                   {tier.name}
                 </Text>
                 {tier.points !== Infinity && (
-                  <Text style={styles.tierBadgePoints}>{tier.points}pts</Text>
+                  <Text style={[styles.tierBadgePoints, { color: colors.secondary }]}>{tier.points}pts</Text>
                 )}
               </View>
             );
@@ -160,42 +160,38 @@ const TierProgressSection = () => {
       </View>
 
       {/* Expandable Rules Section */}
-      <TouchableOpacity style={styles.dropdownHeader} onPress={toggleExpand}>
-        <Text style={styles.dropdownTitle}>How to Earn & Lose Points</Text>
-        <Ionicons
-          name={expanded ? "chevron-up" : "chevron-down"}
-          size={22}
-          color="#495057"
-        />
+      <TouchableOpacity style={[styles.dropdownHeader, { borderTopColor: colors.darkgray }]} onPress={toggleExpand}>
+        <Text style={[styles.dropdownTitle, { color: colors.primary }]}>How to Earn & Lose Points</Text>
+        <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={22} color={colors.secondary} />
       </TouchableOpacity>
 
       {expanded && (
         <View style={styles.rulesContainer}>
-          <Text style={styles.rulesCategory}>⭐ Earn Points</Text>
+          <Text style={[styles.rulesCategory, { color: colors.primary }]}>⭐ Earn Points</Text>
           {Object.entries(POINTS_TABLE)
             .filter(([_, v]) => v > 0)
             .map(([key, value]) => (
               <View key={key} style={styles.ruleItem}>
                 <Ionicons name="add-circle" size={18} color="#28A745" />
-                <Text style={styles.ruleText}>{formatRuleName(key)} +{value}</Text>
+                <Text style={[styles.ruleText, { color: colors.primary }]}>{formatRuleName(key)} +{value}</Text>
               </View>
             ))}
 
-          <Text style={[styles.rulesCategory, { marginTop: 10 }]}>⚠️ Lose Points</Text>
+          <Text style={[styles.rulesCategory, { marginTop: 10, color: colors.primary }]}>⚠️ Lose Points</Text>
           {Object.entries(POINTS_TABLE)
             .filter(([_, v]) => v < 0)
             .map(([key, value]) => (
               <View key={key} style={styles.ruleItem}>
                 <Ionicons name="remove-circle" size={18} color="#DC3545" />
-                <Text style={styles.ruleText}>{formatRuleName(key)} {value}</Text>
+                <Text style={[styles.ruleText, { color: colors.primary }]}>{formatRuleName(key)} {value}</Text>
               </View>
             ))}
 
-          <Text style={[styles.rulesCategory, { marginTop: 10 }]}>⭐ Rating Bonuses</Text>
+          <Text style={[styles.rulesCategory, { marginTop: 10, color: colors.primary }]}>⭐ Rating Bonuses</Text>
           {Object.entries(RATING_POINTS).map(([stars, value]) => (
             <View key={stars} style={styles.ruleItem}>
               <Ionicons name="star" size={18} color="#FFC107" />
-              <Text style={styles.ruleText}>
+              <Text style={[styles.ruleText, { color: colors.primary }]}>
                 {stars}★ Rating → {value > 0 ? `+${value}` : value} points
               </Text>
             </View>
@@ -215,12 +211,10 @@ export default TierProgressSection;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     elevation: 3,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -230,59 +224,49 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#F8F9FA",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
     borderWidth: 2,
-    borderColor: "#E9ECEF",
   },
   badge: { width: 40, height: 40 },
   tierInfo: { flex: 1 },
   tierTitle: { fontSize: 20, fontWeight: "700", marginBottom: 4 },
-  pointsText: { fontSize: 13, color: "#666" },
+  pointsText: { fontSize: 13 },
   progressBackground: {
     height: 10,
-    backgroundColor: "#eee",
     borderRadius: 5,
     overflow: "hidden",
     marginBottom: 16,
   },
   progressBar: { height: 10, borderRadius: 5 },
-  allTiersContainer: { marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: "#E9ECEF" },
-  allTiersTitle: { fontSize: 14, fontWeight: "600", color: "#495057", marginBottom: 12 },
+  allTiersContainer: { marginTop: 8, paddingTop: 16, borderTopWidth: 1 },
+  allTiersTitle: { fontSize: 14, fontWeight: "600", marginBottom: 12 },
   tierBadgesRow: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap" },
   tierBadgeItem: { width: "18%", alignItems: "center", marginBottom: 8 },
   smallBadgeContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#F8F9FA",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 4,
     borderWidth: 2,
-    borderColor: "#E9ECEF",
   },
-  currentBadgeContainer: { borderColor: "#007AFF", borderWidth: 3, backgroundColor: "#E7F3FF" },
-  lockedBadgeContainer: { backgroundColor: "#F1F3F5", borderColor: "#DEE2E6" },
   smallBadge: { width: 28, height: 28 },
-  lockedBadge: { opacity: 0.3 },
-  tierBadgeName: { fontSize: 9, fontWeight: "600", color: "#495057", textAlign: "center", lineHeight: 11 },
-  tierBadgePoints: { fontSize: 8, color: "#868E96", marginTop: 2 },
-  lockedText: { color: "#ADB5BD" },
+  tierBadgeName: { fontSize: 9, fontWeight: "600", textAlign: "center", lineHeight: 11 },
+  tierBadgePoints: { fontSize: 8, marginTop: 2 },
   dropdownHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#E9ECEF",
     marginTop: 10,
+    borderTopWidth: 1,
   },
-  dropdownTitle: { fontSize: 14, fontWeight: "600", color: "#343A40" },
+  dropdownTitle: { fontSize: 14, fontWeight: "600" },
   rulesContainer: { paddingVertical: 8, marginTop: 4 },
-  rulesCategory: { fontWeight: "700", color: "#212529", marginBottom: 4 },
+  rulesCategory: { fontWeight: "700", marginBottom: 4 },
   ruleItem: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  ruleText: { marginLeft: 8, fontSize: 13, color: "#495057" },
+  ruleText: { marginLeft: 8, fontSize: 13 },
 });

@@ -19,6 +19,7 @@ import LawyerAppointmentsScreen from "@/components/ui/screen/widget/LawyerDashbo
 
 
 
+
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
@@ -127,6 +128,8 @@ export default function StackNavigator() {
                     headerShown: false,
                 }}
             />
+
+            
 
             
 

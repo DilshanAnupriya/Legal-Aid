@@ -416,7 +416,7 @@ const getAllLawyers = async (req, res) => {
     // Initial filter for approved lawyers only
     const filter = {
       role: 'lawyer',
-      lawyerStatus: 'pending'
+      lawyerStatus: 'accepted'
     };
 
     // Add category filter if provided

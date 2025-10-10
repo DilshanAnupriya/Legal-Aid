@@ -1,26 +1,31 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from "../../../../../context/ThemeContext";
 
 const AnalyticsSection = () => {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Analytics Overview</Text>
+    <View style={[styles.card, { backgroundColor: colors.white }]}>
+      <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+        Analytics Overview
+      </Text>
       <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>12</Text>
-          <Text style={styles.statLabel}>Users Helped</Text>
+        <View style={[styles.statBox, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>12</Text>
+          <Text style={[styles.statLabel, { color: colors.primary }]}>Users Helped</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>8h</Text>
-          <Text style={styles.statLabel}>Hours Volunteered</Text>
+        <View style={[styles.statBox, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>8h</Text>
+          <Text style={[styles.statLabel, { color: colors.secondary }]}>Hours Volunteered</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>5</Text>
-          <Text style={styles.statLabel}>Cases Resolved</Text>
+        <View style={[styles.statBox, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>5</Text>
+          <Text style={[styles.statLabel, { color: colors.secondary }]}>Cases Resolved</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>Family Law</Text>
-          <Text style={styles.statLabel}>Top Category</Text>
+        <View style={[styles.statBox, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>Family Law</Text>
+          <Text style={[styles.statLabel, { color: colors.secondary }]}>Top Category</Text>
         </View>
       </View>
     </View>
@@ -31,7 +36,6 @@ export default AnalyticsSection;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -41,7 +45,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#333',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -50,19 +53,17 @@ const styles = StyleSheet.create({
   },
   statBox: {
     width: '47%',
-    backgroundColor: '#F4F4F4',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   statValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222',
   },
   statLabel: {
     fontSize: 12,
-    color: '#777',
+    marginTop: 4,
   },
 });

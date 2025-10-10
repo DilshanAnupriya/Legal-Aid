@@ -225,6 +225,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation }) => {
             <Ionicons name="people" size={20} color={COLOR.light.orange} />
             <Text style={styles.actionButtonText}>Manage Users</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              if (navigation) {
+                navigation.navigate('AdminManageLawyers');
+              }
+            }}
+          >
+            <Ionicons name="people" size={20} color={COLOR.light.orange} />
+            <Text style={styles.actionButtonText}>Manage Lawyers</Text>
+          </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.actionButton}
