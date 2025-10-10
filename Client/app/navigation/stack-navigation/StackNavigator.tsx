@@ -14,8 +14,8 @@ import LawyerRegistrationForm from "@/components/ui/screen/LawyerRegistration";
 import LawyersTableAdmin from "@/components/modals/lawyersTableAdmin";
 import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
-import ChatScreen from "@/components/ui/screen/ChatScreen"; // Add this import
-
+import ChatScreen from "@/components/ui/screen/ChatScreen";
+import Doc from "@/components/ui/screen/DocumentGeneratorScreen";
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
@@ -108,6 +108,13 @@ export default function StackNavigator() {
                     headerShown: false, // Using custom header in ChatScreen
                 }}
             />
+            <Stack.Screen
+            name="DocumentGenerator"
+            component={Doc}
+            options={{
+                headerShown: false, // Using custom header in ChatScreen
+            }}
+        />
         </Stack.Navigator>
     );
 }

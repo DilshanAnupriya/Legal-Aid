@@ -17,12 +17,14 @@ import {
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { COLOR } from '@/constants/ColorPallet';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const API_URL = 'http://localhost:3000'; // Update with your server IP
 
 const ChatScreen = () => {
+    const navigation = useNavigation();
     const [messages, setMessages] = useState([
         {
             id: '1',
@@ -38,6 +40,8 @@ const ChatScreen = () => {
     const [showRecommendations, setShowRecommendations] = useState(false);
     const [hasShownRecommendations, setHasShownRecommendations] = useState(false);
     const [showNgoButton, setShowNgoButton] = useState(false);
+    const [showDocumentSuggestion, setShowDocumentSuggestion] = useState(false);
+    const [suggestedDocumentType, setSuggestedDocumentType] = useState(null);
     const flatListRef = useRef(null);
     const typingAnimation = useRef(new Animated.Value(0)).current;
 
@@ -67,8 +71,36 @@ const ChatScreen = () => {
     useEffect(() => {
         if (flatListRef.current && messages.length > 0) {
             setTimeout(() => {
+                // @ts-ignore
                 flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
+        }
+    }, [messages]);
+
+    // Document Detection Logic
+    useEffect(() => {
+        const lastUserMessage = messages.filter(m => m.sender === 'user').slice(-1)[0];
+        if (!lastUserMessage || showDocumentSuggestion) return;
+
+        const text = lastUserMessage.text.toLowerCase();
+
+        // Document trigger keywords
+        const documentTriggers = {
+            'complaint_letter': ['complaint', 'file complaint', 'complain', 'letter','create document'],
+            'affidavit': ['affidavit', 'sworn statement', 'oath'],
+            'notice': ['legal notice', 'send notice', 'notice'],
+            'petition': ['petition', 'file petition'],
+            'authorization_letter': ['authorization', 'authorize', 'power of attorney'],
+            'rental_agreement': ['rental', 'lease', 'rent agreement', 'tenancy']
+        };
+
+        for (const [docType, keywords] of Object.entries(documentTriggers)) {
+            if (keywords.some(keyword => text.includes(keyword))) {
+                // @ts-ignore
+                setSuggestedDocumentType(docType);
+                setShowDocumentSuggestion(true);
+                break;
+            }
         }
     }, [messages]);
 
@@ -244,7 +276,7 @@ const ChatScreen = () => {
         }
     };
 
-    const handleContactNGO = (ngo) => {
+    const handleContactNGO = (ngo:any) => {
         Alert.alert(
             'Contact NGO',
             `Would you like to contact ${ngo.name}?`,
@@ -264,6 +296,81 @@ const ChatScreen = () => {
             ]
         );
     };
+
+
+    const QuickActionButtons = () => (
+        <View style={styles.quickActionsContainer}>
+            <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsRow}>
+                <TouchableOpacity
+                    style={styles.quickActionButton}
+                    // @ts-ignore
+                    onPress={() => navigation.navigate('DocumentGenerator')}
+                >
+                    <Ionicons name="document-text" size={20} color={COLOR.light.primary} />
+                    <Text style={styles.quickActionText}>Generate{'\n'}Document</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.quickActionButton}
+                    onPress={fetchNGORecommendations}
+                >
+                    <Ionicons name="business" size={20} color={COLOR.light.primary} />
+                    <Text style={styles.quickActionText}>Find{'\n'}NGOs</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.quickActionButton}
+                    onPress={() => Alert.alert('Coming Soon', 'Lawyer directory feature coming soon!')}
+                >
+                    <Ionicons name="briefcase" size={20} color={COLOR.light.primary} />
+                    <Text style={styles.quickActionText}>Find{'\n'}Lawyer</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const DocumentSuggestionCard = () => (
+        <View style={styles.documentSuggestionCard}>
+            <View style={styles.docSuggestionHeader}>
+                <Ionicons name="document-text" size={24} color={COLOR.light.primary} />
+                <View style={styles.docSuggestionText}>
+                    <Text style={styles.docSuggestionTitle}>Need a Legal Document?</Text>
+                    <Text style={styles.docSuggestionSubtitle}>
+                        Generate professional legal documents instantly
+                    </Text>
+                </View>
+            </View>
+
+            <View style={styles.docSuggestionActions}>
+                <TouchableOpacity
+                    style={styles.docSuggestionButton}
+                    onPress={() => {
+                        setShowDocumentSuggestion(false);
+                        // @ts-ignore
+                        navigation.navigate('DocumentGenerator', {
+                            suggestedType: suggestedDocumentType
+                        });
+                    }}
+                >
+                    <LinearGradient
+                        colors={[COLOR.light.primary, COLOR.light.secondary]}
+                        style={styles.docSuggestionGradient}
+                    >
+                        <Ionicons name="create" size={18} color="#fff" />
+                        <Text style={styles.docSuggestionButtonText}>Generate Document</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.docDismissButton}
+                    onPress={() => setShowDocumentSuggestion(false)}
+                >
+                    <Text style={styles.docDismissText}>Maybe Later</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
 
     const FindNGOButton = () => (
         <View style={styles.findNgoButtonContainer}>
@@ -287,6 +394,8 @@ const ChatScreen = () => {
             </Text>
         </View>
     );
+
+    // @ts-ignore
 
     const NGORecommendationCard = ({ ngo }) => (
         <View style={styles.ngoCard}>
@@ -342,7 +451,9 @@ const ChatScreen = () => {
 
                         <TouchableOpacity
                             style={styles.detailsButton}
-                            onPress={() => Alert.alert('View Details', `More info about ${ngo.name}`)}
+                            // @ts-ignore
+                            onPress={() => navigation.navigate('NgoProfile', {ngoId: ngo._id,
+                                ngoName:ngo.name })}
                         >
                             <Text style={styles.detailsButtonText}>Details</Text>
                         </TouchableOpacity>
@@ -351,6 +462,7 @@ const ChatScreen = () => {
             </View>
         </View>
     );
+
 
     const NGORecommendationsSection = () => (
         <View style={styles.recommendationsSection}>
@@ -362,13 +474,15 @@ const ChatScreen = () => {
                             Recommended NGOs for You
                         </Text>
                         <Text style={styles.recommendationSubtitle}>
+                            {/*// @ts-ignore */}
                             {ngoRecommendations.recommendations.length} organizations can help
                         </Text>
                     </View>
                 </View>
-
+                {/*// @ts-ignore */}
                 {ngoRecommendations.analysis && (
                     <View style={styles.detectedCategories}>
+                        {/*// @ts-ignore */}
                         {ngoRecommendations.analysis.detectedCategories.slice(0, 2).map((cat, idx) => (
                             <View key={idx} style={styles.categoryTag}>
                                 <Text style={styles.categoryTagText}>{cat}</Text>
@@ -377,7 +491,7 @@ const ChatScreen = () => {
                     </View>
                 )}
             </View>
-
+            {/*// @ts-ignore */}
             {ngoRecommendations.recommendations.map((ngo) => (
                 <NGORecommendationCard key={ngo._id} ngo={ngo} />
             ))}
@@ -413,7 +527,7 @@ const ChatScreen = () => {
             </View>
         </View>
     );
-
+    {/*// @ts-ignore */}
     const renderMessage = ({ item, index }) => {
         const isUser = item.sender === 'user';
         const isSystem = item.sender === 'system';
@@ -508,12 +622,25 @@ const ChatScreen = () => {
                     contentContainerStyle={styles.messagesList}
                     showsVerticalScrollIndicator={false}
                     onContentSizeChange={() =>
+                    // @ts-ignore
                         flatListRef.current?.scrollToEnd({ animated: true })
                     }
                     ListFooterComponent={() => (
                         <>
                             {isTyping && <TypingIndicator />}
+
+                            {/* Show quick actions after initial message */}
+                            {messages.length >= 3 && !showNgoButton && !showRecommendations && !showDocumentSuggestion && (
+                                <QuickActionButtons />
+                            )}
+
+                            {/* Document suggestion */}
+                            {showDocumentSuggestion && <DocumentSuggestionCard />}
+
+                            {/* Existing NGO button */}
                             {showNgoButton && !showRecommendations && <FindNGOButton />}
+
+                            {/* Existing NGO recommendations */}
                             {showRecommendations && ngoRecommendations && (
                                 <NGORecommendationsSection />
                             )}
@@ -756,6 +883,108 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         backgroundColor: COLOR.light.primary,
     },
+    // Quick Actions Styles
+    quickActionsContainer: {
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    quickActionsTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#6B7280',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    quickActionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        gap: 12,
+    },
+    quickActionButton: {
+        flex: 1,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    quickActionText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#374151',
+        marginTop: 8,
+        textAlign: 'center',
+        lineHeight: 16,
+    },
+    // Document Suggestion Styles
+    documentSuggestionCard: {
+        backgroundColor: '#FEF3C7',
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 16,
+        marginBottom: 8,
+        borderWidth: 2,
+        borderColor: '#FCD34D',
+        elevation: 3,
+        shadowColor: '#F59E0B',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+    },
+    docSuggestionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 16,
+    },
+    docSuggestionText: {
+        flex: 1,
+    },
+    docSuggestionTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#92400E',
+        marginBottom: 4,
+    },
+    docSuggestionSubtitle: {
+        fontSize: 13,
+        color: '#78350F',
+    },
+    docSuggestionActions: {
+        gap: 10,
+    },
+    docSuggestionButton: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        elevation: 2,
+    },
+    docSuggestionGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+    },
+    docSuggestionButtonText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    docDismissButton: {
+        paddingVertical: 10,
+        alignItems: 'center',
+    },
+    docDismissText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#92400E',
+    },
     // NGO Recommendation Styles
     recommendationsSection: {
         marginTop: 16,
@@ -982,6 +1211,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         paddingHorizontal: 20,
     },
+    // Input Styles
     inputWrapper: {
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,

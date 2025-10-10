@@ -3,11 +3,36 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const cors = require("cors");
 const { MulterError } = require("multer");
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DB_URL;
 const apiKey = process.env.GEMINI_API_KEY;
+
+// ==================== AUTO-CREATE DIRECTORIES ====================
+const createRequiredDirectories = () => {
+  const directories = [
+    path.join(__dirname, 'uploads'),
+    path.join(__dirname, 'uploads', 'documents'),
+    path.join(__dirname, 'uploads', 'images'),
+    path.join(__dirname, 'uploads', 'profiles'),
+  ];
+
+  directories.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`✅ Created directory: ${dir}`);
+    }
+  });
+
+  console.log('✅ All required directories are ready!');
+};
+
+// Create directories on startup
+createRequiredDirectories();
+// ==================== END DIRECTORY CREATION ====================
 
 // CORS Configuration
 app.use(cors({
@@ -88,6 +113,8 @@ const documentRoutes = require('./Routes/documentRoutes');
 const adminRoutes = require('./Routes/adminRoutes');
 const notificationRoutes = require('./Routes/notificationRoutes');
 const ngoMatchingRoutes = require('./Routes/ngoMatchingRoutes');
+const documentGeneratorRoutes = require('./Routes/documentGeneratorRoutes'); // ✅ NEW
+
 // API Routes
 app.use("/api/ngo", ngoRoutes);
 app.use("/api/posts", postRoutes);
@@ -99,6 +126,8 @@ app.use('/api/documents', documentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ngo", ngoMatchingRoutes);
+app.use("/api/documents/generate", documentGeneratorRoutes); // ✅ NEW
+
 // ==================== GEMINI CHATBOT ROUTES ====================
 
 // Helper function to list available models
@@ -293,6 +322,9 @@ app.get("/", (req, res) => {
       lawyers: "/api/lawyers",
       appointments: "/api/appointments",
       documents: "/api/documents",
+      documentGenerator: "/api/documents/generate", // ✅ NEW
+      documentGeneratorTemplates: "/api/documents/generate/templates", // ✅ NEW
+      documentGeneratorPreview: "/api/documents/generate/preview", // ✅ NEW
       admin: "/api/admin",
       notifications: "/api/notifications",
       ngo: "/api/ngo",
@@ -345,11 +377,21 @@ app.use((req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n${'='.repeat(60)}`);
   console.log(`🚀 Server running at http://localhost:${PORT}`);
   console.log(`🌐 Server accessible at http://10.4.2.1:${PORT}`);
-  console.log(`💬 Chat endpoint: http://localhost:${PORT}/api/chat`);
-  console.log(`📋 Available models: http://localhost:${PORT}/api/chat/models`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-  console.log(`📚 API Documentation available at http://localhost:${PORT}`);
+  console.log(`${'='.repeat(60)}`);
+  console.log(`\n📡 ENDPOINTS:`);
+  console.log(`   💬 Chat: http://localhost:${PORT}/api/chat`);
+  console.log(`   📋 Chat Models: http://localhost:${PORT}/api/chat/models`);
+  console.log(`   📄 Document Generator: http://localhost:${PORT}/api/documents/generate`);
+  console.log(`   📝 Document Templates: http://localhost:${PORT}/api/documents/generate/templates`);
+  console.log(`   👁️  Document Preview: http://localhost:${PORT}/api/documents/generate/preview`);
+  console.log(`   🏥 Health Check: http://localhost:${PORT}/health`);
+  console.log(`   📚 API Docs: http://localhost:${PORT}`);
+  console.log(`\n${'='.repeat(60)}`);
   console.log(`🔑 Gemini API Key: ${apiKey ? '✅ Configured' : '❌ Not configured'}`);
+  console.log(`🗄️  MongoDB: ${mongoose.connection.readyState === 1 ? '✅ Connected' : '⏳ Connecting...'}`);
+  console.log(`📁 Upload Directories: ✅ Ready`);
+  console.log(`${'='.repeat(60)}\n`);
 });
