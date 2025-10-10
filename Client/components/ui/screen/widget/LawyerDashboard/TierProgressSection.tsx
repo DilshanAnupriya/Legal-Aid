@@ -43,8 +43,6 @@ const TierProgressSection = () => {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    let intervalId;
-
     const fetchUserData = async () => {
       try {
         const response = await axios.get(`http://localhost:3000/api/lawyers/${user.id}/tier`);
@@ -77,8 +75,7 @@ const TierProgressSection = () => {
     };
 
     fetchUserData();
-    intervalId = setInterval(fetchUserData, 500);
-    return () => clearInterval(intervalId);
+    // Removed auto-refresh interval - data will refresh when component remounts
   }, [user]);
 
   const pointsToNextTier = nextTierPoints - totalPoints;

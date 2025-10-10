@@ -924,12 +924,8 @@ const ForumsScreen = () => {
         };
 
         fetchNotifications();
-        
-        // Poll for new notifications every 30 seconds
-        const intervalId = setInterval(fetchNotifications, 30000);
-        
-        return () => clearInterval(intervalId);
-    }, [user]);
+        // Removed auto-refresh interval - manual refresh only
+    }, [user?.email]);
 
     // Handle notification click
     const handleNotificationClick = async (notification: Notification) => {
