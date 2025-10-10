@@ -186,11 +186,6 @@ export default function MenuScreen({ navigation }: { navigation?: any }) {
                         title="AI ChatBot Assist" 
                     />
                     <Menu.Item 
-                        leadingIcon="translate" 
-                        onPress={() => {}} 
-                        title="Languages"  
-                    />
-                    <Menu.Item 
                         leadingIcon="cog-outline" 
                         onPress={() => {}} 
                         title="Settings" 
