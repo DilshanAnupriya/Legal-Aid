@@ -27,7 +27,8 @@
     "multer-storage-cloudinary": "^4.0.0",
     "node-fetch": "^2.7.0",
     "pdf-parse": "^1.1.1",
-    "pdfkit": "^0.17.2"
+    "socket.io": "^4.8.1",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

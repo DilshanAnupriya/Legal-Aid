@@ -172,7 +172,7 @@ export default function NgoScreen({ navigation }) {
     };
 
     // Updated card press handler to navigate to profile
-    const handleCardPress = (item:any) => {
+    const handleCardPress = (item) => {
         console.log('NGO card pressed:', item.name);
 
         // Navigate to NGO Profile screen
