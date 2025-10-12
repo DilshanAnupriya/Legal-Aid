@@ -10,7 +10,9 @@ export const LightColors = {
   black: '#000000',
   textcol : '#ffffff',
   blue: '#3498db',
-  darkblue: '#1C2F42'
+  darkblue: '#1C2F42',
+  success :'#048607ff',
+  danger:"red"
 } as const;
 
 export const DarkColors = {
@@ -24,6 +26,8 @@ export const DarkColors = {
   shadow: 'rgba(255,255,255,0.1)',
   black: '#000000ff',
   textcol: '#ffffff',
+  success :'#048607ff',
+  danger:"red",
   darkblue: '#1C2F42'
 } as const;
 

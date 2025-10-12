@@ -1,12 +1,16 @@
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const { createNotification } = require('./notificationController');
+const { updateLawyerPoints } = require("../utils/lawyerPoints");
+const User = require("../models/User");
 
 // Add a comment to a post
 const addComment = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { content, author, isAnonymous } = req.body;
+    const { content, author, isAnonymous,authorEmail } = req.body;
+
+    console.log("req.body in comments : ",req.body)
 
     // Validation
     if (!content) {
@@ -45,16 +49,20 @@ const addComment = async (req, res) => {
       }
     );
 
+    // ✅ Award points if the commenter is a lawyer
+    if (!isAnonymous && authorEmail) {
+      const user = await User.findOne({ email: authorEmail });
+      if (user && user.role === 'lawyer') {
+        const pointsResult = await updateLawyerPoints(user._id, 'forum_reply');
+        console.log(`✅ Lawyer comment points updated:`, pointsResult);
+      }
+    }
+
     // Create notification if commenter is not the post author
     const commentAuthor = isAnonymous ? 'Anonymous User' : (author || 'Anonymous User');
     const commentAuthorEmail = req.body.authorEmail; // Get commenter's email
     
-    console.log('========== NOTIFICATION DEBUG ==========');
-    console.log('Post Author Email:', post.authorEmail);
-    console.log('Comment Author Email:', commentAuthorEmail);
-    console.log('Comment Author Name:', commentAuthor);
-    console.log('Is Anonymous:', isAnonymous);
-    console.log('Should create notification:', post.authorEmail && commentAuthorEmail !== post.authorEmail && !isAnonymous);
+    
     
     // Only create notification if:
     // 1. Post has an authorEmail (not anonymous)

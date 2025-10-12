@@ -11,12 +11,14 @@ import {
 import { getRecentAppointmentsForLawyer, updateAppointmentStatus } from "../../../../../service/appointmentSercive";
 import { useAuth } from "../../../../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
+import { useTheme } from "../../../../../context/ThemeContext";
 
-const AppointmentsSection = ({ onViewAll}) => {
+const AppointmentsSection = ({ onViewAll }) => {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-   const navigation = useNavigation();
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -35,7 +37,7 @@ const AppointmentsSection = ({ onViewAll}) => {
 
   const handleStatusChange = async (appointmentId, newStatus) => {
     try {
-      const result = await updateAppointmentStatus(appointmentId, newStatus);
+      await updateAppointmentStatus(appointmentId, newStatus);
       setAppointments((prev) =>
         prev.map((appt) =>
           appt._id === appointmentId ? { ...appt, status: newStatus } : appt
@@ -49,38 +51,38 @@ const AppointmentsSection = ({ onViewAll}) => {
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Recent Appointments</Text>
+    <View style={[styles.card, { backgroundColor: colors.white, shadowColor: colors.shadow }]}>
+      <Text style={[styles.sectionTitle, { color: colors.primary }]}>Recent Appointments</Text>
 
       {loading ? (
-        <ActivityIndicator size="small" color="#007AFF" />
+        <ActivityIndicator size="small" color={colors.accent} />
       ) : appointments.length === 0 ? (
-        <Text style={styles.noDataText}>No recent appointments found.</Text>
+        <Text style={[styles.noDataText, { color: colors.secondary }]}>No recent appointments found.</Text>
       ) : (
         <FlatList
           data={appointments}
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
-            <View style={styles.appointmentCard}>
+            <View style={[styles.appointmentCard, { backgroundColor: colors.light }]}>
               <View>
-                <Text style={styles.clientName}>{item.contactName || "Client"}</Text>
-                <Text style={styles.caseType}>{item.meetingType || "Consultation"}</Text>
-                <Text style={styles.time}>
+                <Text style={[styles.clientName, { color: colors.primary }]}>{item.contactName || "Client"}</Text>
+                <Text style={[styles.caseType, { color: colors.secondary }]}>{item.meetingType || "Consultation"}</Text>
+                <Text style={[styles.time, { color: colors.secondary }]}>
                   {new Date(item.date).toDateString()} – {item.time}
                 </Text>
               </View>
               <View style={styles.statusButtons}>
                 {item.status !== "Confirmed" && (
                   <TouchableOpacity
-                    style={[styles.statusButton, { backgroundColor: "#4CAF50" }]}
+                    style={[styles.statusButton, { backgroundColor: colors.success }]}
                     onPress={() => handleStatusChange(item._id, "Confirmed")}
                   >
-                    <Text style={styles.statusText}>Confirm</Text>
+                    <Text style={[styles.statusText]}>Confirm</Text>
                   </TouchableOpacity>
                 )}
                 {item.status !== "Cancelled" && (
                   <TouchableOpacity
-                    style={[styles.statusButton, { backgroundColor: "#FF3B30" }]}
+                    style={[styles.statusButton, { backgroundColor: colors.danger }]}
                     onPress={() => handleStatusChange(item._id, "Cancelled")}
                   >
                     <Text style={styles.statusText}>Cancel</Text>
@@ -93,8 +95,10 @@ const AppointmentsSection = ({ onViewAll}) => {
       )}
 
       <TouchableOpacity style={styles.viewAll} onPress={onViewAll}>
-        <Text style={styles.viewAllText} 
-        onPress={() => navigation.navigate("LawyerAppointmentsScreen")} >
+        <Text
+          style={[styles.viewAllText, { color: colors.accent }]}
+          onPress={() => navigation.navigate("LawyerAppointmentsScreen")}
+        >
           View All Appointments →
         </Text>
       </TouchableOpacity>
@@ -106,22 +110,22 @@ export default AppointmentsSection;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 12,
-    color: "#333",
   },
   appointmentCard: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "#F4F4F4",
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
@@ -129,14 +133,12 @@ const styles = StyleSheet.create({
   clientName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#222",
   },
   caseType: {
-    color: "#777",
+    fontSize: 13,
   },
   time: {
     fontSize: 12,
-    color: "#999",
   },
   statusButtons: {
     flexDirection: "column",
@@ -158,12 +160,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   viewAllText: {
-    color: "#007AFF",
     fontWeight: "500",
   },
   noDataText: {
     textAlign: "center",
-    color: "#666",
     marginVertical: 10,
   },
 });

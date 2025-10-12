@@ -216,6 +216,52 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+const updateLawyerStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lawyerStatus } = req.body;
+
+    // Validate status value
+    if (!["pending", "accepted", "rejected"].includes(lawyerStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be 'pending', 'accepted', or 'rejected'.",
+      });
+    }
+
+    // Update lawyer only (role check)
+    const lawyer = await User.findOneAndUpdate(
+      { _id: id, role: "lawyer" },
+      { lawyerStatus },
+      { new: true, select: "-password" }
+    );
+
+    if (!lawyer) {
+      return res.status(404).json({
+        success: false,
+        message: "Lawyer not found or user is not a lawyer.",
+      });
+    }
+
+    // Log admin action
+    console.log(
+      `Admin ${req.userDetails.email} changed lawyer ${lawyer.email} status to ${lawyerStatus}`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Lawyer status updated to '${lawyerStatus}'.`,
+      lawyer: lawyer.toJSON(),
+    });
+  } catch (error) {
+    console.error("Error updating lawyer status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error updating lawyer status.",
+    });
+  }
+};
+
 // @desc    Delete user (admin only)
 // @route   DELETE /api/admin/users/:id
 // @access  Admin
@@ -418,6 +464,7 @@ module.exports = {
   getAllNGOs,
   updateUserStatus,
   deleteUser,
-  getDashboardStats
+  getDashboardStats,
+  updateLawyerStatus
 };
 
