@@ -62,7 +62,7 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
 
   const navigateToChat = () => {
     console.log("navigate to chat pressed..");
-    navigation.navigate("ChatScreen");
+    // navigation.navigate("ChatScreen");
   };
 
   // Fetch notifications function

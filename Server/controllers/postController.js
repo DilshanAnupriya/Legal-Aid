@@ -1,5 +1,8 @@
 const Post = require('../models/Post');
 
+const User = require("../models/User");
+const { updateLawyerPoints } = require("../utils/lawyerPoints");
+
 // Create a new post
 const createPost = async (req, res) => {
   try {
@@ -12,10 +15,31 @@ const createPost = async (req, res) => {
         message: 'Title and description are required'
       });
     }
+    let authorId = null;
 
     // Determine author name
-    const author = isAnonymous ? 'Anonymous User' : (req.body.author || 'Anonymous User');
+    let author = isAnonymous ? 'Anonymous User' : (req.body.author || 'Anonymous User');
 
+    // 🔍 If not anonymous, find user by email
+    if (!isAnonymous && authorEmail) {
+      const user = await User.findOne({ email: authorEmail }).select('_id firstName lastName role');
+      console.log("user : ",user)
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User with provided email not found',
+        });
+      }
+
+      authorId = user._id;
+      
+      author = user.firstName
+        ? `${user.firstName} ${user.lastName || ''}`.trim()
+        : user.email;
+    }
+
+    console.log("author id : ",authorId)
     // Determine category from tags if not provided
     let postCategory = category || 'All';
     if (!category && tags && tags.length > 0) {
@@ -48,10 +72,17 @@ const createPost = async (req, res) => {
       tags: tags || [],
       category: postCategory,
       isAnonymous: isAnonymous || false,
-      priority: priority || 'medium'
+      priority: priority || 'medium',
     });
 
+    console.log("author id : ", authorId)
     const savedPost = await newPost.save();
+
+    // Add points for lawyer if not anonymous
+    if (!isAnonymous && authorId) {
+      const pointsResult = await updateLawyerPoints(authorId, "forum_post");
+      console.log("Lawyer points updated:", pointsResult);
+    }
 
     res.status(201).json({
       success: true,

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "../../../../../context/ThemeContext";
+import { COLOR } from "@/constants/ColorPallet";
 
 const { width } = Dimensions.get("window");
 
@@ -87,9 +88,7 @@ const LawyerCardWidget = ({
         <Text style={styles.gridSpecialization} numberOfLines={1}>
           {specialization}
         </Text>
-        <Text style={styles.gridSpecialization} numberOfLines={1}>
-          {experience} yrs experience
-        </Text>
+        
 
         {/* Tier Display */}
         <View style={styles.tierContainer}>
@@ -118,7 +117,7 @@ const LawyerCardWidget = ({
             <Text style={styles.buttonText}>Chat</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: "#007AFF" }]}
+            style={[styles.button, { backgroundColor: colors.secondary}]}
             onPress={() => onBook && onBook(item)}
           >
             <MaterialIcons name="event-available" size={16} color="#fff" />
@@ -191,7 +190,7 @@ const LawyerCardWidget = ({
               <Text style={styles.buttonText}>Chat</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.primary }]}
+              style={[styles.button, { backgroundColor: colors.secondary}]}
               onPress={() => onBook && onBook(item)}
             >
               <MaterialIcons name="event-available" size={16} color="#fff" />

@@ -1,5 +1,6 @@
 const User = require("../models/User");
 
+
 // Map of actions to point values
 const POINTS_TABLE = {
   forum_post: 10,

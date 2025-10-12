@@ -8,7 +8,8 @@ const {
   getAllNGOs,
   updateUserStatus,
   deleteUser,
-  getDashboardStats
+  getDashboardStats,
+  updateLawyerStatus
 } = require('../controllers/adminController');
 const { authenticateToken, requireAdmin } = require('../middleware/authmiddleware');
 
@@ -43,6 +44,12 @@ router.get('/ngos', authenticateToken, requireAdmin, getAllNGOs);
 // @route   PUT /api/admin/users/:id/status
 // @access  Admin only
 router.put('/users/:id/status', authenticateToken, requireAdmin, updateUserStatus);
+
+
+// @desc    Update lawyer status
+// @route   PUT /api/admin/users/:id/status
+// @access  Admin only
+router.put('/lawyers/:id/status', authenticateToken, requireAdmin, updateLawyerStatus);
 
 // @desc    Delete user
 // @route   DELETE /api/admin/users/:id
