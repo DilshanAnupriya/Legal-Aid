@@ -32,6 +32,7 @@ const Tab = createBottomTabNavigator();
 
 import LawyerDashboard from "@/components/ui/screen/LawyerDashboard";
 
+
 export default function HomeBottomTabNavigation({ navigation }: any) {
   const { colors, theme } = useTheme();
   const { user } = useAuth();

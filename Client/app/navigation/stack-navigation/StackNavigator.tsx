@@ -16,6 +16,8 @@ import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
 
 import Doc from "@/components/ui/screen/DocumentGeneratorScreen";
+import LawyerAppointmentsScreen from "@/components/ui/screen/widget/LawyerDashboard/LawyerAppointmentsScreen";
+
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
@@ -99,6 +101,13 @@ export default function StackNavigator() {
                 options={{
                     headerShown: false,
                 }}
+            />
+            <Stack.Screen
+            name="LawyerAppointmentsScreen"
+            component={LawyerAppointmentsScreen}
+            options={{
+                headerShown: false, // Using custom header in ChatScreen
+            }}
             />
 
             <Stack.Screen

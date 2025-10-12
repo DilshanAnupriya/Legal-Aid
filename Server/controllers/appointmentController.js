@@ -140,3 +140,36 @@ exports.updateAppointmentStatus = async (req, res) => {
     res.status(500).json({ message: "Failed to update status" });
   }
 };
+
+// Get all unique users (clients) related to a specific lawyer
+exports.getClientsForLawyer = async (req, res) => {
+  try {
+    const { lawyerId } = req.params;
+
+    // Find all appointments for this lawyer and populate user details
+    const appointments = await Appointment.find({ lawyer: lawyerId })
+      .populate('user', 'firstName lastName email contactNumber')
+      .select('user');
+
+    if (!appointments || appointments.length === 0) {
+      return res.status(404).json({ message: 'No clients found for this lawyer' });
+    }
+
+    // Extract unique users
+    const uniqueUsers = [];
+    const seen = new Set();
+
+    for (const appt of appointments) {
+      const user = appt.user;
+      if (user && !seen.has(user._id.toString())) {
+        seen.add(user._id.toString());
+        uniqueUsers.push(user);
+      }
+    }
+
+    res.status(200).json({ clients: uniqueUsers });
+  } catch (error) {
+    console.error("Error fetching clients for lawyer:", error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
