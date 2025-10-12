@@ -52,3 +52,14 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
   const response = await axios.put(`${APPOINTMENT_API_URL}/${appointmentId}/status`, { status });
   return response.data;
 };
+
+// ✅ Get all clients for a specific lawyer
+export const getClientsForLawyer = async (lawyerId) => {
+  try {
+    const res = await axios.get(`${APPOINTMENT_API_URL}/${lawyerId}/clients`);
+    return res.data.clients;
+  } catch (error) {
+    console.error("Error fetching clients for lawyer:", error);
+    throw error.response?.data || { message: "Error fetching clients" };
+  }
+};

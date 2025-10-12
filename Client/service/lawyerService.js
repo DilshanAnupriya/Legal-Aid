@@ -74,6 +74,7 @@ export const saveLawyerProfile = async (formData) => {
 // Fetch a lawyer's profile by ID
 export const getLawyerProfile = async (lawyerId) => {
   try {
+    console.log("here")
     const response = await axios.get(`${API_URL_LAWYER_PROFILE}/AddprofileDetails/${lawyerId}`,{
       timeout: 10000, // 10 second timeout
     });
@@ -84,6 +85,7 @@ export const getLawyerProfile = async (lawyerId) => {
     throw error;
   }
 };
+
 
 // Rate or review a lawyer
 export const rateLawyer = async (lawyerId, ratingData, token) => {

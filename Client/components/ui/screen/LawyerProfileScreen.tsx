@@ -1,570 +1,333 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
-    StyleSheet,
-    View,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    Alert,
-    StatusBar,
-    ActivityIndicator,
-    Dimensions
-} from 'react-native';
-import { useAuth } from '@/context/AuthContext';
-import { COLOR } from '@/constants/ColorPallet';
-import LawyerAdditionalDetails from './LawyerAdditionalDetails';
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Image,
+  Platform,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { COLOR } from "@/constants/ColorPallet";
+import { saveLawyerProfile, getLawyerProfile } from "../../../service/lawyerService";
+import { useAuth } from "@/context/AuthContext";
 
-const { width } = Dimensions.get('window');
+export default function LawyerAdditionalDetails() {
+  const { user } = useAuth();
+  const lawyerId = user?.id;
 
-interface LawyerProfileScreenProps {
-    navigation: any;
-}
+  const [profile, setProfile] = useState({
+    experience: 0,
+    aboutMe: "",
+    contactInfo: {
+      email: "",
+      phone: "",
+      officeLocation: "",
+      languages: [],
+    },
+  });
 
-export default function LawyerProfileScreen({ navigation }: LawyerProfileScreenProps) {
-    const { user, updateProfile, logout } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [profileData, setProfileData] = useState({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        specialization: user?.specialization || '',
-        contactNumber: user?.contactNumber || ''
-    });
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const specializationOptions = [
-        'Criminal Law',
-        'Civil Law',
-        'Family Law',
-        'Corporate Law',
-        'Immigration Law',
-        'Labor Law',
-        'Tax Law',
-        'Real Estate Law',
-        'Intellectual Property Law',
-        'Personal Injury Law',
-        'Environmental Law',
-        'Human Rights Law'
-    ];
-
-    useEffect(() => {
-        if (user) {
-            setProfileData({
-                firstName: user.firstName || '',
-                lastName: user.lastName || '',
-                specialization: user.specialization || '',
-                contactNumber: user.contactNumber || ''
-            });
-        }
-    }, [user]);
-
-    const handleSave = async () => {
-        if (!profileData.firstName.trim() || !profileData.lastName.trim() || 
-            !profileData.specialization.trim() || !profileData.contactNumber.trim()) {
-            Alert.alert('Error', 'Please fill in all required fields');
-            return;
-        }
-
+  // Fetch existing profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!lawyerId) return;
+      try {
         setIsLoading(true);
-        try {
-            await updateProfile(profileData);
-            setIsEditing(false);
-            Alert.alert('Success', 'Profile updated successfully');
-        } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update profile');
-        } finally {
-            setIsLoading(false);
+        const data = await getLawyerProfile(lawyerId);
+        if (data) {
+          setProfile({
+            experience: data.experience || 0,
+            aboutMe: data.aboutMe || "",
+            contactInfo: {
+              email: data.contactInfo?.email || "",
+              phone: data.contactInfo?.phone || "",
+              officeLocation: data.contactInfo?.officeLocation || "",
+              languages: data.contactInfo?.languages || [],
+            },
+          });
+
+          if (data.profilePicture) {
+            setProfilePicture({
+              uri: data.profilePicture,
+              isExisting: true,
+            });
+          }
         }
+      } catch (error) {
+        Alert.alert("Error", error.message || "Failed to fetch profile");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    const handleLogout = async () => {
-        try {
-            console.log('[LawyerProfile] User initiated logout');
-            console.log('[LawyerProfile] Starting logout process...');
-            await logout();
-            console.log('[LawyerProfile] Logout completed successfully');
-        } catch (error: any) {
-            console.error('[LawyerProfile] Logout error:', error);
-            Alert.alert('Error', error.message || 'Failed to logout');
-        }
-    };
+    fetchProfile();
+  }, [lawyerId]);
 
-    if (!user) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLOR.light.primary} />
-                <Text style={styles.loadingText}>Loading profile...</Text>
-            </View>
-        );
+  // Pick image from gallery
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Camera roll permissions are needed!");
+      return;
     }
 
-    return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={COLOR.light.primary} />
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
 
-            <ScrollView
-                style={styles.content}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-            >
-                {/* Header Banner */}
-                <View style={styles.headerBanner}>
-                    <View style={styles.headerContent}>
-                        <Text style={styles.headerTitle}>Lawyer Profile</Text>
-                        <TouchableOpacity
-                            style={styles.editButton}
-                            onPress={() => isEditing ? handleSave() : setIsEditing(true)}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator size="small" color="#FFFFFF" />
-                            ) : (
-                                <Text style={styles.editButtonText}>
-                                    {isEditing ? 'Save' : 'Edit'}
-                                </Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </View>
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      console.log("📸 Image selected:", asset);
 
-                {/* Basic Info Card with rounded top */}
-                <View style={styles.basicInfoContainer}>
-                    <View style={styles.profileHeader}>
-                        <View style={styles.avatarContainer}>
-                            <Text style={styles.avatarText}>
-                                {user.firstName?.[0] || user.email?.[0] || 'L'}
-                            </Text>
-                        </View>
-                        <View style={styles.nameContainer}>
-                            <Text style={styles.fullName}>
-                                {profileData.firstName && profileData.lastName 
-                                    ? `${profileData.firstName} ${profileData.lastName}`
-                                    : 'Complete Your Profile'
-                                }
-                            </Text>
-                            <Text style={styles.specialization}>
-                                {profileData.specialization || 'No Specialization'}
-                            </Text>
-                            <View style={styles.badgeContainer}>
-                                <View style={styles.userTypeBadge}>
-                                    <Text style={styles.userTypeText}>Legal Professional</Text>
-                                </View>
-                                <View style={[
-                                    styles.statusBadge,
-                                    user.status === 'active' && styles.activeStatus
-                                ]}>
-                                    <Text style={styles.statusText}>
-                                        {user.status?.toUpperCase() || 'PENDING'}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-                </View>
+      setProfilePicture({
+        uri: asset.uri,
+        isExisting: false,
+      });
+    }
+  };
 
-                {/* Professional Information Section */}
-                <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Professional Information</Text>
-                    
-                    <View style={styles.infoItem}>
-                        <Text style={styles.infoLabel}>First Name</Text>
-                        {isEditing ? (
-                            <TextInput
-                                style={styles.input}
-                                value={profileData.firstName}
-                                onChangeText={(text) => setProfileData(prev => ({ ...prev, firstName: text }))}
-                                placeholder="Enter first name"
-                                placeholderTextColor="#999"
-                            />
-                        ) : (
-                            <Text style={styles.infoValue}>{profileData.firstName || 'Not set'}</Text>
-                        )}
-                    </View>
+  const handleSave = async () => {
+    if (!profile.contactInfo.email || !profile.contactInfo.phone) {
+      Alert.alert("Error", "Email and phone are required.");
+      return;
+    }
 
-                    <View style={styles.infoItem}>
-                        <Text style={styles.infoLabel}>Last Name</Text>
-                        {isEditing ? (
-                            <TextInput
-                                style={styles.input}
-                                value={profileData.lastName}
-                                onChangeText={(text) => setProfileData(prev => ({ ...prev, lastName: text }))}
-                                placeholder="Enter last name"
-                                placeholderTextColor="#999"
-                            />
-                        ) : (
-                            <Text style={styles.infoValue}>{profileData.lastName || 'Not set'}</Text>
-                        )}
-                    </View>
+    if (!lawyerId) {
+      Alert.alert("Error", "User not found.");
+      return;
+    }
 
-                    <View style={styles.infoItem}>
-                        <Text style={styles.infoLabel}>Specialization</Text>
-                        {isEditing ? (
-                            <View style={styles.specializationContainer}>
-                                {specializationOptions.map((option) => (
-                                    <TouchableOpacity
-                                        key={option}
-                                        style={[
-                                            styles.specializationOption,
-                                            profileData.specialization === option && styles.selectedSpecializationOption
-                                        ]}
-                                        onPress={() => setProfileData(prev => ({ ...prev, specialization: option }))}
-                                    >
-                                        <Text style={[
-                                            styles.specializationOptionText,
-                                            profileData.specialization === option && styles.selectedSpecializationOptionText
-                                        ]}>
-                                            {option}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        ) : (
-                            <Text style={styles.infoValue}>{profileData.specialization || 'Not specified'}</Text>
-                        )}
-                    </View>
-                </View>
+    try {
+      setIsLoading(true);
 
-                {/* Contact Information Section */}
-                <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Contact Information</Text>
-                    
-                    <View style={styles.contactItem}>
-                        <Text style={styles.contactLabel}>Email:</Text>
-                        <Text style={styles.contactValue}>{user.email}</Text>
-                    </View>
+      const formData = new FormData();
 
-                    <View style={styles.contactItem}>
-                        <Text style={styles.contactLabel}>Phone:</Text>
-                        {isEditing ? (
-                            <TextInput
-                                style={[styles.input, styles.contactInput]}
-                                value={profileData.contactNumber}
-                                onChangeText={(text) => setProfileData(prev => ({ ...prev, contactNumber: text }))}
-                                placeholder="Enter contact number"
-                                placeholderTextColor="#999"
-                                keyboardType="phone-pad"
-                            />
-                        ) : (
-                            <Text style={styles.contactValue}>{profileData.contactNumber || 'Not set'}</Text>
-                        )}
-                    </View>
-                </View>
+      // Append text fields
+      formData.append("lawyerId", String(lawyerId));
+      formData.append("experience", String(profile.experience));
+      formData.append("aboutMe", profile.aboutMe);
+      formData.append("contactInfo", JSON.stringify(profile.contactInfo));
 
-                {/* Account Information Section */}
-                <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Account Information</Text>
-                    
-                    <View style={styles.detailItem}>
-                        <Text style={styles.detailLabel}>Member Since:</Text>
-                        <Text style={styles.detailValue}>
-                            {new Date(user.createdAt).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                            })}
-                        </Text>
-                    </View>
+      // 🔥 FIXED: Append image only if new (using fetch + blob like your friend's code)
+      if (profilePicture && !profilePicture.isExisting) {
+        try {
+          // Fetch the image as a blob (this is the key difference!)
+          const response = await fetch(profilePicture.uri);
+          const blob = await response.blob();
+          
+          // Append the blob directly with a filename
+          formData.append("profilePicture", blob, `profile_${lawyerId}.jpg`);
+          
+          console.log("📤 Uploading new profile picture");
+        } catch (fetchError) {
+          console.error("❌ Error fetching image:", fetchError);
+          throw new Error("Failed to process image");
+        }
+        
+      } else if (profilePicture?.isExisting) {
+        console.log("ℹ️ Existing profile picture preserved, no upload needed.");
+      } else {
+        console.log("ℹ️ No profile picture provided.");
+      }
 
-                    {user.updatedAt && (
-                        <View style={styles.detailItem}>
-                            <Text style={styles.detailLabel}>Last Updated:</Text>
-                            <Text style={styles.detailValue}>
-                                {new Date(user.updatedAt).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
-                            </Text>
-                        </View>
-                    )}
-                </View>
+      const result = await saveLawyerProfile(formData);
+      console.log("✅ Server response:", result);
+      Alert.alert("Success", "Profile saved successfully!");
+    } catch (error) {
+      console.error("❌ Save error:", error);
+      Alert.alert("Error", error.message || "Failed to save profile.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-                {/* Additional Details Section */}
-                <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>More Details</Text>
-                    <LawyerAdditionalDetails lawyerId={user.id} />
-                </View>
+  const handleChange = (field, value) => {
+    if (field.startsWith("contactInfo.")) {
+      const key = field.split(".")[1];
+      setProfile((prev) => ({
+        ...prev,
+        contactInfo: { ...prev.contactInfo, [key]: value },
+      }));
+    } else {
+      setProfile((prev) => ({ ...prev, [field]: value }));
+    }
+  };
 
-                {/* Action Buttons */}
-                <View style={styles.actionButtonsContainer}>
-                    {isEditing && (
-                        <TouchableOpacity
-                            style={[styles.actionButton, styles.secondaryButton]}
-                            onPress={() => {
-                                setIsEditing(false);
-                                setProfileData({
-                                    firstName: user?.firstName || '',
-                                    lastName: user?.lastName || '',
-                                    specialization: user?.specialization || '',
-                                    contactNumber: user?.contactNumber || ''
-                                });
-                            }}
-                        >
-                            <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Cancel</Text>
-                        </TouchableOpacity>
-                    )}
-                    
-                    <TouchableOpacity   
-                        style={styles.actionButton}
-                        onPress={handleLogout}
-                    >
-                        <Text style={styles.actionButtonText}>Logout</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
+  const toggleLanguage = (lang) => {
+    setProfile((prev) => {
+      const exists = prev.contactInfo.languages.includes(lang);
+      const newLangs = exists
+        ? prev.contactInfo.languages.filter((l) => l !== lang)
+        : [...prev.contactInfo.languages, lang];
+      return {
+        ...prev,
+        contactInfo: { ...prev.contactInfo, languages: newLangs },
+      };
+    });
+  };
+
+  const languageOptions = ["English", "Sinhala", "Tamil"];
+
+  return (
+    <ScrollView style={styles.container}>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={COLOR.light.primary} />
         </View>
-    );
+      )}
+
+      {/* Profile Picture */}
+      <View style={styles.profileImageContainer}>
+        {profilePicture?.uri ? (
+          <Image source={{ uri: profilePicture.uri }} style={styles.profileImage} />
+        ) : (
+          <View style={[styles.profileImage, styles.placeholder]}>
+            <Text style={styles.placeholderText}>No Image</Text>
+          </View>
+        )}
+        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+          <Text style={styles.uploadText}>
+            {profilePicture ? "Change Picture" : "Upload Picture"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* About Me */}
+      <View style={styles.field}>
+        <Text style={styles.label}>About Me</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Tell us about yourself"
+          value={profile.aboutMe}
+          onChangeText={(text) => handleChange("aboutMe", text)}
+          multiline
+          numberOfLines={4}
+        />
+      </View>
+
+      {/* Experience */}
+      <View style={styles.field}>
+        <Text style={styles.label}>Experience (Years)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="0"
+          keyboardType="numeric"
+          value={profile.experience?.toString()}
+          onChangeText={(text) => handleChange("experience", Number(text) || 0)}
+        />
+      </View>
+
+      {/* Contact Info */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Contact Information</Text>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Email *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={profile.contactInfo.email}
+            onChangeText={(text) => handleChange("contactInfo.email", text)}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Phone *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Phone"
+            keyboardType="phone-pad"
+            value={profile.contactInfo.phone}
+            onChangeText={(text) => handleChange("contactInfo.phone", text)}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Office Location</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Location"
+            value={profile.contactInfo.officeLocation}
+            onChangeText={(text) => handleChange("contactInfo.officeLocation", text)}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Languages</Text>
+          <View style={styles.languagesContainer}>
+            {languageOptions.map((lang) => (
+              <TouchableOpacity
+                key={lang}
+                style={[
+                  styles.languageButton,
+                  profile.contactInfo.languages.includes(lang) && styles.languageSelected,
+                ]}
+                onPress={() => toggleLanguage(lang)}
+              >
+                <Text
+                  style={[
+                    styles.languageText,
+                    profile.contactInfo.languages.includes(lang) && styles.languageTextSelected,
+                  ]}
+                >
+                  {lang}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+        onPress={handleSave}
+        disabled={isLoading}
+      >
+        <Text style={styles.saveButtonText}>{isLoading ? "Saving..." : "Save Profile"}</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8F9FA',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F8F9FA',
-    },
-    loadingText: {
-        marginTop: 10,
-        fontSize: 16,
-        color: '#666',
-    },
-    content: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingBottom: 50,
-    },
-    headerBanner: {
-        backgroundColor: COLOR.light.primary,
-        paddingTop: 50,
-        paddingBottom: 40,
-        paddingHorizontal: 16,
-    },
-    headerContent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        color: '#FFFFFF',
-        fontSize: 24,
-        fontWeight: 'bold',
-    },
-    editButton: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 8,
-        minWidth: 70,
-        alignItems: 'center',
-    },
-    editButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    basicInfoContainer: {
-        backgroundColor: '#FFFFFF',
-        padding: 16,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        marginTop: -20,
-        position: 'relative',
-        zIndex: 1,
-    },
-    profileHeader: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-    },
-    avatarContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: COLOR.light.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    avatarText: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-        textTransform: 'uppercase',
-    },
-    nameContainer: {
-        flex: 1,
-    },
-    fullName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 4,
-    },
-    specialization: {
-        fontSize: 16,
-        color: COLOR.light.primary,
-        marginBottom: 8,
-    },
-    badgeContainer: {
-        flexDirection: 'row',
-        gap: 8,
-        flexWrap: 'wrap',
-    },
-    userTypeBadge: {
-        backgroundColor: '#8E44AD',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    userTypeText: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    statusBadge: {
-        backgroundColor: '#E74C3C',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    activeStatus: {
-        backgroundColor: '#27AE60',
-    },
-    statusText: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    sectionContainer: {
-        backgroundColor: '#FFFFFF',
-        marginHorizontal: 16,
-        marginVertical: 8,
-        padding: 16,
-        borderRadius: 12,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 12,
-    },
-    infoItem: {
-        marginBottom: 16,
-    },
-    infoLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 6,
-    },
-    infoValue: {
-        fontSize: 16,
-        color: '#444',
-        lineHeight: 22,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#DDD',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        fontSize: 16,
-        backgroundColor: '#F8F9FA',
-        color: '#333',
-    },
-    specializationContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 4,
-    },
-    specializationOption: {
-        borderWidth: 1,
-        borderColor: '#DDD',
-        borderRadius: 20,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-    },
-    selectedSpecializationOption: {
-        backgroundColor: COLOR.light.primary,
-        borderColor: COLOR.light.primary,
-    },
-    specializationOptionText: {
-        fontSize: 14,
-        color: '#666',
-    },
-    selectedSpecializationOptionText: {
-        color: '#FFFFFF',
-        fontWeight: '600',
-    },
-    contactItem: {
-        flexDirection: 'row',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F1F1F1',
-        alignItems: 'center',
-    },
-    contactLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        width: 80,
-    },
-    contactValue: {
-        fontSize: 16,
-        color: COLOR.light.primary,
-        flex: 1,
-    },
-    contactInput: {
-        flex: 1,
-        marginLeft: 0,
-        paddingVertical: 8,
-    },
-    detailItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 6,
-    },
-    detailLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        width: 130,
-    },
-    detailValue: {
-        fontSize: 16,
-        color: '#444',
-        flex: 1,
-    },
-    actionButtonsContainer: {
-        flexDirection: 'row',
-        paddingHorizontal: 16,
-        paddingVertical: 20,
-        gap: 12,
-    },
-    actionButton: {
-        flex: 1,
-        backgroundColor: '#E74C3C',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    secondaryButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: '#6C757D',
-    },
-    actionButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    secondaryButtonText: {
-        color: '#6C757D',
-    },
+  container: { flex: 1, padding: 20, backgroundColor: COLOR.light.light },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: "center", alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.8)",
+    zIndex: 999,
+  },
+  profileImageContainer: { alignItems: "center", marginBottom: 20 },
+  profileImage: { width: 120, height: 120, borderRadius: 60, backgroundColor: "#EEE" },
+  placeholder: { justifyContent: "center", alignItems: "center" },
+  placeholderText: { color: "#777" },
+  uploadButton: { marginTop: 10, backgroundColor: COLOR.light.primary, padding: 8, borderRadius: 8, paddingHorizontal: 16 },
+  uploadText: { color: "#fff", fontWeight: "600" },
+  section: { marginTop: 20, padding: 15, backgroundColor: "#fff", borderRadius: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  field: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 6, color: "#333" },
+  input: { borderWidth: 1, borderColor: "#DDD", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#F8F9FA", fontSize: 14 },
+  textArea: { height: 100, textAlignVertical: "top", paddingTop: 10 },
+  languagesContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  languageButton: { borderWidth: 1, borderColor: "#DDD", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 8 },
+  languageSelected: { backgroundColor: COLOR.light.primary, borderColor: COLOR.light.primary },
+  languageText: { color: "#666" },
+  languageTextSelected: { color: "#fff", fontWeight: "600" },
+  saveButton: { marginTop: 20, marginBottom: 40, backgroundColor: COLOR.light.primary, paddingVertical: 14, borderRadius: 8, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
+  saveButtonDisabled: { opacity: 0.6 },
+  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

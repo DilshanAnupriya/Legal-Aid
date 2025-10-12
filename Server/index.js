@@ -114,6 +114,7 @@ const adminRoutes = require('./Routes/adminRoutes');
 const notificationRoutes = require('./Routes/notificationRoutes');
 const ngoMatchingRoutes = require('./Routes/ngoMatchingRoutes');
 const documentGeneratorRoutes = require('./Routes/documentGeneratorRoutes'); // ✅ NEW
+const LawyerProfile = require('./Routes/lawyerProfileRoutes');
 
 // API Routes
 app.use("/api/ngo", ngoRoutes);
@@ -127,6 +128,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ngo", ngoMatchingRoutes);
 app.use("/api/documents/generate", documentGeneratorRoutes); // ✅ NEW
+app.use("/api/lawyers/AddprofileDetails",LawyerProfile)
 
 // ==================== GEMINI CHATBOT ROUTES ====================
 
