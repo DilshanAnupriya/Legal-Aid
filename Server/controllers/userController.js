@@ -397,9 +397,81 @@ const getAllowedUpdateFields = (role) => {
 // Add this to ngoController.js instead
 // This is just a reference for the new controller method needed
 
+
+// @desc    Get all lawyers
+// @route   GET /api/lawyers
+// @access  Public (or protect if needed)
+const getAllLawyers = async (req, res) => {
+  try {
+    const {
+      searchText = '',
+      page = 1,
+      size = 10,
+      category = ''
+    } = req.query;
+
+    const pageNumber = parseInt(page);
+    const pageSize = parseInt(size);
+
+    // Initial filter for approved lawyers only
+    const filter = {
+      role: 'lawyer',
+      lawyerStatus: 'pending'
+    };
+
+    // Add category filter if provided
+    if (category) {
+      filter.specialization = category;
+    }
+
+    // Add search filters
+    if (searchText) {
+      filter.$or = [
+        { firstName: { $regex: searchText, $options: 'i' } },
+        { lastName: { $regex: searchText, $options: 'i' } },
+        { specialization: { $regex: searchText, $options: 'i' } }
+      ];
+    }
+
+    // Count total matching lawyers
+    const total = await User.countDocuments(filter);
+
+    // Fetch paginated lawyers
+    const lawyers = await User.find(filter)
+      .sort({ createdAt: -1 }) // Newest first
+      .skip((pageNumber - 1) * pageSize)
+      .limit(pageSize)
+      .select('-password'); // exclude password
+
+    const totalPages = Math.ceil(total / pageSize);
+
+    return res.status(200).json({
+      message: 'list',
+      data: lawyers.map((lawyer) => lawyer.toJSON()),
+      pagination: {
+        count: total,
+        currentPage: pageNumber,
+        totalPages,
+        hasNext: pageNumber < totalPages,
+        hasPrev: pageNumber > 1
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching lawyers:', error);
+    return res.status(500).json({
+      message: 'error',
+      error: error.message
+    });
+  }
+};
+
+
+
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
-  updateUserProfile
+  updateUserProfile,
+  getAllLawyers,
+  
 };

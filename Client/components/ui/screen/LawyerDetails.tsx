@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, ScrollView, StatusBar, SafeAreaView } from "react-native";
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  StatusBar,
+  SafeAreaView,
+} from "react-native";
 
 // Import custom components
 import LawyerProfileHeader from "@/components/ui/screen/widget/LawyerProfile/LawyerProfileHeaderWidget";
@@ -8,70 +14,44 @@ import LawyerProfileAbout from "@/components/ui/screen/widget/LawyerProfile/Lawy
 import LawyerProfileContact from "@/components/ui/screen/widget/LawyerProfile/LawyerProfileContactWidget";
 import LawyerProfileAvailability from "@/components/ui/screen/widget/LawyerProfile/LawyerProfileAvailabilityWidget";
 import LawyerProfileSpecialization from "@/components/ui/screen/widget/LawyerProfile/LawyerProfileSpecializationWidget";
+import LawyerRatingReviewWidget from "@/components/ui/screen/widget/LawyerProfile/LawyerRatingReviewWidget";
+
+import { getLawyerProfile } from "@/service/lawyerService";
 
 export default function LawyerProfile({ route }) {
   const [lawyerData, setLawyerData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Get lawyer ID from route params
   const lawyerId = route?.params?.lawyerId;
+  console.log("lawyer id 1: ", lawyerId);
 
   useEffect(() => {
     fetchLawyerProfile();
   }, [lawyerId]);
 
-  const fetchLawyerProfile = async () => {
-    setLoading(true);
+  const fetchLawyerProfile = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      // Replace with actual API call
-      // const response = await getLawyerById(lawyerId);
-      // setLawyerData(response.data);
-      
-      // Mock data for now
+      const data = await getLawyerProfile(lawyerId);
+      console.log("data : ",data)
+
       setLawyerData({
-        id: 1,
-        name: "Advocate Anura Silva",
-        specialty: "Family Law & Divorce Attorney",
-        rating: 4.8,
-        reviewCount: 127,
-        experience: 15,
-        clientWinRate: 88,
-        responseTime: 92,
-        successRate: 90,
-        bio: "With over 15 years of experience in family law, I specialize in helping individuals and families navigate some of life's most challenging and compassionate and sensitive. My practice focuses on divorce proceedings, child custody arrangements, and domestic relations matters.\n\nI am committed to providing accessible legal services to marginalized communities and believe that everyone deserves quality legal representation regardless of their financial situation. I offer both traditional consultation services and anonymous chat options to ensure clients feel comfortable seeking guidance.\n\nFluent in Sinhala, Tamil, and English, I ensure clear communication with all my clients throughout the legal process.",
-        contactInfo: {
-          email: "Available through platform messaging",
-          hotline: "24/7 Emergency Support",
-          office: "Colombo, Western Province",
-          languages: "Sinhala, Tamil, English"
-        },
+        ...data,
         availability: [
-          { day: 'Mon', date: 26, available: false },
-          { day: 'Tue', date: 27, available: true },
-          { day: 'Wed', date: 28, available: true },
-          { day: 'Thu', date: 29, available: true },
-          { day: 'Fri', date: 30, available: false },
-          { day: 'Sat', date: 31, available: true },
-          { day: 'Sun', date: 1, available: true }
+          { day: "Mon", date: 26, available: false },
+          { day: "Tue", date: 27, available: true },
+          { day: "Wed", date: 28, available: true },
+          { day: "Thu", date: 29, available: true },
+          { day: "Fri", date: 30, available: false },
+          { day: "Sat", date: 31, available: true },
+          { day: "Sun", date: 1, available: true },
         ],
-        specializations: [
-          {
-            title: 'Divorce & Separation',
-            description: 'Contested and uncontested divorces, legal separation agreements'
-          },
-          {
-            title: 'Child Custody',
-            description: 'Custody arrangements, visitation rights, child support'
-          },
-          {
-            title: 'Domestic Violence',
-            description: 'Protection orders, restraining orders, legal advocacy'
-          },
-          {
-            title: 'Property Division',
-            description: 'Asset distribution, property settlements, financial agreements'
-          }
-        ]
       });
     } catch (error) {
       console.error("Error fetching lawyer profile:", error);
@@ -108,9 +88,8 @@ export default function LawyerProfile({ route }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      <ScrollView 
-     
+
+      <ScrollView
         showsVerticalScrollIndicator={true}
         bounces={true}
         scrollEnabled={true}
@@ -119,9 +98,9 @@ export default function LawyerProfile({ route }) {
       >
         {/* Header Section */}
         <LawyerProfileHeader
-          name={lawyerData.name}
-          specialty={lawyerData.specialty}
-          rating={lawyerData.rating}
+          name={`${lawyerData.lawyerDetails.firstName} ${lawyerData.lawyerDetails.lastName}`}
+          specialty={lawyerData.lawyerDetails.specialization}
+          rating={lawyerData.lawyerDetails.rating}
           reviewCount={lawyerData.reviewCount}
           onStartChat={handleStartChat}
           onBookConsultation={handleBookConsultation}
@@ -136,14 +115,10 @@ export default function LawyerProfile({ route }) {
         />
 
         {/* About Section */}
-        <LawyerProfileAbout
-          bio={lawyerData.bio}
-        />
+        <LawyerProfileAbout bio={lawyerData.aboutMe} />
 
         {/* Contact Information Section */}
-        <LawyerProfileContact
-          contactInfo={lawyerData.contactInfo}
-        />
+        <LawyerProfileContact contactInfo={lawyerData.contactInfo} />
 
         {/* Availability Section */}
         <LawyerProfileAvailability
@@ -153,7 +128,16 @@ export default function LawyerProfile({ route }) {
 
         {/* Specialization Section */}
         <LawyerProfileSpecialization
-          specializations={lawyerData.specializations}
+          specializations={[
+            { title: lawyerData.lawyerDetails.specialization, description: "" },
+          ]}
+        />
+
+        {/* Rating & Reviews Section */}
+        <LawyerRatingReviewWidget
+          lawyerId={lawyerId}
+          rating={lawyerData.rating}
+          reviews={lawyerData.reviews}
         />
       </ScrollView>
     </SafeAreaView>
@@ -163,12 +147,12 @@ export default function LawyerProfile({ route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
-  
+
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

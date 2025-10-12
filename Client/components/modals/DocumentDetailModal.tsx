@@ -22,14 +22,13 @@ import {
   isImageFile,
   getReadableFileType
 } from '@/utils/documentUtils';
+import { useTheme } from '@/context/ThemeContext';
 
 interface DocumentDetailModalProps {
   visible: boolean;
   document: Document | null;
   onClose: () => void;
   onDelete?: (documentId: string) => void;
-  theme: string;
-  colors: any;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -39,9 +38,8 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   document,
   onClose,
   onDelete,
-  theme,
-  colors,
 }) => {
+  const { theme, colors } = useTheme();
   const [ocrText, setOcrText] = useState<string>('');
   const [loadingOCR, setLoadingOCR] = useState(false);
   const [showOCRText, setShowOCRText] = useState(false);
@@ -163,7 +161,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     >
       <View style={[styles.container, { backgroundColor: colors.light }]}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.white }]}>
+        <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.light }]}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color={colors.primary} />
           </TouchableOpacity>
@@ -253,7 +251,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
           </View>
 
           {/* OCR Text Section */}
-          {(isImageFile(document.mimeType) || document.ocrText) && (
+          {isImageFile(document.mimeType) && (
             <View style={[styles.ocrCard, { backgroundColor: colors.white }]}>
               <View style={styles.ocrHeader}>
                 <View style={styles.ocrTitleContainer}>
@@ -328,7 +326,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingTop: 60, // Account for status bar
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   closeButton: {
     padding: 8,
@@ -378,13 +380,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   fileName: {
     fontSize: 18,
@@ -444,13 +443,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   ocrHeader: {
     flexDirection: 'row',

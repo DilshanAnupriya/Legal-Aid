@@ -1,4 +1,6 @@
 import Lawyer from "../models/Lawyer.js";
+import User from "../models/User.js";
+import  { updateLawyerPointsFromRating, calculateAverageRating } from "../utils/lawyerPoints.js";
 
 import jwt from "jsonwebtoken";
 
@@ -152,5 +154,142 @@ export const searchLawyers = async (req, res) => {
     res.json({ message: "search", data: lawyers });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+
+// @desc    Submit a review for a lawyer
+// @route   POST /api/lawyers/:lawyerId/review
+// @access  Private (authenticated users)
+export const rateLawyer = async (req, res) => {
+  try {
+    const { lawyerId } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.userDetails._id; // assuming auth middleware sets req.userDetails
+   
+    // Validate input
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be a number between 1 and 5',
+      });
+    }
+
+    // Find the lawyer
+    const lawyer = await User.findById(lawyerId);
+    if (!lawyer || lawyer.role !== 'lawyer') {
+      return res.status(404).json({ success: false, message: 'Lawyer not found' });
+    }
+
+    // Optional: Check if user already reviewed the lawyer
+    const existingReviewIndex = lawyer.reviews.findIndex(
+      (r) => r.userId && r.userId.toString() === userId.toString()
+    );
+
+    if (existingReviewIndex >= 0) {
+      // Update existing review
+      lawyer.reviews[existingReviewIndex].rating = rating;
+      lawyer.reviews[existingReviewIndex].comment = comment || '';
+    } else {
+      // Add new review
+      lawyer.reviews.push({ userId, rating, comment });
+    }
+
+    // Update average rating
+    lawyer.rating =
+      lawyer.reviews.reduce((acc, r) => acc + r.rating, 0) / lawyer.reviews.length;
+
+    await lawyer.save();
+
+    // Update points based on rating
+    const pointsResult = await updateLawyerPointsFromRating(lawyerId, rating);
+    // Recalculate average rating
+    const ratingResult = await calculateAverageRating(lawyerId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Review submitted successfully',
+      reviews: lawyer.reviews,
+      rating: lawyer.rating,
+    });
+  } catch (error) {
+    console.error('Error rating lawyer:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while submitting review',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get all reviews for a specific lawyer
+// @route   GET /api/lawyers/:lawyerId/reviews
+// @access  Public
+export const getLawyerReviews = async (req, res) => {
+  try {
+    const { lawyerId } = req.params;
+
+    // Find the lawyer by ID
+    const lawyer = await User.findById(lawyerId)
+      .select("firstName lastName rating reviews role")
+      
+    if (!lawyer || lawyer.role !== "lawyer") {
+      return res.status(404).json({
+        success: false,
+        message: "Lawyer not found",
+      });
+    }
+
+    // Return reviews and average rating
+    return res.status(200).json({
+      success: true,
+      lawyerId: lawyer._id,
+      lawyerName: `${lawyer.firstName} ${lawyer.lastName}`,
+      rating: lawyer.rating || 0,
+      totalReviews: lawyer.reviews.length,
+      reviews: lawyer.reviews,
+    });
+  } catch (error) {
+    console.error("Error fetching lawyer reviews:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while retrieving reviews",
+      error: error.message,
+    });
+  }
+};
+
+
+// @desc    Get lawyer tier details and total points
+// @route   GET /api/lawyers/:lawyerId/tier
+// @access  Public or Private depending on your auth
+export const getLawyerTier = async (req, res) => {
+  try {
+    const { lawyerId } = req.params;
+
+    // Find lawyer by ID
+    const lawyer = await User.findById(lawyerId).select("firstName lastName tier totalPoints role");
+
+    if (!lawyer || lawyer.role !== "lawyer") {
+      return res.status(404).json({
+        success: false,
+        message: "Lawyer not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      lawyerId: lawyer._id,
+      lawyerName: `${lawyer.firstName} ${lawyer.lastName}`,
+      tier: lawyer.tier,
+      totalPoints: lawyer.totalPoints,
+    });
+  } catch (error) {
+    console.error("Error fetching lawyer tier:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while retrieving tier details",
+      error: error.message,
+    });
   }
 };

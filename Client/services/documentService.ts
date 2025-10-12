@@ -474,6 +474,18 @@ export class DocumentService {
         };
       } else {
         console.error('AI explanation failed with server error:', response.data);
+        
+        // Handle specific error types
+        let userFriendlyMessage = response.data.message || 'AI explanation failed';
+        
+        if (response.data.errorType === 'service_overloaded') {
+          userFriendlyMessage = 'AI service is currently busy. Please try again in a few moments.';
+        } else if (response.data.errorType === 'quota_exceeded') {
+          userFriendlyMessage = 'AI service quota exceeded. Please try again later.';
+        } else if (response.data.errorType === 'content_blocked') {
+          userFriendlyMessage = 'Document content was blocked by safety filters. Please try with a different document.';
+        }
+        
         return {
           success: false,
           explanation: '',
@@ -481,7 +493,9 @@ export class DocumentService {
           confidence: 0,
           wordCount: 0,
           characterCount: 0,
-          error: response.data.message || 'AI explanation failed'
+          error: userFriendlyMessage,
+          errorType: response.data.errorType,
+          documentId: response.data.documentId // For potential retry
         };
       }
     } catch (error: any) {
@@ -501,6 +515,19 @@ export class DocumentService {
       
       if (error.response) {
         console.error('Server response error:', error.response.data);
+        
+        // Handle specific error types from server
+        let userFriendlyMessage = error.response.data?.message || error.response.statusText;
+        let errorType: any = 'unknown';
+        
+        if (error.response.status === 503) {
+          userFriendlyMessage = 'AI service is currently busy. Please try again in a few moments.';
+          errorType = 'service_overloaded';
+        } else if (error.response.status === 429) {
+          userFriendlyMessage = 'Too many requests. Please wait a moment and try again.';
+          errorType = 'quota_exceeded';
+        }
+        
         return {
           success: false,
           explanation: '',
@@ -508,7 +535,9 @@ export class DocumentService {
           confidence: 0,
           wordCount: 0,
           characterCount: 0,
-          error: error.response.data?.message || error.response.statusText
+          error: userFriendlyMessage,
+          errorType: error.response.data?.errorType || errorType,
+          documentId: error.response.data?.documentId
         };
       }
       
