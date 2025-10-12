@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
         color: '#0D9488',
     },
     header: {
-        backgroundColor: '#0D9488',
+        backgroundColor: COLOR.light.darkblue,
         paddingTop: 48,
         paddingBottom: 24,
         paddingHorizontal: 24,
@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
         borderBottomColor: 'transparent',
     },
     activeTab: {
-        borderBottomColor: '#0D9488',
+        borderBottomColor: COLOR.light.orange,
     },
     tabIcon: {
         fontSize: 18,
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
         color: '#6C757D',
     },
     activeTabText: {
-        color: '#0D9488',
+        color: COLOR.light.orange,
         fontWeight: '700',
     },
     content: {

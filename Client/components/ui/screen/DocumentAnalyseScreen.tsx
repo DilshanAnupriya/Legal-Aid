@@ -11,8 +11,8 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
-import { DocumentService } from '../../services/documentService';
-import DocumentHistory from '../../components/DocumentHistory';
+import { DocumentService } from '../../../services/documentService';
+import DocumentHistory from '../../DocumentHistory';
 
 type Step = 'select' | 'configure' | 'results';
 type Tab = 'upload' | 'history';

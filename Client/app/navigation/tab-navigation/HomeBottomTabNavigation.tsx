@@ -10,7 +10,7 @@ import {
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomePageScreen from "@/components/ui/screen/HomePageScreen";
 import ForumScreen from "@/components/ui/screen/ForumScreen";
-import DocumentAnalyseScreen from "../../(tabs)/DocumentAnalyseScreen";
+import DocumentAnalyseScreen from "../../../components/ui/screen/DocumentAnalyseScreen";
 import LawyerScreen from "@/components/ui/screen/LawyerScreen";
 import MenuScreen from "@/components/ui/screen/MenuScreen";
 import LawyerCaseScreen from "@/components/ui/screen/LawyerCases";
@@ -65,30 +65,33 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
     // navigation.navigate("ChatScreen");
   };
 
-  // Fetch notifications
+  // Fetch notifications function
+  const fetchNotifications = async () => {
+    if (!user?.email) return;
+
+    try {
+      const userNotifications =
+        await notificationService.getUserNotifications(user.email);
+      setNotifications(userNotifications);
+
+      const count = await notificationService.getUnreadCount(user.email);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
+
+  // Fetch notifications on mount and when user changes
   useEffect(() => {
-    const fetchNotifications = async () => {
-      if (user && user.email) {
-        try {
-          const userNotifications =
-            await notificationService.getUserNotifications(user.email);
-          setNotifications(userNotifications);
-
-          const count = await notificationService.getUnreadCount(user.email);
-          setUnreadCount(count);
-        } catch (error) {
-          console.error("Error fetching notifications:", error);
-        }
-      }
-    };
-
     fetchNotifications();
+  }, [user?.email]);
 
-    // Poll for new notifications every 30 seconds
-    // const intervalId = setInterval(fetchNotifications, 30000);
-
-    // return () => clearInterval(intervalId);
-  }, [user]);
+  // Refresh notifications when modal opens
+  useEffect(() => {
+    if (isNotificationModalVisible) {
+      fetchNotifications();
+    }
+  }, [isNotificationModalVisible]);
 
   // Handle notification click
   const handleNotificationClick = async (notification: Notification) => {
@@ -411,6 +414,17 @@ export default function HomeBottomTabNavigation({ navigation }: any) {
                 Notifications
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {/* Refresh button */}
+                <TouchableOpacity
+                  onPress={fetchNotifications}
+                  style={{ marginRight: 15 }}
+                >
+                  <Ionicons
+                    name="refresh"
+                    size={20}
+                    color={colors.accent}
+                  />
+                </TouchableOpacity>
                 {notifications.length > 0 && (
                   <>
                     {unreadCount > 0 && (

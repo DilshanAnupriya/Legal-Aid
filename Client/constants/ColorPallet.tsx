@@ -10,6 +10,7 @@ export const LightColors = {
   black: '#000000',
   textcol : '#ffffff',
   blue: '#3498db',
+  darkblue: '#1C2F42',
   success :'#048607ff',
   danger:"red"
 } as const;
@@ -26,7 +27,8 @@ export const DarkColors = {
   black: '#000000ff',
   textcol: '#ffffff',
   success :'#048607ff',
-  danger:"red"
+  danger:"red",
+  darkblue: '#1C2F42'
 } as const;
 
 export type ColorTypes = keyof typeof LightColors;

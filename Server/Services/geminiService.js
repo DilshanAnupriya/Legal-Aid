@@ -116,8 +116,8 @@ ${truncatedText}
 
 Please provide the explanation now:`;
 
-      // Generate content
-      const result = await model.generateContent(prompt);
+      // Generate content with retry logic for service unavailable errors
+      const result = await this.generateWithRetry(model, prompt);
       const response = await result.response;
       const explanation = response.text();
 
@@ -144,9 +144,53 @@ Please provide the explanation now:`;
         throw new Error('Gemini API quota exceeded. Please try again later.');
       } else if (error.message && error.message.includes('safety')) {
         throw new Error('Content was blocked by safety filters. The document may contain sensitive content.');
+      } else if (error.status === 503 || error.message.includes('overloaded')) {
+        throw new Error('Gemini AI service is currently overloaded. Please try again in a few moments.');
+      } else if (error.status === 429) {
+        throw new Error('Too many requests to Gemini AI. Please wait a moment and try again.');
+      } else if (error.status === 500) {
+        throw new Error('Gemini AI service is experiencing internal issues. Please try again later.');
       }
       
       throw new Error('Failed to generate explanation: ' + error.message);
+    }
+  }
+
+  /**
+   * Generate content with retry logic for handling service unavailable errors
+   * @param {Object} model - Gemini model instance
+   * @param {string} prompt - The prompt to send
+   * @param {number} maxRetries - Maximum number of retries
+   * @param {number} baseDelay - Base delay in milliseconds
+   * @returns {Promise} Generated content result
+   */
+  async generateWithRetry(model, prompt, maxRetries = 3, baseDelay = 2000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Gemini AI request attempt ${attempt}/${maxRetries}`);
+        return await model.generateContent(prompt);
+      } catch (error) {
+        const isRetryableError = 
+          error.status === 503 || 
+          error.status === 429 || 
+          error.status === 500 ||
+          error.message.includes('overloaded') ||
+          error.message.includes('rate limit') ||
+          error.message.includes('service unavailable');
+
+        if (!isRetryableError || attempt === maxRetries) {
+          // Don't retry for non-retryable errors or if we've reached max retries
+          throw error;
+        }
+
+        // Calculate delay with exponential backoff
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`Gemini AI error (attempt ${attempt}): ${error.message}`);
+        console.log(`Retrying in ${delay}ms...`);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
   }
 
@@ -209,7 +253,7 @@ ${truncatedText}
 
 Summary:`;
 
-      const result = await model.generateContent(prompt);
+      const result = await this.generateWithRetry(model, prompt);
       const response = await result.response;
       const summary = response.text();
 

@@ -46,6 +46,8 @@ export interface AIExplanationResponse {
   wordCount: number;
   characterCount: number;
   error?: string;
+  errorType?: 'service_overloaded' | 'quota_exceeded' | 'content_blocked' | 'unknown';
+  documentId?: string; // For potential retry
 }
 
 export interface ExplainDocumentRequest {
