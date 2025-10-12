@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         flex: 1,
-        backgroundColor: '#2C5AA0',
+        backgroundColor:'#1C2F42',
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     secondaryButton: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: '#2C5AA0',
+        borderColor: '#d35400',
     },
     actionButtonText: {
         color: '#FFFFFF',
@@ -608,6 +608,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     secondaryButtonText: {
-        color: '#2C5AA0',
+        color: '#d35400',
     },
 });

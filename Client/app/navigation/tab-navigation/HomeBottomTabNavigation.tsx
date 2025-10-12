@@ -10,7 +10,7 @@ import {
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomePageScreen from "@/components/ui/screen/HomePageScreen";
 import ForumScreen from "@/components/ui/screen/ForumScreen";
-import DocumentAnalyseScreen from "../../(tabs)/DocumentAnalyseScreen";
+import DocumentAnalyseScreen from "../../../components/ui/screen/DocumentAnalyseScreen";
 import LawyerScreen from "@/components/ui/screen/LawyerScreen";
 import MenuScreen from "@/components/ui/screen/MenuScreen";
 import LawyerCaseScreen from "@/components/ui/screen/LawyerCases";
