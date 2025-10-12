@@ -16,6 +16,7 @@ import LawyerProfile from "@/components/ui/screen/LawyerDetails";
 import LanguageSettingsScreen from "@/components/ui/screen/LanguageSettingsScreen";
 
 import Doc from "@/components/ui/screen/DocumentGeneratorScreen";
+import ChatScreen from "@/components/ui/screen/ChatScreen";
 const Stack = createStackNavigator();
 
 export default function StackNavigator() {
@@ -98,6 +99,13 @@ export default function StackNavigator() {
                 component={LanguageSettingsScreen}
                 options={{
                     headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="Chat"
+                component={ChatScreen}
+                options={{
+                    headerShown: false, // Using custom header in ChatScreen
                 }}
             />
 
